@@ -1,8 +1,9 @@
+![cover](https://github.com/user-attachments/assets/5cd80d77-1902-4121-ba85-7a94dbd2f69e)
+
 # Playify - Bot Discord Musical
 
 Playify est un bot Discord musical simple et puissant permettant de jouer vos morceaux préférés directement sur votre serveur Discord. Avec Playify, profitez d’une ambiance musicale 24/7 !
 
-![cover](https://github.com/user-attachments/assets/5cd80d77-1902-4121-ba85-7a94dbd2f69e)
 
 ---
 
