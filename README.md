@@ -4,7 +4,7 @@ Playify 🎵
 
 ---
 
-<img src="![github-banner-modified](https://github.com/user-attachments/assets/5c1d5fba-3a34-4ffe-bd46-ef68e1175360)" alt="image" width="900">
+<img src="https://github.com/user-attachments/assets/5c1d5fba-3a34-4ffe-bd46-ef68e1175360" alt="image" width="900">
 
 </h1>
 
