@@ -8,8 +8,6 @@ Playify 🎵
 
 </h1>
 
-<div align="center">
-
 ## Fonctionnalités
 
 - Lecture de musique depuis YouTube et SoundCloud
