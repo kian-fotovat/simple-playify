@@ -61,7 +61,7 @@ Voici les étapes pour héberger Playify sur votre propre machine :
 
 Pas de souci ! Vous pouvez inviter Playify directement dans vos serveurs. Il est hébergé 24/7 par moi-même. (@alananasss sur Discord)
 
-Cliquez ici pour l’ajouter : [Lien d'invitation](https://discord.com/oauth2/authorize?client_id=1323070239222665267&permissions=8&integration_type=0&scope=bot)
+Cliquez ici pour l’ajouter : [Lien d'invitation](https://discord.com/oauth2/authorize?client_id=1330613913569726575&permissions=8&integration_type=0&scope=bot)
 
 ---
 
