@@ -1,4 +1,3 @@
-```markdown
 <h1 align="center">
 
 Playify 🎵
