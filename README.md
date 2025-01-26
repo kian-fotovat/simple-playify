@@ -1,3 +1,4 @@
+```markdown
 <h1 align="center">
 
 Playify 🎵
@@ -73,9 +74,13 @@ Les contributions sont les bienvenues ! Si vous souhaitez ajouter des fonctionna
 2. Créez une branche pour vos modifications
 3. Proposez une pull request
 
+### Soutenir le projet
+
+Si vous appréciez le projet et souhaitez me soutenir financièrement, vous pouvez faire un don via PayPal ici : [Soutenir sur PayPal](https://www.paypal.com/paypalme/alanmussot1)
+
 ---
 
 ## Licence
 
 Ce projet est sous licence MIT. Vous êtes libre de l'utiliser, de le modifier et de le redistribuer.
-
+```
