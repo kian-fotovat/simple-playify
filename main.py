@@ -46,10 +46,28 @@ async def play(interaction: discord.Interaction, query: str):
     url_regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.be|soundcloud\.com)/.+$')
     is_url = url_regex.match(query)
 
-    # Si c'est un lien, ajoute directement à la file d'attente
+    # Si c'est un lien, traite la playlist ou la vidéo
     if is_url:
-        await music_player.queue.put(query)
-        await interaction.response.send_message(f"Lien ajouté à la file d'attente : {query}")
+        await interaction.response.defer()
+        try:
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "extract_flat": "in_playlist",  # Pour récupérer toutes les vidéos de la playlist
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(query, download=False)
+                if "entries" in info:  # Si c'est une playlist
+                    for entry in info["entries"]:
+                        await music_player.queue.put(entry["url"])
+                    await interaction.followup.send(f"Playlist ajoutée avec {len(info['entries'])} titres.")
+                else:  # Si c'est une seule vidéo
+                    await music_player.queue.put(info["url"])
+                    await interaction.followup.send(f"Ajouté à la file d'attente : {query}")
+        except Exception as e:
+            await interaction.followup.send("Erreur lors de l'ajout de la vidéo ou de la playlist.", ephemeral=True)
+            print(f"Erreur : {e}")
     else:
         # Si ce n'est pas un lien, recherche sur YouTube
         await interaction.response.defer()  # Montre "bot réfléchit..." pour éviter les délais
@@ -156,10 +174,20 @@ async def replay(interaction: discord.Interaction):
 @bot.tree.command(name="stop", description="Arrête la lecture et déconnecte le bot.")
 async def stop(interaction: discord.Interaction):
     if music_player.voice_client:
+        # Arrêter la lecture en cours et annuler la tâche active
+        if music_player.voice_client.is_playing():
+            music_player.voice_client.stop()
+        
+        # Vide la file d'attente
+        while not music_player.queue.empty():
+            music_player.queue.get_nowait()
+
+        # Déconnecte le bot
         await music_player.voice_client.disconnect()
         music_player.voice_client = None
         music_player.current_task = None
         music_player.current_url = None
+
         await interaction.response.send_message("Lecture arrêtée et bot déconnecté.")
     else:
         await interaction.response.send_message("Le bot n'est pas connecté à un salon vocal.", ephemeral=True)
