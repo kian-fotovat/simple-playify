@@ -45,6 +45,8 @@ Voici les étapes pour héberger Playify sur votre propre machine :
    DISCORD_TOKEN=Votre_Token_Discord
    ```
 
+4. **Option supplémentaire** : Si vous préférez ne pas utiliser la ligne de commande, vous pouvez simplement double-cliquer sur le fichier `lancer_bot.bat` pour lancer le bot directement.
+
 5. Lancer le bot :
    ```bash
    python main.py
@@ -59,7 +61,7 @@ Voici les étapes pour héberger Playify sur votre propre machine :
 
 ## Pas envie d’héberger Playify vous-même ?
 
-Pas de souci ! Vous pouvez inviter Playify directement dans vos serveurs. Il est hébergé 24/7 par moi-même. (@alananasss sur Discord)
+Pas de souci ! Vous pouvez inviter Playify directement dans vos serveurs. Il est hébergé 24/7 par moi-même. (@alananasssss sur Discord)
 
 Cliquez ici pour l’ajouter : [Lien d'invitation](https://discord.com/oauth2/authorize?client_id=1330613913569726575&permissions=8&integration_type=0&scope=bot)
 
