@@ -1,4 +1,3 @@
-```md
 [🇫🇷 Version française](https://github.com/alan7383/playify/blob/main/README.md)
 
 <h1 align="center">
