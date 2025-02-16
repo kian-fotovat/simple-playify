@@ -1,3 +1,5 @@
+<h1 align="center">
+
 # 🎵 Playify - Le bot musical ultime  
 
 <p align="center">
