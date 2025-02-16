@@ -81,7 +81,3 @@ Si Playify vous plaît et que vous voulez m’envoyer un petit café ☕ :
 ## 📝 Licence  
 
 Ce projet est sous licence **MIT**. Faites-en bon usage ! 🔥  
-
----
-
-Cette version est plus engageante, dynamique et fun. J’ai mis en avant les technologies utilisées pour ton "architecture optimisée" tout en rendant le tout plus attractif ! Ça te plaît ? 😃
