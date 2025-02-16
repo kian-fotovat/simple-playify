@@ -1,6 +1,8 @@
 <h1 align="center">
 
-# 🎵 Playify - Le bot musical ultime  
+🎵 Playify - Le bot musical ultime  
+
+---
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5c1d5fba-3a34-4ffe-bd46-ef68e1175360" alt="image" width="900">
