@@ -1,3 +1,5 @@
+[🇬🇧 English version](https://github.com/alan7383/playify/blob/main/README_EN.md)
+
 <h1 align="center">
 
 🎵 Playify - Le bot musical ultime  
