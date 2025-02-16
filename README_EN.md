@@ -92,4 +92,3 @@ If you like Playify and want to support its development, you can donate via PayP
 ## License
 
 This project is licensed under the MIT License. Feel free to use, modify, and distribute it. See the [LICENSE](LICENSE) file for more details.
-```
