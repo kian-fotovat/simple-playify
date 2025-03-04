@@ -7,7 +7,7 @@
 ---
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/b5aca97b-80be-4023-bea2-a26700bfa0a5" alt="image" width="900">
+  <img src="https://github.com/user-attachments/assets/5c1d5fba-3a34-4ffe-bd46-ef68e1175360" alt="image" width="900">
 </p>
 
 ## 🚀 Pourquoi choisir Playify ?  
