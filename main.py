@@ -55,6 +55,8 @@ async def play(interaction: discord.Interaction, query: str):
                 "quiet": True,
                 "no_warnings": True,
                 "extract_flat": "in_playlist",  # Pour récupérer toutes les vidéos de la playlist
+                "socket_timeout": 30,  # Augmente le délai d'attente
+                "max_duration": 3600,  # Limite la durée à 1 heure
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(query, download=False)
@@ -77,6 +79,8 @@ async def play(interaction: discord.Interaction, query: str):
                 "quiet": True,
                 "no_warnings": True,
                 "default_search": "ytsearch1",  # Recherche uniquement le meilleur résultat
+                "socket_timeout": 30,  # Augmente le délai d'attente
+                "max_duration": 3600,  # Limite la durée à 1 heure
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(query, download=False)
@@ -100,29 +104,38 @@ async def play_audio():
             break
 
         url = await music_player.queue.get()
-        try:
-            music_player.current_url = url
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "source_address": "0.0.0.0",  # Corrige certains problèmes de réseau
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                audio_url = info["url"]
+        retries = 3  # Nombre de tentatives
+        for attempt in range(retries):
+            try:
+                music_player.current_url = url
+                ydl_opts = {
+                    "format": "bestaudio/best",
+                    "quiet": True,
+                    "no_warnings": True,
+                    "source_address": "0.0.0.0",  # Corrige certains problèmes de réseau
+                    "socket_timeout": 30,  # Augmente le délai d'attente
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    audio_url = info["url"]
 
-            ffmpeg_options = {
-                "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-                "options": "-vn",
-            }
-            music_player.voice_client.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print(f"Erreur : {e}") if e else None)
+                ffmpeg_options = {
+                    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+                    "options": "-vn",
+                }
+                music_player.voice_client.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print(f"Erreur : {e}") if e else None)
 
-            while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
-                await asyncio.sleep(1)
+                while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
+                    await asyncio.sleep(1)
 
-        except Exception as e:
-            print(f"Erreur lors de la lecture de l'audio : {e}")
+                break  # Sortir de la boucle de réessai si la lecture réussit
+
+            except Exception as e:
+                print(f"Erreur lors de la lecture de l'audio (tentative {attempt + 1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    await asyncio.sleep(5)  # Attendre 5 secondes avant de réessayer
+                else:
+                    print("Échec après plusieurs tentatives.")
 
         if music_player.queue.empty():
             music_player.current_task = None
