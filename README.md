@@ -12,9 +12,11 @@
 
 ## 🚀 Pourquoi choisir Playify ?  
 
+> **📢 Nouvelle fonctionnalité bientôt disponible !** Playify prendra en charge **Spotify** dans une prochaine mise à jour !
+
 - **🎶 Musique fluide** : Lecture depuis YouTube et SoundCloud, sans latence.
-- **📜 Commandes simples** : Play, pause, skip, stop, replay... et plus encore !
-- **📂 Playlists personnalisées** : Créez, gérez et écoutez vos musiques préférées.
+- **📝 Commandes simples** : Play, pause, skip, stop, replay... et plus encore !
+- **🐄 Playlists personnalisées** : Créez, gérez et écoutez vos musiques préférées.
 - **🔊 Qualité audio premium** : Profitez d'un son optimisé sans compromis.
 - **⚡️ Architecture boostée** : Propulsé par **yt-dlp**, **FFmpeg**, et un système de file d’attente asynchrone ultra-réactif.  
 
@@ -24,10 +26,10 @@
 
 ### ⚙️ Prérequis  
 
-- **Python 3.9+** ➝ [Télécharger ici](https://www.python.org/downloads/)  
-- **FFmpeg** ➝ [Installer ici](https://ffmpeg.org/download.html)  
-- **Un token Discord** ➝ [Obtenir un token](https://discord.com/developers/applications)  
-- **Dépendances** ➝ Installées via `requirements.txt`  
+- **Python 3.9+** ➞ [Télécharger ici](https://www.python.org/downloads/)  
+- **FFmpeg** ➞ [Installer ici](https://ffmpeg.org/download.html)  
+- **Un token Discord** ➞ [Obtenir un token](https://discord.com/developers/applications)  
+- **Dépendances** ➞ Installées via `requirements.txt`  
 
 ### 📌 Installation  
 
@@ -43,7 +45,7 @@ DISCORD_TOKEN=Votre_Token_Discord
 ```
 💡 *Ne partagez jamais votre token !*  
 
-### 🎬 Lancer le bot  
+### 🎮 Lancer le bot  
 
 ```bash
 python main.py
@@ -82,4 +84,5 @@ Si Playify vous plaît et que vous voulez m’envoyer un petit café ☕ :
 
 ## 📝 Licence  
 
-Ce projet est sous licence **MIT**. Faites-en bon usage ! 🔥  
+Ce projet est sous licence **MIT**. Faites-en bon usage ! 🔥
+
