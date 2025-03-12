@@ -10,6 +10,8 @@ Playify 🎵
 
 ## Features
 
+> **📢 New feature coming soon!** Playify will soon support **Spotify** in an upcoming update!
+
 - Stream music from YouTube and SoundCloud
 - Intuitive commands (play, pause, skip, stop, replay, etc.)
 - Playlist management: create, organize, and play your favorite playlists
