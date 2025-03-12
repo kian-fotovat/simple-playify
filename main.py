@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+from discord import app_commands, Embed
 import asyncio
 import yt_dlp
 import re  # Pour détecter si le texte est un lien
@@ -22,6 +22,7 @@ class MusicPlayer:
         self.current_task = None
         self.queue = asyncio.Queue()
         self.current_url = None  # URL actuellement jouée
+        self.text_channel = None  # Canal texte pour envoyer les embeds
 
 music_player = MusicPlayer()
 
@@ -30,7 +31,11 @@ music_player = MusicPlayer()
 @app_commands.describe(query="Lien ou titre de la vidéo à jouer")
 async def play(interaction: discord.Interaction, query: str):
     if not interaction.user.voice or not interaction.user.voice.channel:
-        await interaction.response.send_message("Tu dois être dans un salon vocal pour utiliser cette commande.", ephemeral=True)
+        embed = Embed(
+            description="Tu dois être dans un salon vocal pour utiliser cette commande.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         return
 
     # Joindre le salon vocal si pas déjà connecté
@@ -38,9 +43,16 @@ async def play(interaction: discord.Interaction, query: str):
         try:
             music_player.voice_client = await interaction.user.voice.channel.connect()
         except Exception as e:
-            await interaction.response.send_message("Erreur lors de la connexion au salon vocal.", ephemeral=True)
+            embed = Embed(
+                description="Erreur lors de la connexion au salon vocal.",
+                color=discord.Color.red()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             print(f"Erreur : {e}")
             return
+
+    # Stocker le canal texte pour envoyer les embeds
+    music_player.text_channel = interaction.channel
 
     # Vérifie si la requête est un lien
     url_regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.be|soundcloud\.com)/.+$')
@@ -55,20 +67,45 @@ async def play(interaction: discord.Interaction, query: str):
                 "quiet": True,
                 "no_warnings": True,
                 "extract_flat": "in_playlist",  # Pour récupérer toutes les vidéos de la playlist
-                "socket_timeout": 30,  # Augmente le délai d'attente
-                "max_duration": 3600,  # Limite la durée à 1 heure
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(query, download=False)
                 if "entries" in info:  # Si c'est une playlist
                     for entry in info["entries"]:
-                        await music_player.queue.put(entry["url"])
-                    await interaction.followup.send(f"Playlist ajoutée avec {len(info['entries'])} titres.")
+                        await music_player.queue.put((entry["url"], True))  # True = playlist
+
+                    # Vérifier si la miniature est disponible
+                    thumbnail = info["entries"][0].get("thumbnail") if info["entries"] else None
+
+                    if thumbnail:
+                        embed = Embed(
+                            title="🎶 Playlist ajoutée",
+                            description=f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente.",
+                            color=discord.Color.green()
+                        )
+                        embed.set_thumbnail(url=thumbnail)  # Miniature de la première vidéo
+                    else:
+                        embed = Embed(
+                            title="🎶 Playlist ajoutée",
+                            description=f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente.",
+                            color=discord.Color.green()
+                        )
+                    await interaction.followup.send(embed=embed)
                 else:  # Si c'est une seule vidéo
-                    await music_player.queue.put(info["url"])
-                    await interaction.followup.send(f"Ajouté à la file d'attente : {query}")
+                    await music_player.queue.put((info["url"], False))  # False = vidéo individuelle
+                    embed = Embed(
+                        title="🎵 Ajouté à la file d'attente",
+                        description=f"[{info['title']}]({info['webpage_url']})",  # Utiliser l'URL publique
+                        color=discord.Color.blue()
+                    )
+                    embed.set_thumbnail(url=info["thumbnail"])  # Miniature de la vidéo
+                    await interaction.followup.send(embed=embed)
         except Exception as e:
-            await interaction.followup.send("Erreur lors de l'ajout de la vidéo ou de la playlist.", ephemeral=True)
+            embed = Embed(
+                description="Erreur lors de l'ajout de la vidéo ou de la playlist.",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
             print(f"Erreur : {e}")
     else:
         # Si ce n'est pas un lien, recherche sur YouTube
@@ -79,17 +116,27 @@ async def play(interaction: discord.Interaction, query: str):
                 "quiet": True,
                 "no_warnings": True,
                 "default_search": "ytsearch1",  # Recherche uniquement le meilleur résultat
-                "socket_timeout": 30,  # Augmente le délai d'attente
-                "max_duration": 3600,  # Limite la durée à 1 heure
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(query, download=False)
                 video_url = info["entries"][0]["url"]  # Premier résultat
                 video_title = info["entries"][0]["title"]  # Titre du résultat
-                await music_player.queue.put(video_url)
-                await interaction.followup.send(f"Ajouté à la file d'attente : **{video_title}**")
+                video_thumbnail = info["entries"][0]["thumbnail"]  # Miniature du résultat
+                video_webpage_url = info["entries"][0]["webpage_url"]  # URL publique
+                await music_player.queue.put((video_url, False))  # False = vidéo individuelle
+                embed = Embed(
+                    title="🎵 Ajouté à la file d'attente",
+                    description=f"[{video_title}]({video_webpage_url})",  # Utiliser l'URL publique
+                    color=discord.Color.blue()
+                )
+                embed.set_thumbnail(url=video_thumbnail)  # Miniature de la vidéo
+                await interaction.followup.send(embed=embed)
         except Exception as e:
-            await interaction.followup.send("Erreur lors de la recherche sur YouTube. Réessaie avec un autre titre.", ephemeral=True)
+            embed = Embed(
+                description="Erreur lors de la recherche sur YouTube. Réessaie avec un autre titre.",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
             print(f"Erreur : {e}")
 
     # Démarre une tâche de lecture si aucune n'est en cours
@@ -103,39 +150,63 @@ async def play_audio():
             music_player.current_task = None
             break
 
-        url = await music_player.queue.get()
-        retries = 3  # Nombre de tentatives
-        for attempt in range(retries):
-            try:
-                music_player.current_url = url
-                ydl_opts = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "source_address": "0.0.0.0",  # Corrige certains problèmes de réseau
-                    "socket_timeout": 30,  # Augmente le délai d'attente
-                }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                    audio_url = info["url"]
+        url, is_playlist = await music_player.queue.get()
+        try:
+            music_player.current_url = url
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "source_address": "0.0.0.0",  # Corrige certains problèmes de réseau
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
 
+                # Récupérer les informations de la vidéo
+                video_title = info.get("title", "Titre inconnu")
+                video_thumbnail = info.get("thumbnail", "https://via.placeholder.com/150")  # Miniature par défaut
+                video_webpage_url = info.get("webpage_url", url)  # URL publique
+                audio_url = info.get("url")  # URL audio
+
+                # Si l'URL audio n'est pas trouvée, essayer une autre méthode
+                if not audio_url:
+                    formats = info.get("formats", [])
+                    for f in formats:
+                        if f.get("acodec") != "none":  # Format avec audio
+                            audio_url = f.get("url")
+                            break
+
+                if not audio_url:
+                    raise Exception("Impossible de trouver une URL audio valide.")
+
+                # Envoyer un embed "En cours de lecture" uniquement pour les playlists
+                if is_playlist and music_player.text_channel:
+                    embed = Embed(
+                        title="🎵 En cours de lecture",
+                        description=f"[{video_title}]({video_webpage_url})",  # Utiliser l'URL publique
+                        color=discord.Color.green()
+                    )
+                    embed.set_thumbnail(url=video_thumbnail)
+                    await music_player.text_channel.send(embed=embed)
+
+                # Lire l'audio
                 ffmpeg_options = {
                     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
                     "options": "-vn",
                 }
-                music_player.voice_client.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print(f"Erreur : {e}") if e else None)
+                music_player.voice_client.play(
+                    discord.FFmpegPCMAudio(audio_url, **ffmpeg_options),
+                    after=lambda e: print(f"Erreur : {e}") if e else None
+                )
 
+                # Attendre la fin de la lecture
                 while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
                     await asyncio.sleep(1)
 
-                break  # Sortir de la boucle de réessai si la lecture réussit
-
-            except Exception as e:
-                print(f"Erreur lors de la lecture de l'audio (tentative {attempt + 1}/{retries}): {e}")
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)  # Attendre 5 secondes avant de réessayer
-                else:
-                    print("Échec après plusieurs tentatives.")
+        except Exception as e:
+            print(f"Erreur lors de la lecture de l'audio : {e}")
+            # Passer à la musique suivante en cas d'erreur
+            continue
 
         if music_player.queue.empty():
             music_player.current_task = None
@@ -146,27 +217,51 @@ async def play_audio():
 async def pause(interaction: discord.Interaction):
     if music_player.voice_client and music_player.voice_client.is_playing():
         music_player.voice_client.pause()
-        await interaction.response.send_message("Lecture mise en pause.")
+        embed = Embed(
+            description="⏸️ Lecture mise en pause.",
+            color=discord.Color.orange()
+        )
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message("Aucune lecture en cours.", ephemeral=True)
+        embed = Embed(
+            description="Aucune lecture en cours.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Commande /resume
 @bot.tree.command(name="resume", description="Reprend la lecture mise en pause.")
 async def resume(interaction: discord.Interaction):
     if music_player.voice_client and music_player.voice_client.is_paused():
         music_player.voice_client.resume()
-        await interaction.response.send_message("Lecture reprise.")
+        embed = Embed(
+            description="▶️ Lecture reprise.",
+            color=discord.Color.green()
+        )
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message("Aucune lecture mise en pause.", ephemeral=True)
+        embed = Embed(
+            description="Aucune lecture mise en pause.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Commande /skip
 @bot.tree.command(name="skip", description="Passe à la chanson suivante.")
 async def skip(interaction: discord.Interaction):
     if music_player.voice_client and music_player.voice_client.is_playing():
         music_player.voice_client.stop()
-        await interaction.response.send_message("Chanson actuelle ignorée.")
+        embed = Embed(
+            description="⏭️ Chanson actuelle ignorée.",
+            color=discord.Color.blue()
+        )
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message("Aucune chanson en cours.", ephemeral=True)
+        embed = Embed(
+            description="Aucune chanson en cours.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Commande /replay
 @bot.tree.command(name="replay", description="Recommence la musique actuellement jouée.")
@@ -175,13 +270,21 @@ async def replay(interaction: discord.Interaction):
         if music_player.voice_client and music_player.voice_client.is_playing():
             music_player.voice_client.stop()
 
-        await music_player.queue.put(music_player.current_url)
-        await interaction.response.send_message("Relecture de la musique actuelle.")
+        await music_player.queue.put((music_player.current_url, False))  # False = vidéo individuelle
+        embed = Embed(
+            description="🔁 Relecture de la musique actuelle.",
+            color=discord.Color.blue()
+        )
+        await interaction.response.send_message(embed=embed)
 
         if not music_player.current_task:
             music_player.current_task = asyncio.create_task(play_audio())
     else:
-        await interaction.response.send_message("Aucune musique jouée précédemment.", ephemeral=True)
+        embed = Embed(
+            description="Aucune musique jouée précédemment.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Commande /stop
 @bot.tree.command(name="stop", description="Arrête la lecture et déconnecte le bot.")
@@ -201,9 +304,17 @@ async def stop(interaction: discord.Interaction):
         music_player.current_task = None
         music_player.current_url = None
 
-        await interaction.response.send_message("Lecture arrêtée et bot déconnecté.")
+        embed = Embed(
+            description="⏹️ Lecture arrêtée et bot déconnecté.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message("Le bot n'est pas connecté à un salon vocal.", ephemeral=True)
+        embed = Embed(
+            description="Le bot n'est pas connecté à un salon vocal.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Lancer le bot
 @bot.event
