@@ -23,6 +23,7 @@ class MusicPlayer:
         self.queue = asyncio.Queue()
         self.current_url = None  # URL actuellement jouée
         self.text_channel = None  # Canal texte pour envoyer les embeds
+        self.loop_current = False  # Boucle pour la musique actuelle seulement
 
 music_player = MusicPlayer()
 
@@ -152,6 +153,20 @@ async def play_audio():
 
         url, is_playlist = await music_player.queue.get()
         try:
+            # Vérifier si le bot est toujours connecté au salon vocal
+            if not music_player.voice_client or not music_player.voice_client.is_connected():
+                if music_player.text_channel:
+                    embed = Embed(
+                        description="Le bot a été déconnecté du salon vocal. Reconnexion en cours...",
+                        color=discord.Color.orange()
+                    )
+                    await music_player.text_channel.send(embed=embed)
+
+                # Reconnecter le bot au salon vocal
+                if music_player.text_channel and music_player.text_channel.guild.voice_client:
+                    await music_player.text_channel.guild.voice_client.disconnect()
+                music_player.voice_client = await music_player.text_channel.guild.voice_channels[0].connect()
+
             music_player.current_url = url
             ydl_opts = {
                 "format": "bestaudio/best",
@@ -202,6 +217,11 @@ async def play_audio():
                 # Attendre la fin de la lecture
                 while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
                     await asyncio.sleep(1)
+
+                # Si la boucle est activée pour la musique actuelle, la remettre dans la file d'attente
+                if music_player.loop_current and music_player.voice_client.is_connected():
+                    await music_player.queue.put((url, is_playlist))  # Remettre la musique actuelle dans la file
+                    continue  # Rejouer la même musique immédiatement
 
         except Exception as e:
             print(f"Erreur lors de la lecture de l'audio : {e}")
@@ -263,28 +283,16 @@ async def skip(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-# Commande /replay
-@bot.tree.command(name="replay", description="Recommence la musique actuellement jouée.")
-async def replay(interaction: discord.Interaction):
-    if music_player.current_url:
-        if music_player.voice_client and music_player.voice_client.is_playing():
-            music_player.voice_client.stop()
-
-        await music_player.queue.put((music_player.current_url, False))  # False = vidéo individuelle
-        embed = Embed(
-            description="🔁 Relecture de la musique actuelle.",
-            color=discord.Color.blue()
-        )
-        await interaction.response.send_message(embed=embed)
-
-        if not music_player.current_task:
-            music_player.current_task = asyncio.create_task(play_audio())
-    else:
-        embed = Embed(
-            description="Aucune musique jouée précédemment.",
-            color=discord.Color.red()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+# Commande /loop
+@bot.tree.command(name="loop", description="Active ou désactive la lecture en boucle pour la musique actuelle.")
+async def loop(interaction: discord.Interaction):
+    music_player.loop_current = not music_player.loop_current  # Basculer l'état de la boucle
+    state = "activée" if music_player.loop_current else "désactivée"
+    embed = Embed(
+        description=f"🔁 Lecture en boucle pour la musique actuelle {state}.",
+        color=discord.Color.blue()
+    )
+    await interaction.response.send_message(embed=embed)
 
 # Commande /stop
 @bot.tree.command(name="stop", description="Arrête la lecture et déconnecte le bot.")
