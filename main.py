@@ -18,8 +18,8 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Configuration Spotify
-SPOTIFY_CLIENT_ID = 'YOUR_CLIENT_ID'
-SPOTIFY_CLIENT_SECRET = 'YOUR_CLIENT_SECRET'
+SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
+SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET
@@ -61,7 +61,7 @@ async def process_spotify_url(url, interaction):
         print(f"Erreur Spotify: {e}")
         embed = Embed(
             description="Erreur lors du traitement du lien Spotify.",
-            color=discord.Color(0x8B008B)  # Violet foncé pour les erreurs
+            color=discord.Color.red()
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
         return None
@@ -73,7 +73,7 @@ async def play(interaction: discord.Interaction, query: str):
     if not interaction.user.voice or not interaction.user.voice.channel:
         embed = Embed(
             description="Tu dois être dans un salon vocal pour utiliser cette commande.",
-            color=discord.Color(0x8B008B)  # Violet foncé
+            color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
@@ -84,7 +84,7 @@ async def play(interaction: discord.Interaction, query: str):
         except Exception as e:
             embed = Embed(
                 description="Erreur lors de la connexion au salon vocal.",
-                color=discord.Color(0x8B008B)  # Violet foncé
+                color=discord.Color.red()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             print(f"Erreur : {e}")
@@ -104,7 +104,7 @@ async def play(interaction: discord.Interaction, query: str):
             embed = Embed(
                 title="🎶 Playlist Spotify ajoutée",
                 description=f"**{len(spotify_queries)} titres** en cours d'ajout...",
-                color=discord.Color(0x9932CC)  # Violet orchidée
+                color=discord.Color.green()
             )
             await interaction.followup.send(embed=embed)
 
@@ -125,7 +125,7 @@ async def play(interaction: discord.Interaction, query: str):
                         embed = Embed(
                             title="🎵 Ajouté à la file d'attente",
                             description=f"[{video['title']}]({video['webpage_url']})",
-                            color=discord.Color(0xDA70D6)  # Violet orchidée clair
+                            color=discord.Color.blue()
                         )
                         embed.set_thumbnail(url=video["thumbnail"])
                         await interaction.followup.send(embed=embed)
@@ -163,7 +163,7 @@ async def play(interaction: discord.Interaction, query: str):
                             embed = Embed(
                                 title="🎶 Playlist ajoutée",
                                 description=f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente.",
-                                color=discord.Color(0x9932CC)  # Violet orchidée
+                                color=discord.Color.green()
                             )
                             if thumbnail:
                                 embed.set_thumbnail(url=thumbnail)
@@ -174,7 +174,7 @@ async def play(interaction: discord.Interaction, query: str):
                         embed = Embed(
                             title="🎵 Ajouté à la file d'attente",
                             description=f"[{info['title']}]({info['webpage_url']})",
-                            color=discord.Color(0xDA70D6)  # Violet orchidée clair
+                            color=discord.Color.blue()
                         )
                         if info.get("thumbnail"):
                             embed.set_thumbnail(url=info["thumbnail"])
@@ -182,7 +182,7 @@ async def play(interaction: discord.Interaction, query: str):
             except Exception as e:
                 embed = Embed(
                     description="Erreur lors de l'ajout de la vidéo ou de la playlist.",
-                    color=discord.Color(0x8B008B)  # Violet foncé
+                    color=discord.Color.red()
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 print(f"Erreur : {e}")
@@ -202,7 +202,7 @@ async def play(interaction: discord.Interaction, query: str):
                     embed = Embed(
                         title="🎵 Ajouté à la file d'attente",
                         description=f"[{video['title']}]({video['webpage_url']})",
-                        color=discord.Color(0xDA70D6)  # Violet orchidée clair
+                        color=discord.Color.blue()
                     )
                     if video.get("thumbnail"):
                         embed.set_thumbnail(url=video["thumbnail"])
@@ -210,7 +210,7 @@ async def play(interaction: discord.Interaction, query: str):
             except Exception as e:
                 embed = Embed(
                     description="Erreur lors de la recherche. Réessaie avec un autre titre.",
-                    color=discord.Color(0x8B008B)  # Violet foncé
+                    color=discord.Color.red()
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 print(f"Erreur : {e}")
@@ -246,7 +246,7 @@ async def play_audio():
                     embed = Embed(
                         title="🎵 En cours de lecture",
                         description=f"[{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})",
-                        color=discord.Color(0xBA55D3)  # Violet moyen
+                        color=discord.Color.green()
                     )
                     if info.get('thumbnail'):
                         embed.set_thumbnail(url=info['thumbnail'])
@@ -279,13 +279,13 @@ async def pause(interaction: discord.Interaction):
         music_player.voice_client.pause()
         embed = Embed(
             description="⏸️ Lecture mise en pause.",
-            color=discord.Color(0x9370DB)  # Violet pâle
+            color=discord.Color.orange()
         )
         await interaction.response.send_message(embed=embed)
     else:
         embed = Embed(
             description="Aucune lecture en cours.",
-            color=discord.Color(0x8B008B)  # Violet foncé
+            color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -295,13 +295,13 @@ async def resume(interaction: discord.Interaction):
         music_player.voice_client.resume()
         embed = Embed(
             description="▶️ Lecture reprise.",
-            color=discord.Color(0x9932CC)  # Violet orchidée
+            color=discord.Color.green()
         )
         await interaction.response.send_message(embed=embed)
     else:
         embed = Embed(
             description="Aucune lecture mise en pause.",
-            color=discord.Color(0x8B008B)  # Violet foncé
+            color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -311,13 +311,13 @@ async def skip(interaction: discord.Interaction):
         music_player.voice_client.stop()
         embed = Embed(
             description="⏭️ Chanson actuelle ignorée.",
-            color=discord.Color(0xBA55D3)  # Violet moyen
+            color=discord.Color.blue()
         )
         await interaction.response.send_message(embed=embed)
     else:
         embed = Embed(
             description="Aucune chanson en cours.",
-            color=discord.Color(0x8B008B)  # Violet foncé
+            color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -327,7 +327,7 @@ async def loop(interaction: discord.Interaction):
     state = "activée" if music_player.loop_current else "désactivée"
     embed = Embed(
         description=f"🔁 Lecture en boucle pour la musique actuelle {state}.",
-        color=discord.Color(0x9932CC)  # Violet orchidée
+        color=discord.Color.blue()
     )
     await interaction.response.send_message(embed=embed)
 
@@ -347,13 +347,13 @@ async def stop(interaction: discord.Interaction):
 
         embed = Embed(
             description="⏹️ Lecture arrêtée et bot déconnecté.",
-            color=discord.Color(0x8B008B)  # Violet foncé
+            color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed)
     else:
         embed = Embed(
             description="Le bot n'est pas connecté à un salon vocal.",
-            color=discord.Color(0x8B008B)  # Violet foncé
+            color=discord.Color.red()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
