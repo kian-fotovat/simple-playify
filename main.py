@@ -25,7 +25,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
 
-# Stockage des informations de lecture
+# Stockage des informations de lecture et des modes par serveur
 class MusicPlayer:
     def __init__(self):
         self.voice_client = None
@@ -35,7 +35,19 @@ class MusicPlayer:
         self.text_channel = None
         self.loop_current = False
 
-music_player = MusicPlayer()
+# Dictionnaires pour stocker les états par serveur
+music_players = {}  # {guild_id: MusicPlayer()}
+kawaii_mode = {}    # {guild_id: bool}
+
+# Fonction pour obtenir le player d'un serveur
+def get_player(guild_id):
+    if guild_id not in music_players:
+        music_players[guild_id] = MusicPlayer()
+    return music_players[guild_id]
+
+# Fonction pour obtenir le mode actuel d'un serveur
+def get_mode(guild_id):
+    return kawaii_mode.get(guild_id, False)
 
 # Fonction pour traiter les liens Spotify
 async def process_spotify_url(url, interaction):
@@ -59,22 +71,48 @@ async def process_spotify_url(url, interaction):
             return [f"{track['name']} {track['artists'][0]['name']}" for track in results['tracks']]
     except Exception as e:
         print(f"Erreur Spotify: {e}")
-        embed = Embed(
-            description="Erreur lors du traitement du lien Spotify.",
-            color=discord.Color.red()
-        )
+        if get_mode(interaction.guild_id):
+            description = "(´；ω；`) Oh non ! Problème avec le lien Spotify..."
+            color = 0xFFB6C1  # Rose pastel
+        else:
+            description = "Erreur lors du traitement du lien Spotify."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.followup.send(embed=embed, ephemeral=True)
         return None
 
-# Commande /play originale avec ajout Spotify et SoundCloud
-@bot.tree.command(name="play", description="Joue un lien ou recherche un titre sur YouTube/Spotify/SoundCloud.")
+# Commande pour basculer entre les modes
+@bot.tree.command(name="kaomoji", description="Active/désactive le mode kaomoji")
+@app_commands.default_permissions(administrator=True)
+async def toggle_kawaii(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    kawaii_mode[guild_id] = not get_mode(guild_id)
+    state = "activé (◕‿◕✿)" if kawaii_mode[guild_id] else "désactivé"
+    
+    embed = Embed(
+        description=f"Mode kawaii {state} pour ce serveur !",
+        color=0xFFB6C1 if kawaii_mode[guild_id] else discord.Color.blue()
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# Commande /play avec gestion des deux modes
+@bot.tree.command(name="play", description="Joue un lien ou recherche un titre")
 @app_commands.describe(query="Lien ou titre de la vidéo/musique à jouer")
 async def play(interaction: discord.Interaction, query: str):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     if not interaction.user.voice or not interaction.user.voice.channel:
-        embed = Embed(
-            description="Tu dois être dans un salon vocal pour utiliser cette commande.",
-            color=discord.Color.red()
-        )
+        if is_kawaii:
+            description = "(｡•́︿•̀｡) Tu dois être dans un salon vocal !"
+            color = 0xFF9AA2
+        else:
+            description = "Tu dois être dans un salon vocal pour utiliser cette commande."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
 
@@ -82,10 +120,14 @@ async def play(interaction: discord.Interaction, query: str):
         try:
             music_player.voice_client = await interaction.user.voice.channel.connect()
         except Exception as e:
-            embed = Embed(
-                description="Erreur lors de la connexion au salon vocal.",
-                color=discord.Color.red()
-            )
+            if is_kawaii:
+                description = "(╥﹏╥) Je n'ai pas pu me connecter..."
+                color = 0xFF9AA2
+            else:
+                description = "Erreur lors de la connexion au salon vocal."
+                color = discord.Color.red()
+                
+            embed = Embed(description=description, color=color)
             await interaction.response.send_message(embed=embed, ephemeral=True)
             print(f"Erreur : {e}")
             return
@@ -101,11 +143,16 @@ async def play(interaction: discord.Interaction, query: str):
             return
 
         if len(spotify_queries) > 1:
-            embed = Embed(
-                title="🎶 Playlist Spotify ajoutée",
-                description=f"**{len(spotify_queries)} titres** en cours d'ajout...",
-                color=discord.Color.green()
-            )
+            if is_kawaii:
+                title = "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST SPOTIFY"
+                description = f"**{len(spotify_queries)} musiques** ajoutées !"
+                color = 0xB5EAD7
+            else:
+                title = "🎶 Playlist Spotify ajoutée"
+                description = f"**{len(spotify_queries)} titres** en cours d'ajout..."
+                color = discord.Color.green()
+                
+            embed = Embed(title=title, description=description, color=color)
             await interaction.followup.send(embed=embed)
 
         for spotify_query in spotify_queries:
@@ -122,23 +169,30 @@ async def play(interaction: discord.Interaction, query: str):
                     await music_player.queue.put((video["url"], False))
                     
                     if len(spotify_queries) == 1:
+                        if is_kawaii:
+                            title = "(っ◕‿◕)っ ♫ MUSIQUE AJOUTÉE ♫"
+                            color = 0xC7CEEA
+                        else:
+                            title = "🎵 Ajouté à la file d'attente"
+                            color = discord.Color.blue()
+                            
                         embed = Embed(
-                            title="🎵 Ajouté à la file d'attente",
+                            title=title,
                             description=f"[{video['title']}]({video['webpage_url']})",
-                            color=discord.Color.blue()
+                            color=color
                         )
                         embed.set_thumbnail(url=video["thumbnail"])
+                        if is_kawaii:
+                            embed.set_footer(text="☆⌒(≧▽° )")
                         await interaction.followup.send(embed=embed)
             except Exception as e:
                 print(f"Erreur conversion Spotify: {e}")
                 continue
     else:
-        # Vérifie si c'est un lien SoundCloud
+        # Vérifie si c'est un lien SoundCloud ou YouTube
         soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
-        is_soundcloud = soundcloud_regex.match(query)
-        
-        # Vérifie si c'est un lien YouTube
         youtube_regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$')
+        is_soundcloud = soundcloud_regex.match(query)
         is_youtube = youtube_regex.match(query)
         
         if is_soundcloud or is_youtube:
@@ -155,35 +209,51 @@ async def play(interaction: discord.Interaction, query: str):
                     # Gestion des playlists
                     if "entries" in info:
                         for entry in info["entries"]:
-                            if entry:  # Vérifie que l'entrée n'est pas None
+                            if entry:
                                 await music_player.queue.put((entry["url"], True))
 
-                        if info["entries"] and info["entries"][0]:  # Vérifie que la première entrée existe
+                        if info["entries"] and info["entries"][0]:
                             thumbnail = info["entries"][0].get("thumbnail")
-                            embed = Embed(
-                                title="🎶 Playlist ajoutée",
-                                description=f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente.",
-                                color=discord.Color.green()
-                            )
+                            if is_kawaii:
+                                title = "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
+                                description = f"**{len(info['entries'])} musiques** ajoutées !"
+                                color = 0xE2F0CB
+                            else:
+                                title = "🎶 Playlist ajoutée"
+                                description = f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente."
+                                color = discord.Color.green()
+                                
+                            embed = Embed(title=title, description=description, color=color)
                             if thumbnail:
                                 embed.set_thumbnail(url=thumbnail)
                             await interaction.followup.send(embed=embed)
                     else:
                         # Gestion des singles
                         await music_player.queue.put((info["url"], False))
+                        if is_kawaii:
+                            title = "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ MUSIQUE AJOUTÉE"
+                            color = 0xFFDAC1
+                        else:
+                            title = "🎵 Ajouté à la file d'attente"
+                            color = discord.Color.blue()
+                            
                         embed = Embed(
-                            title="🎵 Ajouté à la file d'attente",
+                            title=title,
                             description=f"[{info['title']}]({info['webpage_url']})",
-                            color=discord.Color.blue()
+                            color=color
                         )
                         if info.get("thumbnail"):
                             embed.set_thumbnail(url=info["thumbnail"])
                         await interaction.followup.send(embed=embed)
             except Exception as e:
-                embed = Embed(
-                    description="Erreur lors de l'ajout de la vidéo ou de la playlist.",
-                    color=discord.Color.red()
-                )
+                if is_kawaii:
+                    description = "(´；ω；`) Problème avec cette vidéo..."
+                    color = 0xFF9AA2
+                else:
+                    description = "Erreur lors de l'ajout de la vidéo ou de la playlist."
+                    color = discord.Color.red()
+                    
+                embed = Embed(description=description, color=color)
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 print(f"Erreur : {e}")
         else:
@@ -199,27 +269,41 @@ async def play(interaction: discord.Interaction, query: str):
                     info = ydl.extract_info(query, download=False)
                     video = info["entries"][0] if "entries" in info else info
                     await music_player.queue.put((video["url"], False))
+                    
+                    if is_kawaii:
+                        title = "ヽ(>∀<☆)ノ MUSIQUE TROUVÉE !"
+                        color = 0xB5EAD7
+                    else:
+                        title = "🎵 Ajouté à la file d'attente"
+                        color = discord.Color.blue()
+                        
                     embed = Embed(
-                        title="🎵 Ajouté à la file d'attente",
+                        title=title,
                         description=f"[{video['title']}]({video['webpage_url']})",
-                        color=discord.Color.blue()
+                        color=color
                     )
                     if video.get("thumbnail"):
                         embed.set_thumbnail(url=video["thumbnail"])
                     await interaction.followup.send(embed=embed)
             except Exception as e:
-                embed = Embed(
-                    description="Erreur lors de la recherche. Réessaie avec un autre titre.",
-                    color=discord.Color.red()
-                )
+                if is_kawaii:
+                    description = "(︶︹︺) Je n'ai pas trouvé cette musique..."
+                    color = 0xFF9AA2
+                else:
+                    description = "Erreur lors de la recherche. Réessaie avec un autre titre."
+                    color = discord.Color.red()
+                    
+                embed = Embed(description=description, color=color)
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 print(f"Erreur : {e}")
 
     if not music_player.current_task or music_player.current_task.done():
-        music_player.current_task = asyncio.create_task(play_audio())
+        music_player.current_task = asyncio.create_task(play_audio(guild_id))
 
-# Fonction pour lire l'audio
-async def play_audio():
+async def play_audio(guild_id):
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     while True:
         if music_player.queue.empty():
             music_player.current_task = None
@@ -243,11 +327,16 @@ async def play_audio():
                 audio_url = info['url']
 
                 if is_playlist and music_player.text_channel:
-                    embed = Embed(
-                        title="🎵 En cours de lecture",
-                        description=f"[{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})",
-                        color=discord.Color.green()
-                    )
+                    if is_kawaii:
+                        title = "♫♬ MAINTENANT EN LECTURE ♬♫"
+                        description = f"♪(´▽｀) [{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})"
+                        color = 0xC7CEEA
+                    else:
+                        title = "🎵 En cours de lecture"
+                        description = f"[{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})"
+                        color = discord.Color.green()
+                        
+                    embed = Embed(title=title, description=description, color=color)
                     if info.get('thumbnail'):
                         embed.set_thumbnail(url=info['thumbnail'])
                     await music_player.text_channel.send(embed=embed)
@@ -272,67 +361,117 @@ async def play_audio():
             print(f"Erreur lecture audio: {e}")
             continue
 
-# Commandes
-@bot.tree.command(name="pause", description="Met en pause la lecture en cours.")
+@bot.tree.command(name="pause", description="Met en pause la lecture en cours")
 async def pause(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     if music_player.voice_client and music_player.voice_client.is_playing():
         music_player.voice_client.pause()
-        embed = Embed(
-            description="⏸️ Lecture mise en pause.",
-            color=discord.Color.orange()
-        )
+        if is_kawaii:
+            description = "(´･_･`) Musique en pause..."
+            color = 0xFFB7B2
+        else:
+            description = "⏸️ Lecture mise en pause."
+            color = discord.Color.orange()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed)
     else:
-        embed = Embed(
-            description="Aucune lecture en cours.",
-            color=discord.Color.red()
-        )
+        if is_kawaii:
+            description = "(・_・;) Rien ne joue actuellement..."
+            color = 0xFF9AA2
+        else:
+            description = "Aucune lecture en cours."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@bot.tree.command(name="resume", description="Reprend la lecture mise en pause.")
+@bot.tree.command(name="resume", description="Reprend la lecture")
 async def resume(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     if music_player.voice_client and music_player.voice_client.is_paused():
         music_player.voice_client.resume()
-        embed = Embed(
-            description="▶️ Lecture reprise.",
-            color=discord.Color.green()
-        )
+        if is_kawaii:
+            description = "☆*:.｡.o(≧▽≦)o.｡.:*☆ C'est reparti !"
+            color = 0xB5EAD7
+        else:
+            description = "▶️ Lecture reprise."
+            color = discord.Color.green()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed)
     else:
-        embed = Embed(
-            description="Aucune lecture mise en pause.",
-            color=discord.Color.red()
-        )
+        if is_kawaii:
+            description = "(´･ω･`) Aucune musique en pause..."
+            color = 0xFF9AA2
+        else:
+            description = "Aucune lecture mise en pause."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@bot.tree.command(name="skip", description="Passe à la chanson suivante.")
+@bot.tree.command(name="skip", description="Passe à la chanson suivante")
 async def skip(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     if music_player.voice_client and music_player.voice_client.is_playing():
         music_player.voice_client.stop()
-        embed = Embed(
-            description="⏭️ Chanson actuelle ignorée.",
-            color=discord.Color.blue()
-        )
+        if is_kawaii:
+            description = "(ノ°ο°)ノ Skippé ! Prochaine musique ~"
+            color = 0xE2F0CB
+        else:
+            description = "⏭️ Chanson actuelle ignorée."
+            color = discord.Color.blue()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed)
     else:
-        embed = Embed(
-            description="Aucune chanson en cours.",
-            color=discord.Color.red()
-        )
+        if is_kawaii:
+            description = "(；一_一) Rien à skipper..."
+            color = 0xFF9AA2
+        else:
+            description = "Aucune chanson en cours."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@bot.tree.command(name="loop", description="Active ou désactive la lecture en boucle pour la musique actuelle.")
+@bot.tree.command(name="loop", description="Active/désactive la boucle")
 async def loop(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     music_player.loop_current = not music_player.loop_current
-    state = "activée" if music_player.loop_current else "désactivée"
+    
+    if is_kawaii:
+        state = "activée (◕‿◕✿)" if music_player.loop_current else "désactivée (︶︹︺)"
+        color = 0xC7CEEA
+    else:
+        state = "activée" if music_player.loop_current else "désactivée"
+        color = discord.Color.blue()
+        
     embed = Embed(
         description=f"🔁 Lecture en boucle pour la musique actuelle {state}.",
-        color=discord.Color.blue()
+        color=color
     )
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="stop", description="Arrête la lecture et déconnecte le bot.")
+@bot.tree.command(name="stop", description="Arrête la lecture et déconnecte le bot")
 async def stop(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
     if music_player.voice_client:
         if music_player.voice_client.is_playing():
             music_player.voice_client.stop()
@@ -345,16 +484,24 @@ async def stop(interaction: discord.Interaction):
         music_player.current_task = None
         music_player.current_url = None
 
-        embed = Embed(
-            description="⏹️ Lecture arrêtée et bot déconnecté.",
-            color=discord.Color.red()
-        )
+        if is_kawaii:
+            description = "(ﾉ´･ω･)ﾉ ﾐ ┸━┸ J'ai tout arrêté ! Bye bye ~"
+            color = 0xFF9AA2
+        else:
+            description = "⏹️ Lecture arrêtée et bot déconnecté."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed)
     else:
-        embed = Embed(
-            description="Le bot n'est pas connecté à un salon vocal.",
-            color=discord.Color.red()
-        )
+        if is_kawaii:
+            description = "(￣ω￣;) Je ne suis pas connecté..."
+            color = 0xFF9AA2
+        else:
+            description = "Le bot n'est pas connecté à un salon vocal."
+            color = discord.Color.red()
+            
+        embed = Embed(description=description, color=color)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @bot.event
@@ -365,51 +512,31 @@ async def on_ready():
         print(f"Commandes slash synchronisées : {len(synced)}")
 
         async def rotate_presence():
-            statuses = [
-                "vos liens Spotify 🎧",
-                "/play [lien] 🔥",
-            ]
-            
             while True:
-                try:
-                    for status in statuses:
-                        # Vérifie que la connexion est toujours active
-                        if not bot.is_ready() or bot.is_closed():
-                            return
-                            
-                        try:
-                            await bot.change_presence(
-                                activity=discord.Activity(
-                                    name=status,
-                                    type=discord.ActivityType.listening
-                                )
+                if not bot.is_ready() or bot.is_closed():
+                    return
+                
+                statuses = [
+                    "vos liens Spotify 🎧",
+                    "/play [lien] 🔥",
+                ]
+                
+                for status in statuses:
+                    try:
+                        await bot.change_presence(
+                            activity=discord.Activity(
+                                name=status,
+                                type=discord.ActivityType.listening
                             )
-                        except (discord.ConnectionClosed, discord.HTTPException) as e:
-                            print(f"Erreur changement statut (réessai dans 5s): {type(e).__name__}")
-                            await asyncio.sleep(5)
-                            continue
-                            
-                        await asyncio.sleep(5)  # Intervalle de 5 secondes
-                        
-                except Exception as e:
-                    print(f"Erreur inattendue (rotation continuée): {type(e).__name__}: {e}")
-                    await asyncio.sleep(5)
+                        )
+                        await asyncio.sleep(10)
+                    except Exception as e:
+                        print(f"Erreur changement statut: {e}")
+                        await asyncio.sleep(5)
 
-        # Démarrer la tâche avec une gestion d'erreur supplémentaire
-        def start_task():
-            task = bot.loop.create_task(rotate_presence())
-            def restart_if_failed(fut):
-                try:
-                    fut.result()  # Vérifie s'il y a eu une exception
-                except Exception as e:
-                    print(f"Tâche de rotation crashée, redémarrage: {e}")
-                    start_task()  # Relance la tâche
-                    
-            task.add_done_callback(restart_if_failed)
-            
-        start_task()
+        bot.loop.create_task(rotate_presence())
         
     except Exception as e:
         print(f"Erreur lors de la synchronisation des commandes : {e}")
-        
-bot.run("TON_TOKEN")
+                
+bot.run("TOKEN")
