@@ -434,6 +434,18 @@
       font-size: 0.9rem;
     }
 
+    .beta-badge {
+      display: inline-block;
+      background: rgba(138, 43, 226, 0.2);
+      color: var(--primary);
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+
     /* How It Works Section */
     .how-it-works {
       padding: 100px 5%;
@@ -790,29 +802,30 @@
   <section id="platforms" class="platforms">
     <h2 class="section-title fade-in">SUPPORTED PLATFORMS</h2>
     <p class="fade-in" style="max-width: 800px; margin: 0 auto 50px; color: var(--text-secondary); font-size: 1.2rem;">
-      Playify supports music from multiple platforms. You can use direct URLs or simply search by keywords.
+      Playify supports music from multiple platforms. You can use direct URLs or simply search by keywords. 
+      All platforms support songs, albums and playlists, except Spotify where playlist support is currently in beta.
     </p>
     <div class="platforms-grid">
       <div class="platform-card fade-in">
         <div class="platform-icon">
           <i class="fab fa-spotify"></i>
         </div>
-        <h3 class="platform-name">Spotify</h3>
-        <p class="platform-desc">Play songs, albums or playlists directly from Spotify</p>
+        <h3 class="platform-name">Spotify <span class="beta-badge">BETA</span></h3>
+        <p class="platform-desc">Play songs and albums directly from Spotify. Playlist support in beta.</p>
       </div>
       <div class="platform-card fade-in delay-1">
         <div class="platform-icon">
           <i class="fab fa-youtube"></i>
         </div>
         <h3 class="platform-name">YouTube</h3>
-        <p class="platform-desc">Search and play any song or video from YouTube</p>
+        <p class="platform-desc">Search and play any song, album or playlist from YouTube</p>
       </div>
       <div class="platform-card fade-in delay-2">
         <div class="platform-icon">
           <i class="fab fa-soundcloud"></i>
         </div>
         <h3 class="platform-name">SoundCloud</h3>
-        <p class="platform-desc">Stream music directly from SoundCloud's vast library</p>
+        <p class="platform-desc">Stream music, albums and playlists directly from SoundCloud</p>
       </div>
     </div>
   </section>
