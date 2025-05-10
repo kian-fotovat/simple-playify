@@ -88,7 +88,7 @@ Si vous êtes allergique à la ligne de commande, double-cliquez simplement sur 
 ## 🔗 Pas envie de l’héberger ?
 
 Pas de stress ! Playify est déjà en ligne 24/7. Ajoutez-le à votre serveur ici :
-➡ **[Inviter Playify](https://alan7383.github.io/playify-site/)**
+➡ **[Inviter Playify](https://alan7383.github.io/playify/)**
 
 ---
 
