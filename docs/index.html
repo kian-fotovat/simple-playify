@@ -385,11 +385,60 @@
       font-size: 1.1rem;
     }
 
+    /* Supported Platforms Section */
+    .platforms {
+      padding: 100px 5%;
+      text-align: center;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(10, 10, 10, 0.8));
+    }
+
+    .platforms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 30px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .platform-card {
+      background: rgba(20, 20, 20, 0.6);
+      border-radius: 15px;
+      padding: 30px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(138, 43, 226, 0.1);
+    }
+
+    .platform-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(138, 43, 226, 0.2);
+      border-color: rgba(138, 43, 226, 0.3);
+    }
+
+    .platform-icon {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      color: var(--primary);
+    }
+
+    .platform-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      font-family: 'SequelGeoWide', sans-serif;
+    }
+
+    .platform-desc {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
     /* How It Works Section */
     .how-it-works {
       padding: 100px 5%;
       text-align: center;
-      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(10, 10, 10, 0.8));
+      background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), rgba(0, 0, 0, 0.9));
     }
 
     .steps {
@@ -594,6 +643,10 @@
       .feature-card {
         padding: 30px 20px;
       }
+
+      .platforms-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     @media (max-width: 480px) {
@@ -616,6 +669,10 @@
 
       .section-title {
         font-size: 2rem;
+      }
+
+      .platforms-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -660,6 +717,7 @@
     <div class="logo">PLAYIFY</div>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#platforms">Platforms</a>
       <a href="#how-it-works">How It Works</a>
       <a href="https://github.com/alan7383/playify" target="_blank">GitHub</a>
     </div>
@@ -728,6 +786,37 @@
     </div>
   </section>
 
+  <!-- Supported Platforms Section -->
+  <section id="platforms" class="platforms">
+    <h2 class="section-title fade-in">SUPPORTED PLATFORMS</h2>
+    <p class="fade-in" style="max-width: 800px; margin: 0 auto 50px; color: var(--text-secondary); font-size: 1.2rem;">
+      Playify supports music from multiple platforms. You can use direct URLs or simply search by keywords.
+    </p>
+    <div class="platforms-grid">
+      <div class="platform-card fade-in">
+        <div class="platform-icon">
+          <i class="fab fa-spotify"></i>
+        </div>
+        <h3 class="platform-name">Spotify</h3>
+        <p class="platform-desc">Play songs, albums or playlists directly from Spotify</p>
+      </div>
+      <div class="platform-card fade-in delay-1">
+        <div class="platform-icon">
+          <i class="fab fa-youtube"></i>
+        </div>
+        <h3 class="platform-name">YouTube</h3>
+        <p class="platform-desc">Search and play any song or video from YouTube</p>
+      </div>
+      <div class="platform-card fade-in delay-2">
+        <div class="platform-icon">
+          <i class="fab fa-soundcloud"></i>
+        </div>
+        <h3 class="platform-name">SoundCloud</h3>
+        <p class="platform-desc">Stream music directly from SoundCloud's vast library</p>
+      </div>
+    </div>
+  </section>
+
   <!-- How It Works Section -->
   <section id="how-it-works" class="how-it-works">
     <h2 class="section-title fade-in">HOW IT WORKS</h2>
@@ -773,6 +862,7 @@
         <h3>Links</h3>
         <ul>
           <li><a href="#features">Features</a></li>
+          <li><a href="#platforms">Platforms</a></li>
           <li><a href="#how-it-works">How It Works</a></li>
           <li><a href="https://github.com/alan7383/playify" target="_blank">GitHub</a></li>
         </ul>
