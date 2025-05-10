@@ -787,7 +787,7 @@
           <i class="fas fa-music"></i>
         </div>
         <h3 class="feature-title">High Quality Audio</h3>
-        <p class="feature-desc">Enjoy crystal clear audio streaming with no interruptions or buffering.</p>
+        <p class="feature-desc">Enjoy crystal clear audio streaming with minimal interruptions.</p>
       </div>
       <div class="feature-card fade-in delay-1">
         <div class="feature-icon">
@@ -800,22 +800,22 @@
         <div class="feature-icon">
           <i class="fas fa-list-ol"></i>
         </div>
-        <h3 class="feature-title">Playlist Management</h3>
-        <p class="feature-desc">Create playlists to queue multiple songs at once during your listening session.</p>
+        <h3 class="feature-title">Playlist Support</h3>
+        <p class="feature-desc">Play existing playlists or queue multiple songs from various platforms.</p>
       </div>
       <div class="feature-card fade-in">
         <div class="feature-icon">
           <i class="fas fa-robot"></i>
         </div>
         <h3 class="feature-title">24/7 Availability</h3>
-        <p class="feature-desc">Reliable uptime with auto-reconnect features to keep the music playing.</p>
+        <p class="feature-desc">Features auto-reconnect to maintain music playback in case of disconnections.</p>
       </div>
       <div class="feature-card fade-in delay-1">
         <div class="feature-icon">
-          <i class="fas fa-smile"></i>
+          <i class="fas fa-language"></i>
         </div>
-        <h3 class="feature-title">Kaomoji Fun</h3>
-        <p class="feature-desc">Use /kaomoji to add fun Japanese emoticons to your messages.</p>
+        <h3 class="feature-title">Kaomoji Mode</h3>
+        <p class="feature-desc">Toggle kaomoji mode to make the bot's responses more fun with Japanese emoticons.</p>
       </div>
       <div class="feature-card fade-in delay-2">
         <div class="feature-icon">
@@ -1046,7 +1046,7 @@
     
     const appearOptions = {
       threshold: 0.1,
-      rootMargin: "0px 0px -100px 0px"
+      rootMargin: "0px 0px -50px 0px" // Reduced rootMargin to trigger visibility earlier
     };
 
     const appearOnScroll = new IntersectionObserver(function(entries, appearOnScroll) {
@@ -1060,8 +1060,14 @@
       });
     }, appearOptions);
 
+    // Check elements visibility on page load
     fadeElements.forEach(fadeElement => {
-      appearOnScroll.observe(fadeElement);
+      const rect = fadeElement.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        fadeElement.classList.add('visible');
+      } else {
+        appearOnScroll.observe(fadeElement);
+      }
     });
 
     // Smooth scroll for anchor links
