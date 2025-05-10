@@ -559,6 +559,30 @@
       line-height: 1.6;
     }
 
+    .no-limits {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      max-width: 800px;
+      margin: 0 auto 40px;
+    }
+
+    .no-limits-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(138, 43, 226, 0.1);
+      padding: 10px 20px;
+      border-radius: 50px;
+      border: 1px solid rgba(138, 43, 226, 0.2);
+      backdrop-filter: blur(5px);
+    }
+
+    .no-limits-item i {
+      color: var(--primary);
+    }
+
     /* Footer */
     footer {
       background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), var(--darker));
@@ -658,6 +682,11 @@
 
       .platforms-grid {
         grid-template-columns: repeat(2, 1fr);
+      }
+
+      .no-limits {
+        flex-direction: column;
+        align-items: center;
       }
     }
 
@@ -857,6 +886,22 @@
     <div class="fade-in">
       <h2>READY TO ENHANCE YOUR SERVER?</h2>
       <p>Join communities enjoying the ultimate music experience. Playify is free forever with no hidden costs.</p>
+      
+      <div class="no-limits fade-in delay-1">
+        <div class="no-limits-item">
+          <i class="fas fa-infinity"></i>
+          <span>No playlist limits</span>
+        </div>
+        <div class="no-limits-item">
+          <i class="fas fa-ad"></i>
+          <span>Zero advertisements</span>
+        </div>
+        <div class="no-limits-item">
+          <i class="fas fa-dollar-sign"></i>
+          <span>Completely free</span>
+        </div>
+      </div>
+      
       <a href="https://discord.com/oauth2/authorize?client_id=1330613913569726575&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add Playify Now</a>
     </div>
   </section>
