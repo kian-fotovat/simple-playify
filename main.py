@@ -6,6 +6,7 @@ import yt_dlp
 import re
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+import concurrent.futures
 
 # Intents pour le bot
 intents = discord.Intents.default()
@@ -24,6 +25,18 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
+
+# Fonction asynchrone pour extraire les informations avec yt_dlp
+async def extract_info_async(ydl_opts, query, loop=None):
+    """Exécute yt_dlp.extract_info dans un thread séparé pour éviter de bloquer."""
+    if loop is None:
+        loop = asyncio.get_running_loop()
+    
+    def extract():
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            return ydl.extract_info(query, download=False)
+    
+    return await loop.run_in_executor(None, extract)
 
 # Stockage des informations de lecture et des modes par serveur
 class MusicPlayer:
@@ -163,28 +176,27 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_warnings": True,
                     "default_search": "ytsearch1",
                 }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(spotify_query, download=False)
-                    video = info["entries"][0] if "entries" in info else info
-                    await music_player.queue.put((video["url"], False))
-                    
-                    if len(spotify_queries) == 1:
-                        if is_kawaii:
-                            title = "(っ◕‿◕)っ ♫ MUSIQUE AJOUTÉE ♫"
-                            color = 0xC7CEEA
-                        else:
-                            title = "🎵 Ajouté à la file d'attente"
-                            color = discord.Color.blue()
-                            
-                        embed = Embed(
-                            title=title,
-                            description=f"[{video['title']}]({video['webpage_url']})",
-                            color=color
-                        )
-                        embed.set_thumbnail(url=video["thumbnail"])
-                        if is_kawaii:
-                            embed.set_footer(text="☆⌒(≧▽° )")
-                        await interaction.followup.send(embed=embed)
+                info = await extract_info_async(ydl_opts, spotify_query)
+                video = info["entries"][0] if "entries" in info else info
+                await music_player.queue.put((video["url"], False))
+                
+                if len(spotify_queries) == 1:
+                    if is_kawaii:
+                        title = "(っ◕‿◕)っ ♫ MUSIQUE AJOUTÉE ♫"
+                        color = 0xC7CEEA
+                    else:
+                        title = "🎵 Ajouté à la file d'attente"
+                        color = discord.Color.blue()
+                        
+                    embed = Embed(
+                        title=title,
+                        description=f"[{video['title']}]({video['webpage_url']})",
+                        color=color
+                    )
+                    embed.set_thumbnail(url=video["thumbnail"])
+                    if is_kawaii:
+                        embed.set_footer(text="☆⌒(≧▽° )")
+                    await interaction.followup.send(embed=embed)
             except Exception as e:
                 print(f"Erreur conversion Spotify: {e}")
                 continue
@@ -203,48 +215,45 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_warnings": True,
                     "extract_flat": "in_playlist",
                 }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(query, download=False)
-                    
-                    # Gestion des playlists
-                    if "entries" in info:
-                        for entry in info["entries"]:
-                            if entry:
-                                await music_player.queue.put((entry["url"], True))
+                info = await extract_info_async(ydl_opts, query)
+                
+                if "entries" in info:
+                    for entry in info["entries"]:
+                        if entry:
+                            await music_player.queue.put((entry["url"], True))
 
-                        if info["entries"] and info["entries"][0]:
-                            thumbnail = info["entries"][0].get("thumbnail")
-                            if is_kawaii:
-                                title = "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
-                                description = f"**{len(info['entries'])} musiques** ajoutées !"
-                                color = 0xE2F0CB
-                            else:
-                                title = "🎶 Playlist ajoutée"
-                                description = f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente."
-                                color = discord.Color.green()
-                                
-                            embed = Embed(title=title, description=description, color=color)
-                            if thumbnail:
-                                embed.set_thumbnail(url=thumbnail)
-                            await interaction.followup.send(embed=embed)
-                    else:
-                        # Gestion des singles
-                        await music_player.queue.put((info["url"], False))
+                    if info["entries"] and info["entries"][0]:
+                        thumbnail = info["entries"][0].get("thumbnail")
                         if is_kawaii:
-                            title = "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ MUSIQUE AJOUTÉE"
-                            color = 0xFFDAC1
+                            title = "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
+                            description = f"**{len(info['entries'])} musiques** ajoutées !"
+                            color = 0xE2F0CB
                         else:
-                            title = "🎵 Ajouté à la file d'attente"
-                            color = discord.Color.blue()
+                            title = "🎶 Playlist ajoutée"
+                            description = f"**{len(info['entries'])} titres** ont été ajoutés à la file d'attente."
+                            color = discord.Color.green()
                             
-                        embed = Embed(
-                            title=title,
-                            description=f"[{info['title']}]({info['webpage_url']})",
-                            color=color
-                        )
-                        if info.get("thumbnail"):
-                            embed.set_thumbnail(url=info["thumbnail"])
+                        embed = Embed(title=title, description=description, color=color)
+                        if thumbnail:
+                            embed.set_thumbnail(url=thumbnail)
                         await interaction.followup.send(embed=embed)
+                else:
+                    await music_player.queue.put((info["url"], False))
+                    if is_kawaii:
+                        title = "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ MUSIQUE AJOUTÉE"
+                        color = 0xFFDAC1
+                    else:
+                        title = "🎵 Ajouté à la file d'attente"
+                        color = discord.Color.blue()
+                        
+                    embed = Embed(
+                        title=title,
+                        description=f"[{info['title']}]({info['webpage_url']})",
+                        color=color
+                    )
+                    if info.get("thumbnail"):
+                        embed.set_thumbnail(url=info["thumbnail"])
+                    await interaction.followup.send(embed=embed)
             except Exception as e:
                 if is_kawaii:
                     description = "(´；ω；`) Problème avec cette vidéo..."
@@ -265,26 +274,25 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_warnings": True,
                     "default_search": "ytsearch1",
                 }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(query, download=False)
-                    video = info["entries"][0] if "entries" in info else info
-                    await music_player.queue.put((video["url"], False))
+                info = await extract_info_async(ydl_opts, query)
+                video = info["entries"][0] if "entries" in info else info
+                await music_player.queue.put((video["url"], False))
+                
+                if is_kawaii:
+                    title = "ヽ(>∀<☆)ノ MUSIQUE TROUVÉE !"
+                    color = 0xB5EAD7
+                else:
+                    title = "🎵 Ajouté à la file d'attente"
+                    color = discord.Color.blue()
                     
-                    if is_kawaii:
-                        title = "ヽ(>∀<☆)ノ MUSIQUE TROUVÉE !"
-                        color = 0xB5EAD7
-                    else:
-                        title = "🎵 Ajouté à la file d'attente"
-                        color = discord.Color.blue()
-                        
-                    embed = Embed(
-                        title=title,
-                        description=f"[{video['title']}]({video['webpage_url']})",
-                        color=color
-                    )
-                    if video.get("thumbnail"):
-                        embed.set_thumbnail(url=video["thumbnail"])
-                    await interaction.followup.send(embed=embed)
+                embed = Embed(
+                    title=title,
+                    description=f"[{video['title']}]({video['webpage_url']})",
+                    color=color
+                )
+                if video.get("thumbnail"):
+                    embed.set_thumbnail(url=video["thumbnail"])
+                await interaction.followup.send(embed=embed)
             except Exception as e:
                 if is_kawaii:
                     description = "(︶︹︺) Je n'ai pas trouvé cette musique..."
@@ -322,40 +330,39 @@ async def play_audio(guild_id):
                 "quiet": True,
                 "no_warnings": True,
             }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                audio_url = info['url']
+            info = await extract_info_async(ydl_opts, url)
+            audio_url = info['url']
 
-                if is_playlist and music_player.text_channel:
-                    if is_kawaii:
-                        title = "♫♬ MAINTENANT EN LECTURE ♬♫"
-                        description = f"♪(´▽｀) [{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})"
-                        color = 0xC7CEEA
-                    else:
-                        title = "🎵 En cours de lecture"
-                        description = f"[{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})"
-                        color = discord.Color.green()
-                        
-                    embed = Embed(title=title, description=description, color=color)
-                    if info.get('thumbnail'):
-                        embed.set_thumbnail(url=info['thumbnail'])
-                    await music_player.text_channel.send(embed=embed)
+            if is_playlist and music_player.text_channel:
+                if is_kawaii:
+                    title = "♫♬ MAINTENANT EN LECTURE ♬♫"
+                    description = f"♪(´▽｀) [{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})"
+                    color = 0xC7CEEA
+                else:
+                    title = "🎵 En cours de lecture"
+                    description = f"[{info.get('title', 'Titre inconnu')}]({info.get('webpage_url', url)})"
+                    color = discord.Color.green()
+                    
+                embed = Embed(title=title, description=description, color=color)
+                if info.get('thumbnail'):
+                    embed.set_thumbnail(url=info['thumbnail'])
+                await music_player.text_channel.send(embed=embed)
 
-                ffmpeg_options = {
-                    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-                    "options": "-vn",
-                }
-                music_player.voice_client.play(
-                    discord.FFmpegPCMAudio(audio_url, **ffmpeg_options),
-                    after=lambda e: print(f"Erreur: {e}") if e else None
-                )
+            ffmpeg_options = {
+                "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+                "options": "-vn",
+            }
+            music_player.voice_client.play(
+                discord.FFmpegPCMAudio(audio_url, **ffmpeg_options),
+                after=lambda e: print(f"Erreur: {e}") if e else None
+            )
 
-                while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
-                    await asyncio.sleep(1)
+            while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
+                await asyncio.sleep(1)
 
-                if music_player.loop_current:
-                    await music_player.queue.put((url, is_playlist))
-                    continue
+            if music_player.loop_current:
+                await music_player.queue.put((url, is_playlist))
+                continue
 
         except Exception as e:
             print(f"Erreur lecture audio: {e}")
