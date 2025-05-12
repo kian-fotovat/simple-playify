@@ -121,6 +121,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
 
     .section-title {
@@ -129,6 +130,7 @@
       font-family: 'SequelGeoWide', sans-serif;
       color: var(--text);
       position: relative;
+      text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
     }
 
     .section-title::after {
@@ -187,55 +189,118 @@
       line-height: 1.6;
     }
 
+    /* Scroll Down Arrow */
+    .scroll-down {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.5rem;
+      color: var(--text);
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+      cursor: pointer;
+      animation: bounce 2s infinite;
+      z-index: 10;
+    }
+
+    .scroll-down:hover {
+      text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateX(-50%) translateY(0);
+      }
+      40% {
+        transform: translateX(-50%) translateY(-10px);
+      }
+      60% {
+        transform: translateX(-50%) translateY(-5px);
+      }
+    }
+
     /* Maintenance Section */
     .maintenance-section {
-      padding: 0 5% 100px;
+      padding: 100px 5%;
       text-align: center;
-      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(10, 10, 10, 0.8));
+      background: linear-gradient(to bottom, rgba(15, 15, 15, 0.9), rgba(5, 5, 5, 0.9));
+      border-top: 1px solid rgba(138, 43, 226, 0.2);
+      box-shadow: 0 0 20px rgba(138, 43, 226, 0.1);
+    }
+
+    .maintenance-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .maintenance-section .section-title {
+      font-size: 3.5rem;
+      margin-bottom: 60px;
     }
 
     .maintenance-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
-      max-width: 1200px;
-      margin: 0 auto;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 40px;
     }
 
     .maintenance-card {
-      background: rgba(20, 20, 20, 0.6);
-      border-radius: 15px;
-      padding: 30px;
+      background: rgba(25, 25, 25, 0.7);
+      border-radius: 20px;
+      padding: 40px;
       text-align: center;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(138, 43, 226, 0.1);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(138, 43, 226, 0.15);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
       transition: all 0.3s ease;
+      animation: pulse 2s ease-in-out infinite;
     }
 
     .maintenance-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 40px rgba(138, 43, 226, 0.3);
-      border-color: rgba(138, 43, 226, 0.3);
+      transform: translateY(-10px);
+      box-shadow: 0 20px 50px rgba(138, 43, 226, 0.4);
+      border: 2px solid linear-gradient(90deg, var(--primary), var(--secondary));
     }
 
     .maintenance-date {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       font-family: 'SequelGeoWide', sans-serif;
-      margin-bottom: 15px;
+      font-weight: 600;
+      margin-bottom: 20px;
       color: var(--primary);
+      text-shadow: 0 0 8px rgba(138, 43, 226, 0.5);
     }
 
     .maintenance-desc {
-      color: var(--text-secondary);
-      font-size: 1.1rem;
-      line-height: 1.6;
+      color: var(--text);
+      font-size: 1.2rem;
+      line-height: 1.7;
+    }
+
+    /* Pulse Animation */
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(138, 43, 226, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 20px 10px rgba(138, 43, 226, 0.1);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(138, 43, 226, 0.3);
+      }
     }
 
     /* Responsive Design */
     @media (max-width: 768px) {
       .section-title {
         font-size: 2.5rem;
+      }
+
+      .maintenance-section .section-title {
+        font-size: 3rem;
       }
 
       .status-card {
@@ -253,11 +318,32 @@
       .status-desc {
         font-size: 1rem;
       }
+
+      .maintenance-card {
+        padding: 30px;
+      }
+
+      .maintenance-date {
+        font-size: 1.6rem;
+      }
+
+      .maintenance-desc {
+        font-size: 1.1rem;
+      }
+
+      .scroll-down {
+        font-size: 2rem;
+        bottom: 20px;
+      }
     }
 
     @media (max-width: 480px) {
       .section-title {
         font-size: 2rem;
+      }
+
+      .maintenance-section .section-title {
+        font-size: 2.5rem;
       }
 
       .nav-links {
@@ -280,12 +366,21 @@
         font-size: 0.9rem;
       }
 
+      .maintenance-card {
+        padding: 25px;
+      }
+
       .maintenance-date {
-        font-size: 1.3rem;
+        font-size: 1.4rem;
       }
 
       .maintenance-desc {
         font-size: 1rem;
+      }
+
+      .scroll-down {
+        font-size: 1.8rem;
+        bottom: 15px;
       }
     }
 
@@ -345,19 +440,20 @@
       <h3 class="status-title">Bot Status: Checking...</h3>
       <p class="status-desc">Checking the status of Playify. Please wait a moment.</p>
     </div>
+    <div class="scroll-down">
+      <i class="fas fa-chevron-down"></i>
+    </div>
   </section>
 
   <!-- Maintenance Section -->
   <section class="maintenance-section">
-    <h2 class="section-title fade-in">SCHEDULED MAINTENANCE</h2>
-    <div class="maintenance-grid">
-      <div class="maintenance-card fade-in delay-1">
-        <div class="maintenance-date">May 15, 2025</div>
-        <p class="maintenance-desc">Scheduled maintenance for server upgrades. Expected downtime: 2 hours from 02:00 to 04:00 UTC.</p>
-      </div>
-      <div class="maintenance-card fade-in delay-2">
-        <div class="maintenance-date">June 1, 2025</div>
-        <p class="maintenance-desc">Database optimization and bot updates. Expected downtime: 1 hour from 03:00 to 04:00 UTC.</p>
+    <div class="maintenance-container">
+      <h2 class="section-title fade-in">SCHEDULED MAINTENANCE</h2>
+      <div class="maintenance-grid">
+        <div class="maintenance-card fade-in delay-1">
+          <div class="maintenance-date">May 13, 2025</div>
+          <p class="maintenance-desc">The bot will be unavailable from 08:00 to 18:00 (local time) due to planned maintenance. Thanks for your patience!</p>
+        </div>
       </div>
     </div>
   </section>
@@ -500,12 +596,14 @@
       }
     });
 
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
+    // Smooth scroll for anchor links and scroll-down arrow
+    document.querySelectorAll('a[href^="#"], .scroll-down').forEach(element => {
+      element.addEventListener('click', function (e) {
         e.preventDefault();
-        
-        document.querySelector(this.getAttribute('href')).scrollIntoView({
+        const target = this.classList.contains('scroll-down') 
+          ? document.querySelector('.maintenance-section')
+          : document.querySelector(this.getAttribute('href'));
+        target.scrollIntoView({
           behavior: 'smooth'
         });
       });
