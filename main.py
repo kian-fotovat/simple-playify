@@ -8,11 +8,11 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import concurrent.futures
 import uuid
+import random  # Ajouté pour la commande shuffle
 
 # Intents pour le bot
 intents = discord.Intents.default()
 intents.messages = True
-intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
 
@@ -190,7 +190,15 @@ def get_messages(message_key, guild_id):
             "language_toggle": {
                 "normal": "Language set to {lang} for this server!",
                 "kawaii": "Language set to {lang} for this server! (✿◕‿◕)"
-            }
+            },
+            "shuffle_success": {  # Ajouté pour la commande shuffle
+                "normal": "🔀 Queue shuffled successfully!",
+                "kawaii": "(✿◕‿◕) Queue shuffled! Yay! ~"
+            },
+            "queue_empty": {  # Ajouté pour la commande shuffle
+                "normal": "The queue is empty.",
+                "kawaii": "(´･ω･`) No songs in the queue..."
+            },
         },
         "fr": {
             "no_voice_channel": {
@@ -213,7 +221,7 @@ def get_messages(message_key, guild_id):
                 "normal": "**{count} titres** en cours d'ajout...",
                 "kawaii": "**{count} musiques** ajoutées !"
             },
-            "song_added": {
+            " Hannah": {
                 "normal": "🎵 Ajouté à la file d'attente",
                 "kawaii": "(っ◕‿◕)っ ♫ MUSIQUE AJOUTÉE ♫"
             },
@@ -308,7 +316,15 @@ def get_messages(message_key, guild_id):
             "language_toggle": {
                 "normal": "Langue définie sur {lang} pour ce serveur !",
                 "kawaii": "Langue définie sur {lang} pour ce serveur ! (✿◕‿◕)"
-            }
+            },
+            "shuffle_success": {  # Ajouté pour la commande shuffle
+                "normal": "🔀 File d'attente mélangée avec succès !",
+                "kawaii": "(✿◕‿◕) File d'attente mélangée ! Youpi ! ~"
+            },
+            "queue_empty": {  # Ajouté pour la commande shuffle
+                "normal": "La file d'attente est vide.",
+                "kawaii": "(´･ω･`) Pas de musiques dans la file..."
+            },
         }
     }
     
@@ -696,6 +712,39 @@ async def stop(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Commande /shuffle
+@bot.tree.command(name="shuffle", description="Shuffle the current queue")
+async def shuffle(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
+    if not music_player.queue.empty():
+        # Extraire tous les éléments de la queue
+        items = []
+        while not music_player.queue.empty():
+            items.append(await music_player.queue.get())
+        
+        # Mélanger les éléments
+        random.shuffle(items)
+        
+        # Créer une nouvelle queue et y remettre les éléments mélangés
+        music_player.queue = asyncio.Queue()
+        for item in items:
+            await music_player.queue.put(item)
+        
+        embed = Embed(
+            description=get_messages("shuffle_success", guild_id),
+            color=0xB5EAD7 if is_kawaii else discord.Color.green()
+        )
+        await interaction.response.send_message(embed=embed)
+    else:
+        embed = Embed(
+            description=get_messages("queue_empty", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} is online.")
@@ -709,16 +758,17 @@ async def on_ready():
                     return
                 
                 statuses = [
-                    "your Spotify links 🎧",
-                    "/play [link] 🔥",
+                    ("your Spotify links 🎧", discord.ActivityType.listening),
+                    ("/play [link] 🔥", discord.ActivityType.listening),
+                    (f"music on {len(bot.guilds)} servers 🎶", discord.ActivityType.playing)
                 ]
                 
-                for status in statuses:
+                for status_text, status_type in statuses:
                     try:
                         await bot.change_presence(
                             activity=discord.Activity(
-                                name=status,
-                                type=discord.ActivityType.listening
+                                name=status_text,
+                                type=status_type
                             )
                         )
                         await asyncio.sleep(10)
@@ -729,6 +779,5 @@ async def on_ready():
         bot.loop.create_task(rotate_presence())
         
     except Exception as e:
-        print(f"Error syncing commands: {e}")
-                
+        print(f"Error syncing commands: {e}")                        
 bot.run("TOKEN")
