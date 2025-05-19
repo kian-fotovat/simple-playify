@@ -119,83 +119,133 @@
       position: relative;
     }
 
-    .section-title {
-      text-align: center;
-      font-size: 3rem;
-      margin-bottom: 80px;
-      font-family: 'SequelGeoWide', sans-serif;
-      color: var(--text);
-      position: relative;
-    }
-
-    .section-title::after {
-      content: '';
-      position: absolute;
-      width: 100px;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      bottom: -15px;
-      left: 50%;
-      transform: translateX(-50%);
-      border-radius: 3px;
-    }
-
-    .commands-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 40px;
+    .commands-table {
       max-width: 1200px;
       margin: 0 auto;
-    }
-
-    .command-card {
       background: rgba(20, 20, 20, 0.6);
       border-radius: 15px;
-      padding: 30px;
-      text-align: left;
-      transition: all 0.4s ease;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(138, 43, 226, 0.1);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      position: relative;
       overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
 
-    .command-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(0, 0, 0, 0.7));
-      z-index: -1;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+    .table-header {
+      background: rgba(138, 43, 226, 0.15);
+      padding: 25px 30px;
+      display: grid;
+      grid-template-columns: 80px 1fr 2fr;
+      gap: 30px;
+      align-items: center;
+      border-bottom: 2px solid rgba(138, 43, 226, 0.2);
     }
 
-    .command-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 15px 40px rgba(138, 43, 226, 0.3);
-      border-color: rgba(138, 43, 226, 0.3);
+    .table-header h3 {
+      font-family: 'SequelGeoWide', sans-serif;
+      color: var(--primary);
+      font-size: 1.3rem;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    .command-card:hover::before {
-      opacity: 1;
+    .command-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 2fr;
+      gap: 30px;
+      padding: 25px 30px;
+      align-items: center;
+      border-bottom: 1px solid rgba(138, 43, 226, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .command-row:last-child {
+      border-bottom: none;
+    }
+
+    .command-row:hover {
+      background: rgba(138, 43, 226, 0.08);
+    }
+
+    .command-icon {
+      width: 55px;
+      height: 55px;
+      background: rgba(138, 43, 226, 0.12);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 1.5rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.1);
+    }
+
+    .command-row:hover .command-icon {
+      background: rgba(138, 43, 226, 0.2);
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(138, 43, 226, 0.2);
+    }
+
+    .command-row:hover .command-icon i {
+      color: var(--text);
+    }
+
+    .command-name {
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
 
     .command-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 10px;
       font-family: 'SequelGeoWide', sans-serif;
+      color: var(--text);
+      font-size: 1.3rem;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+
+    .admin-badge {
+      background: rgba(138, 43, 226, 0.2);
       color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(138, 43, 226, 0.1);
     }
 
     .command-desc {
       color: var(--text-secondary);
-      line-height: 1.6;
+      margin: 0;
+      line-height: 1.7;
       font-size: 1.1rem;
+    }
+
+    .category-section {
+      margin-bottom: 50px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .category-title {
+      font-size: 2.2rem;
+      margin-bottom: 25px;
+      font-family: 'SequelGeoWide', sans-serif;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      text-shadow: 0 2px 10px rgba(138, 43, 226, 0.2);
+      padding: 0 30px;
+    }
+
+    .category-title i {
+      color: var(--primary);
+      font-size: 2rem;
+      text-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
     }
 
     /* Footer */
@@ -274,12 +324,29 @@
 
     /* Responsive Design */
     @media (max-width: 768px) {
-      .section-title {
-        font-size: 2.5rem;
+      .commands-table {
+        margin: 0 20px;
       }
 
-      .command-card {
+      .table-header, .command-row {
+        grid-template-columns: 60px 1fr;
         padding: 20px;
+        gap: 20px;
+      }
+
+      .table-header h3:last-child,
+      .command-desc {
+        display: none;
+      }
+
+      .command-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.3rem;
+      }
+
+      .command-title {
+        font-size: 1.1rem;
       }
     }
 
@@ -348,43 +415,128 @@
 
   <!-- Commands Section -->
   <section class="commands">
-    <h2 class="section-title fade-in">COMMANDS</h2>
-    <div class="commands-grid">
-      <div class="command-card fade-in">
-        <h3 class="command-title">/play [query]</h3>
-        <p class="command-desc">Plays a song, playlist, or searches by title from YouTube (including YouTube Music links), Spotify, or SoundCloud.</p>
+    <div class="category-section fade-in">
+      <h3 class="category-title">
+        <i class="fas fa-play-circle"></i>
+        Basic Controls
+      </h3>
+      <div class="commands-table">
+        <div class="table-header">
+          <h3></h3>
+          <h3>Command</h3>
+          <h3>Description</h3>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/play [query]</h3>
+          </div>
+          <p class="command-desc">Plays a song, playlist, or searches by title from YouTube (including YouTube Music links), Spotify, or SoundCloud.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-pause"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/pause</h3>
+          </div>
+          <p class="command-desc">Pauses the current song.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/resume</h3>
+          </div>
+          <p class="command-desc">Resumes the paused song.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-stop"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/stop</h3>
+          </div>
+          <p class="command-desc">Stops playback and disconnects the bot.</p>
+        </div>
       </div>
-      <div class="command-card fade-in delay-1">
-        <h3 class="command-title">/pause</h3>
-        <p class="command-desc">Pauses the current song.</p>
+    </div>
+
+    <div class="category-section fade-in">
+      <h3 class="category-title">
+        <i class="fas fa-list"></i>
+        Queue Management
+      </h3>
+      <div class="commands-table">
+        <div class="table-header">
+          <h3></h3>
+          <h3>Command</h3>
+          <h3>Description</h3>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-forward"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/skip</h3>
+          </div>
+          <p class="command-desc">Skips to the next song in the queue.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-random"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/shuffle</h3>
+          </div>
+          <p class="command-desc">Shuffles the current queue randomly.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-redo"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/loop</h3>
+          </div>
+          <p class="command-desc">Toggles looping for the current song.</p>
+        </div>
       </div>
-      <div class="command-card fade-in delay-2">
-        <h3 class="command-title">/resume</h3>
-        <p class="command-desc">Resumes the paused song.</p>
-      </div>
-      <div class="command-card fade-in">
-        <h3 class="command-title">/skip</h3>
-        <p class="command-desc">Skips to the next song in the queue.</p>
-      </div>
-      <div class="command-card fade-in delay-1">
-        <h3 class="command-title">/loop</h3>
-        <p class="command-desc">Toggles looping for the current song.</p>
-      </div>
-      <div class="command-card fade-in delay-2">
-        <h3 class="command-title">/stop</h3>
-        <p class="command-desc">Stops playback and disconnects the bot.</p>
-      </div>
-      <div class="command-card fade-in">
-        <h3 class="command-title">/kaomoji</h3>
-        <p class="command-desc">Toggles kawaii mode for fun responses (admin only).</p>
-      </div>
-      <div class="command-card fade-in delay-1">
-        <h3 class="command-title">/language</h3>
-        <p class="command-desc">Sets the bot's language (English/French) for the server (admin only).</p>
-      </div>
-      <div class="command-card fade-in delay-2">
-        <h3 class="command-title">/shuffle</h3>
-        <p class="command-desc">Shuffles the current queue randomly.</p>
+    </div>
+
+    <div class="category-section fade-in">
+      <h3 class="category-title">
+        <i class="fas fa-cog"></i>
+        Settings & Preferences
+      </h3>
+      <div class="commands-table">
+        <div class="table-header">
+          <h3></h3>
+          <h3>Command</h3>
+          <h3>Description</h3>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-smile"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/kaomoji</h3>
+            <span class="admin-badge">ADMIN</span>
+          </div>
+          <p class="command-desc">Toggles kawaii mode for fun responses.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-language"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/language</h3>
+            <span class="admin-badge">ADMIN</span>
+          </div>
+          <p class="command-desc">Sets the bot's language (English/French) for the server.</p>
+        </div>
       </div>
     </div>
   </section>
