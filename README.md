@@ -79,7 +79,7 @@ Bot is already running 24/7.
 
 You can just invite it:
 
-👉 [Add to Discord](https://discord.com/oauth2/authorize?client_id=1330613913569726575&permissions=8&integration_type=0&scope=bot)
+👉 [Add to Discord](https://alan7383.github.io/playify/)
 
 ---
 
