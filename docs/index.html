@@ -754,7 +754,7 @@
       position: fixed;
       top: 100px;
       right: 30px;
-      transform: translateX(0);
+      transform: translateX(0) scale(1);
       background: rgba(138, 43, 226, 0.15);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
@@ -768,9 +768,41 @@
       align-items: center;
       gap: 12px;
       box-shadow: 0 5px 20px rgba(138, 43, 226, 0.2);
-      animation: slideIn 0.6s ease-out forwards,
-                 fadeOut 0.5s ease-out 7.5s forwards;
+      animation: slideIn 0.6s ease-out forwards;
       opacity: 0;
+      max-width: 400px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: top right;
+    }
+
+    .celebration-popup.fade-out {
+      opacity: 0;
+      transform: translateX(20px) scale(0.95);
+      filter: blur(2px);
+    }
+
+    .popup-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .popup-button {
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+    }
+
+    .popup-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
     }
 
     .celebration-popup i {
@@ -817,24 +849,16 @@
         background-position: 200% center;
       }
     }
-
-    @keyframes fadeOut {
-      0% {
-        opacity: 1;
-        transform: translateX(0);
-      }
-      100% {
-        opacity: 0;
-        transform: translateX(20px);
-      }
-    }
   </style>
 </head>
 <body>
   <!-- Celebration Popup -->
   <div class="celebration-popup">
     <i class="fas fa-sparkles"></i>
-    <span>🎉 We've reached 100 servers! Thank you for your amazing support!</span>
+    <div class="popup-content">
+      <span>🎉 We've reached 100 servers! Thank you for your amazing support!</span>
+      <button class="popup-button">Learn More</button>
+    </div>
   </div>
 
   <!-- Particle Background -->
@@ -1167,6 +1191,35 @@
         document.querySelector(this.getAttribute('href')).scrollIntoView({
           behavior: 'smooth'
         });
+      });
+    });
+
+    // Popup button click handler
+    document.querySelector('.popup-button').addEventListener('click', function() {
+      const popup = document.querySelector('.celebration-popup');
+      popup.innerHTML = `
+        <i class="fas fa-info-circle"></i>
+        <div class="popup-content">
+          <span>Hey! Thanks for wanting to add Playify 💜</span>
+          <p style="font-size: 0.9rem; margin: 5px 0; color: var(--text-secondary); line-height: 1.5;">
+            The bot has reached Discord's 100 servers limit and needs verification to continue growing. I've already submitted the request and added the privacy policy - just waiting for Discord's approval!
+          </p>
+          <p style="font-size: 0.9rem; margin: 5px 0; color: var(--text-secondary); line-height: 1.5;">
+            You'll be able to add the bot once it's approved. Thanks for your patience! 🙏
+          </p>
+          <button class="popup-button" id="closePopup">Close</button>
+        </div>
+      `;
+      popup.style.animation = 'none';
+      popup.style.opacity = '1';
+
+      // Add event listener to the new close button
+      document.getElementById('closePopup').addEventListener('click', function() {
+        const popup = document.querySelector('.celebration-popup');
+        popup.classList.add('fade-out');
+        setTimeout(() => {
+          popup.remove();
+        }, 400); // Remove after animation completes
       });
     });
   </script>
