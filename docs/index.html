@@ -752,39 +752,57 @@
     /* Celebration Popup */
     .celebration-popup {
       position: fixed;
-      top: 100px;
+      bottom: 30px;
       right: 30px;
-      transform: translateX(0) scale(1);
-      background: rgba(138, 43, 226, 0.15);
+      background: rgba(138, 43, 226, 0.1);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(138, 43, 226, 0.4);
-      border-radius: 15px;
-      padding: 15px 25px;
+      border: 1px solid rgba(138, 43, 226, 0.2);
+      border-radius: 12px;
+      padding: 12px 20px;
       color: var(--text);
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       z-index: 1001;
       display: flex;
       align-items: center;
-      gap: 12px;
-      box-shadow: 0 5px 20px rgba(138, 43, 226, 0.2);
+      gap: 10px;
+      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.15);
       animation: slideIn 0.6s ease-out forwards;
       opacity: 0;
-      max-width: 400px;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      transform-origin: top right;
+      max-width: 300px;
     }
 
     .celebration-popup.fade-out {
-      opacity: 0;
-      transform: translateX(20px) scale(0.95);
-      filter: blur(2px);
+      animation: slideOut 0.8s ease-in forwards;
+    }
+
+    @keyframes slideIn {
+      0% {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      0% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(20px);
+        opacity: 0;
+      }
     }
 
     .popup-content {
       display: flex;
       flex-direction: column;
       gap: 10px;
+      flex: 1;
     }
 
     .popup-button {
@@ -821,17 +839,6 @@
       font-weight: 600;
     }
 
-    @keyframes slideIn {
-      0% {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      100% {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
     @keyframes float {
       0%, 100% {
         transform: translateY(0) rotate(0deg);
@@ -856,8 +863,7 @@
   <div class="celebration-popup">
     <i class="fas fa-sparkles"></i>
     <div class="popup-content">
-      <span>🎉 We've reached 100 servers! Thank you for your amazing support!</span>
-      <button class="popup-button">Learn More</button>
+      <span>🎉 200 servers reached! Thank you for your amazing support!</span>
     </div>
   </div>
 
@@ -1194,31 +1200,16 @@
       });
     });
 
-    // Popup button click handler
-    document.querySelector('.popup-button').addEventListener('click', function() {
+    // Auto-hide popup after 5 seconds
+    setTimeout(() => {
       const popup = document.querySelector('.celebration-popup');
-      popup.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        <div class="popup-content">
-          <span>Great news! Playify is now verified! 🎉</span>
-          <p style="font-size: 0.9rem; margin: 5px 0; color: var(--text-secondary); line-height: 1.5;">
-            Discord has approved our verification request. You can now add Playify to your server without any restrictions! Thank you for your patience and support 💜
-          </p>
-          <button class="popup-button" id="closePopup">Close</button>
-        </div>
-      `;
-      popup.style.animation = 'none';
-      popup.style.opacity = '1';
-
-      // Add event listener to the new close button
-      document.getElementById('closePopup').addEventListener('click', function() {
-        const popup = document.querySelector('.celebration-popup');
+      if (popup) {
         popup.classList.add('fade-out');
         setTimeout(() => {
           popup.remove();
-        }, 400); // Remove after animation completes
-      });
-    });
+        }, 800);
+      }
+    }, 5000);
   </script>
 </body>
 </html>
