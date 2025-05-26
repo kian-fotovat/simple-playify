@@ -6,13 +6,11 @@ import yt_dlp
 import re
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-import concurrent.futures
-import uuid
-import random  # Ajouté pour la commande shuffle
+import random
+from urllib.parse import urlparse, parse_qs
 
 # Intents pour le bot
 intents = discord.Intents.default()
-intents.messages = True
 intents.guilds = True
 intents.voice_states = True
 
@@ -29,7 +27,6 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 
 # Fonction asynchrone pour extraire les informations avec yt_dlp
 async def extract_info_async(ydl_opts, query, loop=None):
-    """Run yt_dlp.extract_info in a separate thread to avoid blocking."""
     if loop is None:
         loop = asyncio.get_running_loop()
     
@@ -48,6 +45,8 @@ class MusicPlayer:
         self.current_url = None
         self.text_channel = None
         self.loop_current = False
+        self.autoplay_enabled = False
+        self.last_was_single = False  # Drapeau pour suivre si la dernière piste était unique
 
 # Dictionnaires pour stocker les états par serveur
 music_players = {}      # {guild_id: MusicPlayer()}
@@ -66,7 +65,7 @@ def get_mode(guild_id):
 
 # Fonction pour obtenir la langue d'un serveur
 def get_language(guild_id):
-    return server_languages.get(guild_id, "en")  # Anglais par défaut
+    return server_languages.get(guild_id, "en")
 
 # Fonction pour obtenir les messages selon la langue et le mode kawaii
 def get_messages(message_key, guild_id):
@@ -191,13 +190,29 @@ def get_messages(message_key, guild_id):
                 "normal": "Language set to {lang} for this server!",
                 "kawaii": "Language set to {lang} for this server! (✿◕‿◕)"
             },
-            "shuffle_success": {  # Ajouté pour la commande shuffle
+            "shuffle_success": {
                 "normal": "🔀 Queue shuffled successfully!",
                 "kawaii": "(✿◕‿◕) Queue shuffled! Yay! ~"
             },
-            "queue_empty": {  # Ajouté pour la commande shuffle
+            "queue_empty": {
                 "normal": "The queue is empty.",
                 "kawaii": "(´･ω･`) No songs in the queue..."
+            },
+            "autoplay_toggle": {
+                "normal": "Autoplay {state}.",
+                "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
+            },
+            "autoplay_state_enabled": {
+                "normal": "enabled",
+                "kawaii": "enabled"
+            },
+            "autoplay_state_disabled": {
+                "normal": "disabled",
+                "kawaii": "disabled"
+            },
+            "autoplay_added": {
+                "normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute depending on server load)",
+                "kawaii": "♪(´▽｀) Adding similar songs to the queue! ~ (It might take a little while, up to 1 minute!)"
             },
         },
         "fr": {
@@ -221,7 +236,7 @@ def get_messages(message_key, guild_id):
                 "normal": "**{count} titres** en cours d'ajout...",
                 "kawaii": "**{count} musiques** ajoutées !"
             },
-            " Hannah": {
+            "song_added": {
                 "normal": "🎵 Ajouté à la file d'attente",
                 "kawaii": "(っ◕‿◕)っ ♫ MUSIQUE AJOUTÉE ♫"
             },
@@ -317,19 +332,71 @@ def get_messages(message_key, guild_id):
                 "normal": "Langue définie sur {lang} pour ce serveur !",
                 "kawaii": "Langue définie sur {lang} pour ce serveur ! (✿◕‿◕)"
             },
-            "shuffle_success": {  # Ajouté pour la commande shuffle
+            "shuffle_success": {
                 "normal": "🔀 File d'attente mélangée avec succès !",
                 "kawaii": "(✿◕‿◕) File d'attente mélangée ! Youpi ! ~"
             },
-            "queue_empty": {  # Ajouté pour la commande shuffle
+            "queue_empty": {
                 "normal": "La file d'attente est vide.",
                 "kawaii": "(´･ω･`) Pas de musiques dans la file..."
+            },
+            "autoplay_toggle": {
+                "normal": "Autoplay {state}.",
+                "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
+            },
+            "autoplay_state_enabled": {
+                "normal": "activé",
+                "kawaii": "activé"
+            },
+            "autoplay_state_disabled": {
+                "normal": "désactivé",
+                "kawaii": "désactivé"
+            },
+            "autoplay_added": {
+                "normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute depending on server load)",
+                "kawaii": "♪(´▽｀) Adding similar songs to the queue! ~ (It might take a little while, up to 1 minute!)"
             },
         }
     }
     
     mode = "kawaii" if is_kawaii else "normal"
     return messages[lang][message_key][mode]
+
+# Fonctions utilitaires pour YouTube Mix et SoundCloud Stations
+def get_video_id(url):
+    parsed = urlparse(url)
+    if parsed.hostname in ('www.youtube.com', 'youtube.com', 'youtu.be'):
+        if parsed.hostname == 'youtu.be':
+            return parsed.path[1:]
+        if parsed.path == '/watch':
+            query = parse_qs(parsed.query)
+            return query.get('v', [None])[0]
+    return None
+
+def get_mix_playlist_url(video_url):
+    video_id = get_video_id(video_url)
+    if video_id:
+        return f"https://www.youtube.com/watch?v={video_id}&list=RD{video_id}"
+    return None
+
+def get_soundcloud_track_id(url):
+    if "soundcloud.com" in url:
+        try:
+            ydl_opts = {
+                "quiet": True,
+                "no_warnings": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                return info.get("id")
+        except Exception:
+            return None
+    return None
+
+def get_soundcloud_station_url(track_id):
+    if track_id:
+        return f"https://soundcloud.com/discover/sets/track-stations:{track_id}"
+    return None
 
 # Fonction pour traiter les liens Spotify
 async def process_spotify_url(url, interaction):
@@ -423,7 +490,6 @@ async def play(interaction: discord.Interaction, query: str):
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
 
-    # Vérifie si c'est un lien Spotify, SoundCloud, YouTube ou YouTube Music
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
     youtube_regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$')
@@ -439,39 +505,54 @@ async def play(interaction: discord.Interaction, query: str):
         if not spotify_queries:
             return
 
-        if len(spotify_queries) > 1:
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "default_search": "ytsearch1",
+        }
+        
+        if len(spotify_queries) == 1:
+            # Piste unique
+            query = spotify_queries[0]
+            try:
+                info = await extract_info_async(ydl_opts, query)
+                video = info["entries"][0] if "entries" in info else info
+                video_url = video["webpage_url"]
+                await music_player.queue.put({'url': video_url, 'is_single': True})
+                embed = Embed(
+                    title=get_messages("song_added", guild_id),
+                    description=f"[{video['title']}]({video['webpage_url']})",
+                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
+                )
+                embed.set_thumbnail(url=video["thumbnail"])
+                if is_kawaii:
+                    embed.set_footer(text="☆⌒(≧▽° )")
+                await interaction.followup.send(embed=embed)
+            except Exception as e:
+                print(f"Spotify conversion error: {e}")
+                embed = Embed(
+                    description=get_messages("search_error", guild_id),
+                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            # Playlist
+            for spotify_query in spotify_queries:
+                try:
+                    info = await extract_info_async(ydl_opts, spotify_query)
+                    video = info["entries"][0] if "entries" in info else info
+                    video_url = video["webpage_url"]
+                    await music_player.queue.put({'url': video_url, 'is_single': False})
+                except Exception as e:
+                    print(f"Spotify conversion error: {e}")
+                    continue
             embed = Embed(
                 title=get_messages("spotify_playlist_added", guild_id),
                 description=get_messages("spotify_playlist_description", guild_id).format(count=len(spotify_queries)),
                 color=0xB5EAD7 if is_kawaii else discord.Color.green()
             )
             await interaction.followup.send(embed=embed)
-
-        for spotify_query in spotify_queries:
-            try:
-                ydl_opts = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "default_search": "ytsearch1",
-                }
-                info = await extract_info_async(ydl_opts, spotify_query)
-                video = info["entries"][0] if "entries" in info else info
-                await music_player.queue.put((video["url"], False))
-                
-                if len(spotify_queries) == 1:
-                    embed = Embed(
-                        title=get_messages("song_added", guild_id),
-                        description=f"[{video['title']}]({video['webpage_url']})",
-                        color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                    )
-                    embed.set_thumbnail(url=video["thumbnail"])
-                    if is_kawaii:
-                        embed.set_footer(text="☆⌒(≧▽° )")
-                    await interaction.followup.send(embed=embed)
-            except Exception as e:
-                print(f"Spotify conversion error: {e}")
-                continue
     elif is_soundcloud or is_youtube or is_ytmusic:
         try:
             ydl_opts = {
@@ -484,10 +565,10 @@ async def play(interaction: discord.Interaction, query: str):
             info = await extract_info_async(ydl_opts, query)
             
             if "entries" in info:
+                # Playlist
                 for entry in info["entries"]:
                     if entry:
-                        await music_player.queue.put((entry["url"], True))
-
+                        await music_player.queue.put({'url': entry["webpage_url"], 'is_single': False})
                 if info["entries"] and info["entries"][0]:
                     thumbnail = info["entries"][0].get("thumbnail")
                     embed_title = get_messages("ytmusic_playlist_added", guild_id) if is_ytmusic else get_messages("playlist_added", guild_id)
@@ -501,7 +582,8 @@ async def play(interaction: discord.Interaction, query: str):
                         embed.set_thumbnail(url=thumbnail)
                     await interaction.followup.send(embed=embed)
             else:
-                await music_player.queue.put((info["url"], False))
+                # Piste unique
+                await music_player.queue.put({'url': info["webpage_url"], 'is_single': True})
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
                     description=f"[{info['title']}]({info['webpage_url']})",
@@ -518,7 +600,6 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.followup.send(embed=embed, ephemeral=True)
             print(f"Error: {e}")
     else:
-        # Recherche YouTube par défaut
         try:
             ydl_opts = {
                 "format": "bestaudio/best",
@@ -528,7 +609,7 @@ async def play(interaction: discord.Interaction, query: str):
             }
             info = await extract_info_async(ydl_opts, query)
             video = info["entries"][0] if "entries" in info else info
-            await music_player.queue.put((video["url"], False))
+            await music_player.queue.put({'url': video["webpage_url"], 'is_single': True})
             
             embed = Embed(
                 title=get_messages("song_added", guild_id),
@@ -555,36 +636,100 @@ async def play_audio(guild_id):
     
     while True:
         if music_player.queue.empty():
-            music_player.current_task = None
-            break
+            if music_player.autoplay_enabled and music_player.last_was_single and music_player.current_url:
+                # Envoyer le message d'autoplay immédiatement
+                if music_player.text_channel:
+                    embed = Embed(
+                        description=get_messages("autoplay_added", guild_id),
+                        color=0xC7CEEA if is_kawaii else discord.Color.blue()
+                    )
+                    await music_player.text_channel.send(embed=embed)
+                
+                # Ajouter des chansons similaires
+                if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url:
+                    mix_playlist_url = get_mix_playlist_url(music_player.current_url)
+                    if mix_playlist_url:
+                        ydl_opts = {
+                            "format": "bestaudio/best",
+                            "quiet": True,
+                            "no_warnings": True,
+                            "extract_flat": True,
+                        }
+                        try:
+                            info = await extract_info_async(ydl_opts, mix_playlist_url)
+                            if "entries" in info:
+                                current_video_id = get_video_id(music_player.current_url)
+                                for entry in info["entries"]:
+                                    entry_video_id = get_video_id(entry["url"])
+                                    if entry_video_id and entry_video_id != current_video_id:
+                                        await music_player.queue.put({'url': entry["url"], 'is_single': False})
+                        except Exception as e:
+                            print(f"Erreur YouTube Mix : {e}")
+                elif "soundcloud.com" in music_player.current_url:
+                    track_id = get_soundcloud_track_id(music_player.current_url)
+                    if track_id:
+                        station_url = get_soundcloud_station_url(track_id)
+                        if station_url:
+                            ydl_opts = {
+                                "format": "bestaudio/best",
+                                "quiet": True,
+                                "no_warnings": True,
+                                "extract_flat": True,
+                            }
+                            try:
+                                info = await extract_info_async(ydl_opts, station_url)
+                                if "entries" in info:
+                                    current_track_id = track_id
+                                    for entry in info["entries"]:
+                                        entry_track_id = get_soundcloud_track_id(entry["url"])
+                                        if entry_track_id and entry_track_id != current_track_id:
+                                            await music_player.queue.put({'url': entry["url"], 'is_single': False})
+                            except Exception as e:
+                                print(f"Erreur SoundCloud Station : {e}")
+            else:
+                music_player.current_task = None
+                break
 
-        url, is_playlist = await music_player.queue.get()
+        track_info = await music_player.queue.get()
+        video_url = track_info['url']
+        is_single = track_info['is_single']
+        
+        # Vérifier si c’est la dernière piste
+        if music_player.queue.empty():
+            music_player.last_was_single = is_single
+        else:
+            music_player.last_was_single = False
+        
+        music_player.current_url = video_url
         try:
             if not music_player.voice_client or not music_player.voice_client.is_connected():
                 if music_player.text_channel:
                     await music_player.text_channel.guild.voice_client.disconnect()
                     music_player.voice_client = await music_player.text_channel.guild.voice_channels[0].connect()
 
-            music_player.current_url = url
             ydl_opts = {
                 "format": "bestaudio/best",
                 "quiet": True,
                 "no_warnings": True,
             }
-            info = await extract_info_async(ydl_opts, url)
-            audio_url = info['url']
+            info = await extract_info_async(ydl_opts, video_url)
+            audio_url = info["url"]
+            title = info.get("title", "Unknown Title")
+            thumbnail = info.get("thumbnail")
+            webpage_url = info.get("webpage_url", video_url)
 
-            if is_playlist and music_player.text_channel:
+            # Afficher "Now Playing" uniquement pour les pistes non uniques (playlists)
+            if not is_single and music_player.text_channel:
                 embed = Embed(
                     title=get_messages("now_playing", guild_id),
                     description=get_messages("now_playing_description", guild_id).format(
-                        title=info.get('title', 'Unknown Title'), 
-                        url=info.get('webpage_url', url)
+                        title=title,
+                        url=webpage_url
                     ),
                     color=0xC7CEEA if is_kawaii else discord.Color.green()
                 )
-                if info.get('thumbnail'):
-                    embed.set_thumbnail(url=info['thumbnail'])
+                if thumbnail:
+                    embed.set_thumbnail(url=thumbnail)
                 await music_player.text_channel.send(embed=embed)
 
             ffmpeg_options = {
@@ -593,20 +738,21 @@ async def play_audio(guild_id):
             }
             music_player.voice_client.play(
                 discord.FFmpegPCMAudio(audio_url, **ffmpeg_options),
-                after=lambda e: print(f"Error: {e}") if e else None
+                after=lambda e: print(f"Erreur : {e}") if e else None
             )
 
             while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
                 await asyncio.sleep(1)
 
             if music_player.loop_current:
-                await music_player.queue.put((url, is_playlist))
+                await music_player.queue.put({'url': video_url, 'is_single': is_single})
                 continue
 
         except Exception as e:
-            print(f"Audio playback error: {e}")
+            print(f"Erreur de lecture audio : {e}")
             continue
 
+# Commande /pause
 @bot.tree.command(name="pause", description="Pause the current playback")
 async def pause(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -627,6 +773,7 @@ async def pause(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Commande /resume
 @bot.tree.command(name="resume", description="Resume the playback")
 async def resume(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -647,6 +794,7 @@ async def resume(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Commande /skip
 @bot.tree.command(name="skip", description="Skip to the next song")
 async def skip(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -667,6 +815,7 @@ async def skip(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Commande /loop
 @bot.tree.command(name="loop", description="Enable/disable looping")
 async def loop(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -682,6 +831,7 @@ async def loop(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
+# Commande /stop
 @bot.tree.command(name="stop", description="Stop playback and disconnect the bot")
 async def stop(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -720,15 +870,12 @@ async def shuffle(interaction: discord.Interaction):
     music_player = get_player(guild_id)
     
     if not music_player.queue.empty():
-        # Extraire tous les éléments de la queue
         items = []
         while not music_player.queue.empty():
             items.append(await music_player.queue.get())
         
-        # Mélanger les éléments
         random.shuffle(items)
         
-        # Créer une nouvelle queue et y remettre les éléments mélangés
         music_player.queue = asyncio.Queue()
         for item in items:
             await music_player.queue.put(item)
@@ -745,6 +892,22 @@ async def shuffle(interaction: discord.Interaction):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Commande /autoplay
+@bot.tree.command(name="autoplay", description="Enable/disable autoplay of similar songs")
+async def toggle_autoplay(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
+    music_player.autoplay_enabled = not music_player.autoplay_enabled
+    state = get_messages("autoplay_state_enabled", guild_id) if music_player.autoplay_enabled else get_messages("autoplay_state_disabled", guild_id)
+    
+    embed = Embed(
+        description=get_messages("autoplay_toggle", guild_id).format(state=state),
+        color=0xC7CEEA if is_kawaii else discord.Color.blue()
+    )
+    await interaction.response.send_message(embed=embed)
+
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} is online.")
@@ -758,7 +921,7 @@ async def on_ready():
                     return
                 
                 statuses = [
-                    ("your Spotify links 🎧", discord.ActivityType.listening),
+                    ("/autoplay for endless music 🎶", discord.ActivityType.listening),
                     ("/play [link] 🔥", discord.ActivityType.listening),
                     (f"music on {len(bot.guilds)} servers 🎶", discord.ActivityType.playing)
                 ]
@@ -779,5 +942,7 @@ async def on_ready():
         bot.loop.create_task(rotate_presence())
         
     except Exception as e:
-        print(f"Error syncing commands: {e}")                        
+        print(f"Error syncing commands: {e}")
+
+# Lancer le bot
 bot.run("TOKEN")
