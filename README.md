@@ -125,4 +125,3 @@ It helps keep it ad-free. And maybe I’ll fix bugs faster. Maybe.
 ## (⊙‿‿⊙) License
 
 MIT. Do whatever you want with it.  
-Just don’t turn it into a crypto scam.
