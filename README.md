@@ -1,6 +1,4 @@
-<h1 align="center">Playify 🎵</h1>
-
----
+<h1 align="center">Playify ♪( ° □ °) ♪</h1>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5c1d5fba-3a34-4ffe-bd46-ef68e1175360" alt="Playify Banner" width="900">
@@ -8,45 +6,50 @@
 
 ---
 
-Playify is a Discord music bot. It plays music. That's it.
+## ＼(ノºДº)ノ What is Playify?
 
-No web UI. No “premium tier”. No bloat. Just clean commands and proper sound.
+Playify is a minimalist Discord music bot.
 
-No limits whatsoever — whether it’s the number of tracks in a playlist or anything else.
+- No web UI.
+- No premium tier.
+- No bloat.
 
-You type play, it plays. You type stop, it stops. Revolutionary.
+Just clean commands and proper sound.  
+You type `play`, it plays. You type `stop`, it stops. Revolutionary.
+
+**No limits whatsoever — whether it’s the number of tracks in a playlist or anything else.**
 
 ---
 
-## 🧪 Spotify Support (Beta)
+## (＾□＾) Spotify Support (Beta)
 
 Yes, it plays Spotify tracks now. Kind of.
 
-- ✅ Individual tracks? Works fine.
-- 🔁 Small playlists? Sure.
-- 🪦 Giant playlists? Come back later.
+- ✅ Individual tracks? Works fine.  
+- ↺ Small playlists? Sure.  
+- ☠️ Giant playlists? Come back later.
 
 ---
 
-## ✨ Features
+## (｡‿‿｡) Features
 
-- Music from YouTube, SoundCloud, and Spotify
-- Commands you already know: `play`, `pause`, `skip`, etc.
-- Custom playlists (stored locally)
-- Actually fast — no stupid queue lag
+- Music from YouTube, SoundCloud, and Spotify  
+- Commands you already know: `play`, `pause`, `skip`, etc.  
+- Custom playlists (stored locally)  
+- Actually fast — no stupid queue lag  
 - Built with `yt-dlp`, `FFmpeg`, `asyncio` and pure resentment
 
 ---
 
-## 💻 Self-hosting?
+## (◕‿◕)ノ Self-hosting?
 
 Yeah, you can.
 
 ### Requirements
 
-- Python 3.9+
-- FFmpeg
-- A Discord bot token
+- Python 3.9+  
+- FFmpeg  
+- A Discord bot token  
 - Spotify API creds (if you care)
 
 ### Setup
@@ -55,7 +58,7 @@ Yeah, you can.
 git clone https://github.com/alan7383/playify.git
 cd playify
 pip install -r requirements.txt
-````
+```
 
 Create a `.env` file:
 
@@ -73,34 +76,43 @@ Done. No PhD required.
 
 ---
 
-## 🛰️ Don’t want to self-host?
+## (´・ω・`)ノ Don’t want to self-host?
 
-Bot is already running 24/7.
-
+Bot is already running 24/7.  
 You can just invite it:
 
 👉 [Add to Discord](https://alan7383.github.io/playify/)
 
 ---
 
-## 🧠 Will you see what I’m playing?
+## (・Д・)ノ♥ Your privacy, your music.
 
-Nah, your music taste is safe.
+**Will you see what I’m playing?**  
+Nope. Your music taste stays between you and your headphones.
 
-Playify doesn’t log a thing. Not out of some noble privacy crusade, but because debugging is a pain asf. If something breaks, I just shrug and keep vibing. Probably.
+**Playify doesn’t store or collect any user data.**  
+It logs basic playback stuff *locally* to help with debugging — and that’s it.  
+No tracking, no history, no analytics.  
+**Nothing leaves your machine. Ever.**
 
-![Capture d'écran 2025-05-20 222811](https://github.com/user-attachments/assets/a39773b9-3362-41ba-b23d-475368f1d07e)
+If something breaks, I check the console.  
+If it works, we vibe.  
+If it doesn’t, enjoy the silence (or not).
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/a39773b9-3362-41ba-b23d-475368f1d07e" alt="Debug Screenshot" width="700">
+</p>
 
 ---
 
-## 🛠 Contribute?
+## (≧□≦)ノ Contribute?
 
-You can fork, PR, whatever.
+You can fork, PR, whatever.  
 But don’t expect a quick merge unless it fixes something annoying.
 
 ---
 
-## ❤️ Support
+## (･∀･)♡ Support
 
 Wanna support the chaos?
 
@@ -110,7 +122,7 @@ It helps keep it ad-free. And maybe I’ll fix bugs faster. Maybe.
 
 ---
 
-## ⚖️ License
+## (⊙‿‿⊙) License
 
-MIT. Do whatever you want with it.
+MIT. Do whatever you want with it.  
 Just don’t turn it into a crypto scam.
