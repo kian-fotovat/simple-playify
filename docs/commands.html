@@ -314,6 +314,48 @@
       transform: translateY(-3px);
     }
 
+    .button {
+      padding: 18px 45px;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      border: none;
+      cursor: pointer;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .primary-button {
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      color: white;
+      box-shadow: 0 0 25px rgba(138, 43, 226, 0.5);
+    }
+
+    .button:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(138, 43, 226, 0.4);
+    }
+
+    .primary-button:hover {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(138, 43, 226, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 15px rgba(138, 43, 226, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(138, 43, 226, 0);
+      }
+    }
+
     .copyright {
       margin-top: 60px;
       padding-top: 30px;
@@ -381,7 +423,7 @@
     }
 
     .delay-1 {
-      transition-delay: 0.51111111s;
+      transition-delay: 0.2s;
     }
 
     .delay-2 {
@@ -505,12 +547,12 @@
         </div>
         <div class="command-row">
           <div class="command-icon">
-            <i class="fas fa-sync-alt"></i>
+            <i class="fas fa-random"></i>
           </div>
           <div class="command-name">
             <h3 class="command-title">/autoplay</h3>
           </div>
-          <p class="command-desc">Toggles autoplay to add similar songs to the queue automatically.</p>
+          <p class="command-desc">Enables/disables automatic playback of similar songs when the queue is empty.</p>
         </div>
       </div>
     </div>
@@ -555,20 +597,27 @@
     <div class="footer-content">
       <div class="footer-column">
         <h3>PLAYIFY</h3>
-        <p>The music bot for Discord that delivers premium quality with a sleek interface.</p>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">The music bot for Discord that delivers premium quality with a sleek interface.</p>
         <div class="social-links">
           <a href="https://github.com/alan7383/playify" target="_blank"><i class="fab fa-github"></i></a>
         </div>
       </div>
-      <div class="footer-column">
+      <div class="footer-column" style="text-align: center;">
         <h3>Links</h3>
-        <ul>
+        <ul style="display: inline-block; text-align: left;">
           <li><a href="index.html#features">Features</a></li>
           <li><a href="index.html#platforms">Platforms</a></li>
           <li><a href="index.html#how-it-works">How It Works</a></li>
           <li><a href="commands.html">Commands</a></li>
           <li><a href="https://github.com/alan7383/playify" target="_blank">GitHub</a></li>
         </ul>
+      </div>
+      <div class="footer-column">
+        <h3>Support</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">Help us keep Playify running and improving!</p>
+        <a href="https://www.paypal.com/paypalme/alanmussot1" target="_blank" class="button primary-button" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fab fa-paypal"></i> Support on PayPal
+        </a>
       </div>
     </div>
     <div class="copyright">
