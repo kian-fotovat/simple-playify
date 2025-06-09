@@ -223,6 +223,32 @@
       font-size: 1.1rem;
     }
 
+    .command-desc a {
+      color: var(--primary);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .command-desc a:hover {
+      color: var(--text);
+    }
+
+    .command-desc a::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 1px;
+      bottom: -2px;
+      left: 0;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.3s ease;
+    }
+
+    .command-desc a:hover::after {
+      width: 100%;
+    }
+
     .category-section {
       margin-bottom: 50px;
       max-width: 1200px;
@@ -475,7 +501,7 @@
           <div class="command-name">
             <h3 class="command-title">/play [query]</h3>
           </div>
-          <p class="command-desc">Plays a song, playlist, or searches by title from YouTube (including YouTube Music links), Spotify, or SoundCloud.</p>
+          <p class="command-desc">Plays songs by title from various platforms. <a href="index.html#platforms">See supported platforms</a></p>
         </div>
         <div class="command-row">
           <div class="command-icon">
