@@ -78,6 +78,8 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       text-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+      white-space: nowrap;
+      padding: 0 10px;
     }
 
     .nav-links {
@@ -111,6 +113,42 @@
 
     .nav-links a:hover::after {
       width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        padding: 15px 20px;
+      }
+      
+      .logo {
+        font-size: 1.5rem;
+      }
+
+      .nav-links {
+        gap: 15px;
+      }
+
+      .nav-links a {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      nav {
+        padding: 12px 15px;
+      }
+
+      .logo {
+        font-size: 1.3rem;
+      }
+
+      .nav-links {
+        gap: 10px;
+      }
+
+      .nav-links a {
+        font-size: 0.8rem;
+      }
     }
 
     /* Hero Section */
@@ -168,6 +206,7 @@
       letter-spacing: 2px;
       padding: 0 20px;
       border-radius: 10px;
+      white-space: nowrap;
     }
 
     h1::before {
@@ -837,6 +876,27 @@
     @keyframes shimmer {
       0% { background-position: 0% center; }
       100% { background-position: 200% center; }
+    }
+
+    @media (max-width: 1024px) {
+      h1 {
+        font-size: 6rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 4rem;
+        padding: 0 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 3rem;
+        padding: 0 10px;
+        letter-spacing: 1px;
+      }
     }
   </style>
 </head>
