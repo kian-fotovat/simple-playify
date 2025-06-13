@@ -8,7 +8,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import random
 from urllib.parse import urlparse, parse_qs
-import uuid
 
 # Intents pour le bot
 intents = discord.Intents.default()
@@ -44,15 +43,16 @@ class MusicPlayer:
         self.current_task = None
         self.queue = asyncio.Queue()
         self.current_url = None
+        self.current_info = None  # Ajouté pour stocker les infos de la chanson actuelle
         self.text_channel = None
         self.loop_current = False
         self.autoplay_enabled = False
-        self.last_was_single = False
+        self.last_was_single = False  # Drapeau pour suivre si la dernière piste était unique
 
 # Dictionnaires pour stocker les états par serveur
-music_players = {}
-kawaii_mode = {}
-server_languages = {}
+music_players = {}      # {guild_id: MusicPlayer()}
+kawaii_mode = {}       # {guild_id: bool}
+server_languages = {}  # {guild_id: "en" or "fr"}
 
 # Fonction pour obtenir le player d'un serveur
 def get_player(guild_id):
@@ -95,22 +95,6 @@ def get_messages(message_key, guild_id):
                 "normal": "**{count} tracks** being added...",
                 "kawaii": "**{count} songs** added!"
             },
-            "bandcamp_track_added": {
-                "normal": "🎵 Bandcamp Track Added",
-                "kawaii": "(っ◕‿◕)っ ♫ BANDCAMP SONG ADDED ♫"
-            },
-            "bandcamp_album_added": {
-                "normal": "🎶 Bandcamp Album Added",
-                "kawaii": "✧･ﾟ: *✧･ﾟ:* BANDCAMP ALBUM *:･ﾟ✧*:･ﾟ✧"
-            },
-            "bandcamp_playlist_added": {
-                "normal": "🎶 Bandcamp Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ BANDCAMP PLAYLIST"
-            },
-            "bandcamp_description": {
-                "normal": "**{count} tracks** added to the queue.",
-                "kawaii": "**{count} songs** added!"
-            },
             "song_added": {
                 "normal": "🎵 Added to Queue",
                 "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
@@ -139,7 +123,7 @@ def get_messages(message_key, guild_id):
                 "normal": "Error during search. Try another title.",
                 "kawaii": "(︶︹︺) Couldn't find this song..."
             },
-            "now_playing": {
+            "now_playing_title": {
                 "normal": "🎵 Now Playing",
                 "kawaii": "♫♬ NOW PLAYING ♬♫"
             },
@@ -231,6 +215,34 @@ def get_messages(message_key, guild_id):
                 "normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute depending on server load)",
                 "kawaii": "♪(´▽｀) Adding similar songs to the queue! ~ (It might take a little while, up to 1 minute!)"
             },
+            "queue_title": {
+                "normal": "🎶 Queue",
+                "kawaii": "🎶 Queue (◕‿◕✿)"
+            },
+            "queue_description": {
+                "normal": "There are **{count} songs** in the queue.",
+                "kawaii": "**{count} songs** in the queue! ~"
+            },
+            "queue_next": {
+                "normal": "Next songs:",
+                "kawaii": "Next songs: ♫"
+            },
+            "queue_song": {
+                "normal": "- [{title}]({url})",
+                "kawaii": "- ♪ [{title}]({url})"
+            },
+            "clear_queue_success": {
+                "normal": "✅ Queue cleared.",
+                "kawaii": "(≧▽≦) Queue cleared! ~"
+            },
+            "play_next_added": {
+                "normal": "🎵 Added as next song",
+                "kawaii": "(っ◕‿◕)っ ♫ Added as next song ♫"
+            },
+            "no_song_playing": {
+                "normal": "No song is currently playing.",
+                "kawaii": "(´･ω･`) No music is playing right now..."
+            },
         },
         "fr": {
             "no_voice_channel": {
@@ -251,22 +263,6 @@ def get_messages(message_key, guild_id):
             },
             "spotify_playlist_description": {
                 "normal": "**{count} titres** en cours d'ajout...",
-                "kawaii": "**{count} musiques** ajoutées !"
-            },
-            "bandcamp_track_added": {
-                "normal": "🎵 Piste Bandcamp ajoutée",
-                "kawaii": "(っ◕‿◕)っ ♫ MUSIQUE BANDCAMP AJOUTÉE ♫"
-            },
-            "bandcamp_album_added": {
-                "normal": "🎶 Album Bandcamp ajouté",
-                "kawaii": "✧･ﾟ: *✧･ﾟ:* ALBUM BANDCAMP *:･ﾟ✧*:･ﾟ✧"
-            },
-            "bandcamp_playlist_added": {
-                "normal": "🎶 Playlist Bandcamp ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST BANDCAMP"
-            },
-            "bandcamp_description": {
-                "normal": "**{count} titres** ont été ajoutés à la file d'attente.",
                 "kawaii": "**{count} musiques** ajoutées !"
             },
             "song_added": {
@@ -297,7 +293,7 @@ def get_messages(message_key, guild_id):
                 "normal": "Erreur lors de la recherche. Réessaie avec un autre titre.",
                 "kawaii": "(︶︹︺) Je n'ai pas trouvé cette musique..."
             },
-            "now_playing": {
+            "now_playing_title": {
                 "normal": "🎵 En cours de lecture",
                 "kawaii": "♫♬ MAINTENANT EN LECTURE ♬♫"
             },
@@ -387,7 +383,35 @@ def get_messages(message_key, guild_id):
             },
             "autoplay_added": {
                 "normal": "🎵 Ajout de chansons similaires à la file... (Cela peut prendre jusqu'à 1 minute selon la charge du serveur)",
-                "kawaii": "♪(´▽｀) Ajout de chansons similaires ! ~ (Ça peut prendre un petit moment, jusqu'à 1 minute !)"
+                "kawaii": "♪(´▽｀) Ajout de chansons similaires à la file ! ~ (Ça peut prendre un petit moment, jusqu'à 1 minute !)"
+            },
+            "queue_title": {
+                "normal": "🎶 File d'attente",
+                "kawaii": "🎶 File d'attente (◕‿◕✿)"
+            },
+            "queue_description": {
+                "normal": "Il y a **{count} chansons** dans la file d'attente.",
+                "kawaii": "**{count} chansons** dans la file d'attente ! ~"
+            },
+            "queue_next": {
+                "normal": "Chansons suivantes :",
+                "kawaii": "Chansons suivantes : ♫"
+            },
+            "queue_song": {
+                "normal": "- [{title}]({url})",
+                "kawaii": "- ♪ [{title}]({url})"
+            },
+            "clear_queue_success": {
+                "normal": "✅ File d'attente effacée.",
+                "kawaii": "(≧▽≦) File d'attente effacée ! ~"
+            },
+            "play_next_added": {
+                "normal": "🎵 Ajoutée comme prochaine chanson",
+                "kawaii": "(っ◕‿◕)っ ♫ Ajoutée comme prochaine chanson ♫"
+            },
+            "no_song_playing": {
+                "normal": "Aucune chanson n'est actuellement en lecture.",
+                "kawaii": "(´･ω･`) Aucune musique n'est en lecture actuellement..."
             },
         }
     }
@@ -517,57 +541,68 @@ async def play(interaction: discord.Interaction, query: str):
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            print(f"Error connecting to voice channel: {e}")
+            print(f"Error: {e}")
             return
 
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
 
-    spotify_regex = re.compile(r'^(https?://)?(?:www\.)?(open\.spotify\.com)/.+$')
-    soundcloud_regex = re.compile(r'^(https?://)?(?:www\.)?(soundcloud\.com)/.+$')
-    youtube_regex = re.compile(r'^(https?://)?(?:www\.)?(?:youtube\.com|youtu\.be)/.+$')
-    ytmusic_regex = re.compile(r'^(https?://)?(?:music\.youtube\.com)/.+$')
-    bandcamp_regex = re.compile(r'^(https?://)?([^\.]+)\.bandcamp\.com/.+$')
-
+    spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+    soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
+    youtube_regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$')
+    ytmusic_regex = re.compile(r'^(https?://)?(music\.youtube\.com)/.+$')
+    bandcamp_regex = re.compile(r'^(https?://)?([^\.]+)\.bandcamp\.com/.+$')  # Ajout de Bandcamp
+    
     is_spotify = spotify_regex.match(query)
     is_soundcloud = soundcloud_regex.match(query)
     is_youtube = youtube_regex.match(query)
     is_ytmusic = ytmusic_regex.match(query)
-    is_bandcamp = bandcamp_regex.match(query)
-
-    # Options modifiées pour yt-dlp pour mieux gérer les miniatures et les titres
-    ydl_opts = {
-        "format": "bestaudio/best",
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": False,  # Désactivé pour obtenir plus d'informations
-        "forcejson": True,
-        "noplaylist": False,
-        "ignoreerrors": True,
-        "extractor_args": {
-            "youtube": {
-                "skip": ["dash", "hls"]
-            }
-        }
-    }
-
+    is_bandcamp = bandcamp_regex.match(query)  # Détection de Bandcamp
+    
     if is_spotify:
         spotify_queries = await process_spotify_url(query, interaction)
         if not spotify_queries:
             return
-        ydl_opts["default_search"] = "ytsearch1"
+
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "default_search": "ytsearch1",
+        }
+        
         if len(spotify_queries) == 1:
+            # Piste unique
             query = spotify_queries[0]
+            try:
+                info = await extract_info_async(ydl_opts, query)
+                video = info["entries"][0] if "entries" in info else info
+                video_url = video["webpage_url"]
+                await music_player.queue.put({'url': video_url, 'is_single': True})
+                embed = Embed(
+                    title=get_messages("song_added", guild_id),
+                    description=f"[{video['title']}]({video['webpage_url']})",
+                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
+                )
+                embed.set_thumbnail(url=video["thumbnail"])
+                if is_kawaii:
+                    embed.set_footer(text="☆⌒(≧▽° )")
+                await interaction.followup.send(embed=embed)
+            except Exception as e:
+                print(f"Spotify conversion error: {e}")
+                embed = Embed(
+                    description=get_messages("search_error", guild_id),
+                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
         else:
+            # Playlist
             for spotify_query in spotify_queries:
                 try:
                     info = await extract_info_async(ydl_opts, spotify_query)
                     video = info["entries"][0] if "entries" in info else info
-                    video_url = video.get("webpage_url") or video.get("url")
-                    video_title = video.get("title", "Unknown Title")
-                    video_thumbnail = video.get("thumbnail") or None
-                    if video_url:
-                        await music_player.queue.put({'url': video_url, 'title': video_title, 'thumbnail': video_thumbnail, 'is_single': False})
+                    video_url = video["webpage_url"]
+                    await music_player.queue.put({'url': video_url, 'is_single': False})
                 except Exception as e:
                     print(f"Spotify conversion error: {e}")
                     continue
@@ -577,105 +612,247 @@ async def play(interaction: discord.Interaction, query: str):
                 color=0xB5EAD7 if is_kawaii else discord.Color.green()
             )
             await interaction.followup.send(embed=embed)
-            if not music_player.current_task or music_player.current_task.done():
-                music_player.current_task = asyncio.create_task(play_audio(guild_id))
-            return
-    else:
-        ydl_opts["default_search"] = "ytsearch1"
-
-    try:
-        info = await extract_info_async(ydl_opts, query)
-
-        if "entries" in info:
-            track_count = 0
-            for entry in info["entries"]:
-                if entry:
-                    video_url = entry.get("webpage_url") or entry.get("url")
-                    video_title = entry.get("title", "Unknown Title")
-                    video_thumbnail = entry.get("thumbnail") or None
-                    
-                    # Pour SoundCloud, on essaie d'obtenir plus d'informations si le titre est inconnu
-                    if video_title == "Unknown Title" and "soundcloud.com" in video_url:
-                        try:
-                            with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
-                                track_info = ydl.extract_info(video_url, download=False)
-                                video_title = track_info.get("title", video_title)
-                                video_thumbnail = track_info.get("thumbnail", video_thumbnail)
-                        except:
-                            pass
-                    
-                    if video_url:
-                        await music_player.queue.put({'url': video_url, 'title': video_title, 'thumbnail': video_thumbnail, 'is_single': False})
-                        track_count += 1
             
-            if track_count > 0:
-                thumbnail = info["entries"][0].get("thumbnail") if info["entries"][0] else None
-                if not thumbnail and "youtube.com" in query:
-                    thumbnail = f"https://img.youtube.com/vi/{get_video_id(query)}/hqdefault.jpg"
-                
-                embed_title = get_messages("ytmusic_playlist_added", guild_id) if is_ytmusic else get_messages("playlist_added", guild_id)
-                embed_description = get_messages("ytmusic_playlist_description", guild_id).format(count=track_count) if is_ytmusic else get_messages("playlist_description", guild_id).format(count=track_count)
-                embed = Embed(
-                    title=embed_title,
-                    description=embed_description,
-                    color=0xE2F0CB if is_kawaii else discord.Color.green()
-                )
-                if thumbnail:
-                    embed.set_thumbnail(url=thumbnail)
-                await interaction.followup.send(embed=embed)
+    elif is_soundcloud or is_youtube or is_ytmusic or is_bandcamp:  # Bandcamp ajouté ici
+        try:
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "extract_flat": "in_playlist",
+                "noplaylist": False,
+            }
+            info = await extract_info_async(ydl_opts, query)
+            
+            if "entries" in info:
+                # Playlist
+                for entry in info["entries"]:
+                    if entry:
+                        await music_player.queue.put({'url': entry['url'], 'is_single': False})
+                if info["entries"] and info["entries"][0]:
+                    thumbnail = info["entries"][0].get("thumbnail")
+                    embed_title = get_messages("ytmusic_playlist_added", guild_id) if is_ytmusic else get_messages("playlist_added", guild_id)
+                    embed_description = get_messages("ytmusic_playlist_description", guild_id).format(count=len(info["entries"])) if is_ytmusic else get_messages("playlist_description", guild_id).format(count=len(info["entries"]))
+                    embed = Embed(
+                        title=embed_title,
+                        description=embed_description,
+                        color=0xE2F0CB if is_kawaii else discord.Color.green()
+                    )
+                    if thumbnail:
+                        embed.set_thumbnail(url=thumbnail)
+                    await interaction.followup.send(embed=embed)
             else:
+                # Piste unique
+                await music_player.queue.put({'url': info["webpage_url"], 'is_single': True})
                 embed = Embed(
-                    description=get_messages("video_error", guild_id),
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
+                    title=get_messages("song_added", guild_id),
+                    description=f"[{info['title']}]({info['webpage_url']})",
+                    color=0xFFDAC1 if is_kawaii else discord.Color.blue()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
-            video_url = info.get("webpage_url") or info.get("url")
-            video_title = info.get("title", "Unknown Title")
-            video_thumbnail = info.get("thumbnail") or None
-            
-            # Pour SoundCloud, on essaie d'obtenir plus d'informations si le titre est inconnu
-            if video_title == "Unknown Title" and "soundcloud.com" in video_url:
-                try:
-                    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
-                        track_info = ydl.extract_info(video_url, download=False)
-                        video_title = track_info.get("title", video_title)
-                        video_thumbnail = track_info.get("thumbnail", video_thumbnail)
-                except:
-                    pass
-            
-            if not video_url:
-                raise KeyError("No valid URL found")
-            
-            await music_player.queue.put({'url': video_url, 'title': video_title, 'thumbnail': video_thumbnail, 'is_single': True})
+                if info.get("thumbnail"):
+                    embed.set_thumbnail(url=info["thumbnail"])
+                await interaction.followup.send(embed=embed)
+        except Exception as e:
+            embed = Embed(
+                description=get_messages("video_error", guild_id),
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            print(f"Error: {e}")
+    else:
+        try:
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "default_search": "ytsearch1",
+            }
+            info = await extract_info_async(ydl_opts, query)
+            video = info["entries"][0] if "entries" in info else info
+            await music_player.queue.put({'url': video["webpage_url"], 'is_single': True})
             
             embed = Embed(
                 title=get_messages("song_added", guild_id),
-                description=f"[{video_title}]({video_url})",
-                color=0xFFDAC1 if is_kawaii else discord.Color.blue()
+                description=f"[{video['title']}]({video['webpage_url']})",
+                color=0xB5EAD7 if is_kawaii else discord.Color.blue()
             )
-            
-            # Si pas de miniature, on essaie d'en obtenir une pour YouTube
-            if not video_thumbnail and "youtube.com" in video_url:
-                video_id = get_video_id(video_url)
-                if video_id:
-                    video_thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-            
-            if video_thumbnail:
-                embed.set_thumbnail(url=video_thumbnail)
-            
+            if video.get("thumbnail"):
+                embed.set_thumbnail(url=video["thumbnail"])
             await interaction.followup.send(embed=embed)
+        except Exception as e:
+            embed = Embed(
+                description=get_messages("search_error", guild_id),
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            print(f"Error: {e}")
 
+    if not music_player.current_task or music_player.current_task.done():
+        music_player.current_task = asyncio.create_task(play_audio(guild_id))
+
+@bot.tree.command(name="queue", description="Show the current queue")
+async def queue(interaction: discord.Interaction):
+    # Déférer la réponse pour éviter le timeout
+    await interaction.response.defer()
+
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
+    # Si la file d'attente est vide
+    if music_player.queue.qsize() == 0:
+        embed = Embed(
+            description=get_messages("queue_empty", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        return
+    
+    # Récupérer les 5 premières chansons (ou ajuster selon tes besoins)
+    queue_items = list(music_player.queue._queue)[:5]
+    next_songs = []
+    for item in queue_items:
+        try:
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+            }
+            info = await extract_info_async(ydl_opts, item['url'])
+            title = info.get("title", "Unknown Title")
+            url = info.get("webpage_url", item['url'])
+            next_songs.append(get_messages("queue_song", guild_id).format(title=title, url=url))
+        except Exception as e:
+            print(f"Erreur lors de l'extraction des infos : {e}")
+            next_songs.append("- Chanson inconnue")
+    
+    # Créer l'embed avec les infos
+    embed = Embed(
+        title=get_messages("queue_title", guild_id),
+        description=get_messages("queue_description", guild_id).format(count=music_player.queue.qsize()),
+        color=0xB5EAD7 if is_kawaii else discord.Color.blue()
+    )
+    if next_songs:
+        embed.add_field(
+            name=get_messages("queue_next", guild_id),
+            value="\n".join(next_songs),
+            inline=False
+        )
+    
+    # Envoyer la réponse finale
+    await interaction.followup.send(embed=embed)
+
+# Commande /clearqueue
+@bot.tree.command(name="clearqueue", description="Clear the current queue")
+async def clear_queue(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
+    while not music_player.queue.empty():
+        music_player.queue.get_nowait()
+    
+    embed = Embed(
+        description=get_messages("clear_queue_success", guild_id),
+        color=0xB5EAD7 if is_kawaii else discord.Color.green()
+    )
+    await interaction.response.send_message(embed=embed)
+
+# Commande /playnext
+@bot.tree.command(name="playnext", description="Add a song to play next")
+@app_commands.describe(query="Link or title of the video/song to play next")
+async def play_next(interaction: discord.Interaction, query: str):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
+    if not interaction.user.voice or not interaction.user.voice.channel:
+        embed = Embed(
+            description=get_messages("no_voice_channel", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+
+    if not music_player.voice_client or not music_player.voice_client.is_connected():
+        try:
+            music_player.voice_client = await interaction.user.voice.channel.connect()
+        except Exception as e:
+            embed = Embed(
+                description=get_messages("connection_error", guild_id),
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            print(f"Error: {e}")
+            return
+
+    music_player.text_channel = interaction.channel
+    await interaction.response.defer()
+
+    try:
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "default_search": "ytsearch1",
+        }
+        info = await extract_info_async(ydl_opts, query)
+        video = info["entries"][0] if "entries" in info else info
+        video_url = video["webpage_url"]
+        
+        # Créer une nouvelle file d'attente
+        new_queue = asyncio.Queue()
+        await new_queue.put({'url': video_url, 'is_single': True})
+        
+        # Ajouter les chansons existantes
+        while not music_player.queue.empty():
+            item = await music_player.queue.get()
+            await new_queue.put(item)
+        
+        music_player.queue = new_queue
+        
+        embed = Embed(
+            title=get_messages("play_next_added", guild_id),
+            description=f"[{video['title']}]({video['webpage_url']})",
+            color=0xC7CEEA if is_kawaii else discord.Color.blue()
+        )
+        if video.get("thumbnail"):
+            embed.set_thumbnail(url=video["thumbnail"])
+        await interaction.followup.send(embed=embed)
     except Exception as e:
         embed = Embed(
-            description=get_messages("video_error", guild_id),
+            description=get_messages("search_error", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
         print(f"Error: {e}")
 
-    if not music_player.current_task or music_player.current_task.done():
-        music_player.current_task = asyncio.create_task(play_audio(guild_id))
+# Commande /nowplaying
+@bot.tree.command(name="nowplaying", description="Show the current song playing")
+async def now_playing(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+    
+    if music_player.current_info:
+        title = music_player.current_info.get("title", "Unknown Title")
+        url = music_player.current_info.get("webpage_url", music_player.current_url)
+        thumbnail = music_player.current_info.get("thumbnail")
+        
+        embed = Embed(
+            title=get_messages("now_playing_title", guild_id),
+            description=get_messages("now_playing_description", guild_id).format(title=title, url=url),
+            color=0xC7CEEA if is_kawaii else discord.Color.green()
+        )
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
+        await interaction.response.send_message(embed=embed)
+    else:
+        embed = Embed(
+            description=get_messages("no_song_playing", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def play_audio(guild_id):
     is_kawaii = get_mode(guild_id)
@@ -684,6 +861,7 @@ async def play_audio(guild_id):
     while True:
         if music_player.queue.empty():
             if music_player.autoplay_enabled and music_player.last_was_single and music_player.current_url:
+                # Envoyer le message d'autoplay immédiatement
                 if music_player.text_channel:
                     embed = Embed(
                         description=get_messages("autoplay_added", guild_id),
@@ -691,6 +869,7 @@ async def play_audio(guild_id):
                     )
                     await music_player.text_channel.send(embed=embed)
                 
+                # Ajouter des chansons similaires
                 if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url:
                     mix_playlist_url = get_mix_playlist_url(music_player.current_url)
                     if mix_playlist_url:
@@ -698,20 +877,18 @@ async def play_audio(guild_id):
                             "format": "bestaudio/best",
                             "quiet": True,
                             "no_warnings": True,
-                            "extract_flat": False,
+                            "extract_flat": True,
                         }
                         try:
                             info = await extract_info_async(ydl_opts, mix_playlist_url)
                             if "entries" in info:
                                 current_video_id = get_video_id(music_player.current_url)
                                 for entry in info["entries"]:
-                                    video_url = entry.get("webpage_url") or entry.get("url")
-                                    video_title = entry.get("title", "Unknown Title")
-                                    video_thumbnail = entry.get("thumbnail") or None
-                                    if video_url and get_video_id(video_url) != current_video_id:
-                                        await music_player.queue.put({'url': video_url, 'title': video_title, 'thumbnail': video_thumbnail, 'is_single': False})
+                                    entry_video_id = get_video_id(entry["url"])
+                                    if entry_video_id and entry_video_id != current_video_id:
+                                        await music_player.queue.put({'url': entry["url"], 'is_single': False})
                         except Exception as e:
-                            print(f"Erreur YouTube Mix: {e}")
+                            print(f"Erreur YouTube Mix : {e}")
                 elif "soundcloud.com" in music_player.current_url:
                     track_id = get_soundcloud_track_id(music_player.current_url)
                     if track_id:
@@ -721,31 +898,28 @@ async def play_audio(guild_id):
                                 "format": "bestaudio/best",
                                 "quiet": True,
                                 "no_warnings": True,
-                                "extract_flat": False,
+                                "extract_flat": True,
                             }
                             try:
                                 info = await extract_info_async(ydl_opts, station_url)
                                 if "entries" in info:
                                     current_track_id = track_id
                                     for entry in info["entries"]:
-                                        video_url = entry.get("webpage_url") or entry.get("url")
-                                        video_title = entry.get("title", "Unknown Title")
-                                        video_thumbnail = entry.get("thumbnail") or None
-                                        entry_track_id = get_soundcloud_track_id(video_url)
+                                        entry_track_id = get_soundcloud_track_id(entry["url"])
                                         if entry_track_id and entry_track_id != current_track_id:
-                                            await music_player.queue.put({'url': video_url, 'title': video_title, 'thumbnail': video_thumbnail, 'is_single': False})
+                                            await music_player.queue.put({'url': entry["url"], 'is_single': False})
                             except Exception as e:
-                                print(f"Erreur SoundCloud Station: {e}")
+                                print(f"Erreur SoundCloud Station : {e}")
             else:
                 music_player.current_task = None
+                music_player.current_info = None  # Réinitialiser les infos quand la file est vide
                 break
 
         track_info = await music_player.queue.get()
         video_url = track_info['url']
-        video_title = track_info['title']
-        video_thumbnail = track_info['thumbnail']
         is_single = track_info['is_single']
         
+        # Vérifier si c’est la dernière piste
         if music_player.queue.empty():
             music_player.last_was_single = is_single
         else:
@@ -762,48 +936,46 @@ async def play_audio(guild_id):
                 "format": "bestaudio/best",
                 "quiet": True,
                 "no_warnings": True,
-                "ignoreerrors": True,
             }
             info = await extract_info_async(ydl_opts, video_url)
-            audio_url = info.get("url")
+            music_player.current_info = info  # Stocker les infos de la chanson actuelle
+            audio_url = info["url"]
+            title = info.get("title", "Unknown Title")
+            thumbnail = info.get("thumbnail")
             webpage_url = info.get("webpage_url", video_url)
 
+            # Afficher "Now Playing" uniquement pour les pistes non uniques (playlists)
             if not is_single and music_player.text_channel:
                 embed = Embed(
-                    title=get_messages("now_playing", guild_id),
+                    title=get_messages("now_playing_title", guild_id),
                     description=get_messages("now_playing_description", guild_id).format(
-                        title=video_title,
+                        title=title,
                         url=webpage_url
                     ),
                     color=0xC7CEEA if is_kawaii else discord.Color.green()
                 )
-                if not video_thumbnail and "youtube.com" in webpage_url:
-                    video_id = get_video_id(webpage_url)
-                    if video_id:
-                        video_thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-                
-                if video_thumbnail:
-                    embed.set_thumbnail(url=video_thumbnail)
+                if thumbnail:
+                    embed.set_thumbnail(url=thumbnail)
                 await music_player.text_channel.send(embed=embed)
 
             ffmpeg_options = {
                 "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-                "options": "-vn"
+                "options": "-vn",
             }
             music_player.voice_client.play(
                 discord.FFmpegPCMAudio(audio_url, **ffmpeg_options),
-                after=lambda e: print(f"Playback error: {e}") if e else None
+                after=lambda e: print(f"Erreur : {e}") if e else None
             )
 
             while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
                 await asyncio.sleep(1)
 
             if music_player.loop_current:
-                await music_player.queue.put({'url': video_url, 'title': video_title, 'thumbnail': video_thumbnail, 'is_single': is_single})
+                await music_player.queue.put({'url': video_url, 'is_single': is_single})
                 continue
 
         except Exception as e:
-            print(f"Audio playback error: {e}")
+            print(f"Erreur de lecture audio : {e}")
             continue
 
 # Commande /pause
@@ -897,12 +1069,13 @@ async def stop(interaction: discord.Interaction):
             music_player.voice_client.stop()
         
         while not music_player.queue.empty():
-            await music_player.queue.get()
-        
+            music_player.queue.get_nowait()
+
         await music_player.voice_client.disconnect()
         music_player.voice_client = None
         music_player.current_task = None
         music_player.current_url = None
+        music_player.current_info = None  # Réinitialiser les infos lors de l'arrêt
 
         embed = Embed(
             description=get_messages("stop", guild_id),
@@ -975,7 +1148,7 @@ async def on_ready():
                     return
                 
                 statuses = [
-                    ("/autoplay for endless music 🎶", discord.ActivityType.listening),
+                    ("your Bandcamp links 🎶", discord.ActivityType.listening),
                     ("/play [link] 🔥", discord.ActivityType.listening),
                     (f"music on {len(bot.guilds)} servers 🎶", discord.ActivityType.playing)
                 ]
