@@ -121,10 +121,6 @@ No problem! Playify is running 24/7. Invite it to your server:
 
 ---
 
-Voici une version modifiée du passage pour qu’il couvre à la fois les utilisateurs en **auto-hébergement** *et* ceux qui utilisent la version **hébergée par toi** :
-
----
-
 ## (・Д・)ノ♥ Privacy First
 
 Your music, your business. Whether you host it yourself or use the hosted Playify bot, **no user data is ever collected or stored**.
