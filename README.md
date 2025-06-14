@@ -17,17 +17,17 @@ Playify is a minimalist Discord music bot.
 Just clean commands and proper sound.  
 You type `play`, it plays. You type `stop`, it stops. Revolutionary.
 
-**No limits whatsoever — whether it’s the number of tracks in a playlist or anything else.**
+**No limits whatsoever — whether it’s the number of tracks in a playlist or anything else. Spotify support is fully functional (with one small caveat).**
 
 ---
 
-## (＾□＾) Spotify Support (Beta)
+## (＾□＾) Spotify Support
 
-Yes, it plays Spotify tracks now. Kind of.
+Yes, it plays Spotify tracks. Fully.
 
 - ✅ Individual tracks? Works fine.  
-- ↺ Small playlists? Sure.  
-- ☠️ Giant playlists? Come back later.
+- ✅ Small or giant playlists? Absolutely.  
+- ⚠️ **Playlists created by Spotify (e.g. "This Is", "Your Mix", "Release Radar") are not supported — blame the API.**
 
 ---
 
@@ -58,7 +58,7 @@ Yeah, you can.
 git clone https://github.com/alan7383/playify.git
 cd playify
 pip install -r requirements.txt
-```
+````
 
 Create a `.env` file:
 
@@ -76,9 +76,9 @@ Done. No PhD required.
 
 ---
 
-## (´・ω・`)ノ Don’t want to self-host?
+## (´・ω・\`)ノ Don’t want to self-host?
 
-Bot is already running 24/7.  
+Bot is already running 24/7.
 You can just invite it:
 
 👉 [Add to Discord](https://alan7383.github.io/playify/)
@@ -87,16 +87,16 @@ You can just invite it:
 
 ## (・Д・)ノ♥ Your privacy, your music.
 
-**Will you see what I’m playing?**  
+**Will you see what I’m playing?**
 Nope. Your music taste stays between you and your headphones.
 
-**Playify doesn’t store or collect any user data.**  
-It logs basic playback stuff *locally* to help with debugging — and that’s it.  
-No tracking, no history, no analytics.  
+**Playify doesn’t store or collect any user data.**
+It logs basic playback stuff *locally* to help with debugging — and that’s it.
+No tracking, no history, no analytics.
 **Nothing leaves your machine. Ever.**
 
-If something breaks, I check the console.  
-If it works, we vibe.  
+If something breaks, I check the console.
+If it works, we vibe.
 If it doesn’t, enjoy the silence (or not).
 
 <p align="center">
@@ -107,7 +107,7 @@ If it doesn’t, enjoy the silence (or not).
 
 ## (≧□≦)ノ Contribute?
 
-You can fork, PR, whatever.  
+You can fork, PR, whatever.
 But don’t expect a quick merge unless it fixes something annoying.
 
 ---
@@ -124,4 +124,4 @@ It helps keep it ad-free. And maybe I’ll fix bugs faster. Maybe.
 
 ## (⊙‿‿⊙) License
 
-MIT. Do whatever you want with it.  
+MIT. Do whatever you want with it.
