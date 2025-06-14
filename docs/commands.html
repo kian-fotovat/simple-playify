@@ -330,14 +330,17 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
+      background: transparent;
       color: var(--text);
       transition: all 0.3s ease;
+      border: 1px solid rgba(138, 43, 226, 0.2);
     }
 
     .social-links a:hover {
       background: linear-gradient(135deg, var(--primary), var(--secondary));
       transform: translateY(-3px);
+      border-color: transparent;
+      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
     }
 
     .button {
@@ -662,6 +665,7 @@
         <p style="color: var(--text-secondary); margin-bottom: 20px;">The music bot for Discord that delivers premium quality with a sleek interface.</p>
         <div class="social-links">
           <a href="https://github.com/alan7383/playify" target="_blank"><i class="fab fa-github"></i></a>
+          <a href="https://x.com/PlayifyBot" target="_blank"><i class="fa-brands fa-twitter"></i></a>
         </div>
       </div>
       <div class="footer-column" style="text-align: center;">
