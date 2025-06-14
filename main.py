@@ -1110,7 +1110,6 @@ async def clear_queue(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
-# /playnext command
 @bot.tree.command(name="playnext", description="Add a song to play next")
 @app_commands.describe(query="Link or title of the video/song to play next")
 async def play_next(interaction: discord.Interaction, query: str):
@@ -1141,22 +1140,54 @@ async def play_next(interaction: discord.Interaction, query: str):
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
 
+    spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+
     try:
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "quiet": True,
-            "no_warnings": True,
-            "default_search": "ytsearch1",
-            "extract_flat": True,
-            "noplaylist": True,
-            "no_color": True,
-            "socket_timeout": 10,
-            "force_generic_extractor": True,
-        }
-        info = await extract_info_async(ydl_opts, query)
-        video = info["entries"][0] if "entries" in info else info
-        video_url = video["webpage_url"]
-        
+        if spotify_regex.match(query):
+            spotify_tracks = await process_spotify_url(query, interaction)
+            if not spotify_tracks or len(spotify_tracks) != 1:
+                raise Exception("Only single Spotify tracks are supported for /playnext")
+            
+            track_name, artist_name = spotify_tracks[0]
+            search_query = f"ytsearch:{sanitize_query(f'{track_name} {artist_name}')}"
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+                "no_color": True,
+                "socket_timeout": 10,
+                "force_generic_extractor": True,
+            }
+            info = await extract_info_async(ydl_opts, search_query)
+            video = info["entries"][0] if "entries" in info and info["entries"] else None
+            if not video:
+                raise Exception("No results found")
+            video_url = video.get("webpage_url", video.get("url"))
+            if not video_url:
+                raise KeyError("No valid URL found in video metadata")
+            
+            logger.debug(f"Metadata for Spotify track: {video}")
+        else:
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "extract_flat": True,
+                "noplaylist": True,
+                "no_color": True,
+                "socket_timeout": 10,
+                "force_generic_extractor": True,
+            }
+            search_query = f"ytsearch:{sanitize_query(query)}" if not query.startswith(('http://', 'https://')) else query
+            info = await extract_info_async(ydl_opts, search_query)
+            video = info["entries"][0] if "entries" in info and info["entries"] else info
+            video_url = video.get("webpage_url", video.get("url"))
+            if not video_url:
+                raise KeyError("No valid URL found in video metadata")
+            
+            logger.debug(f"Metadata for non-Spotify query: {video}")
+
         new_queue = asyncio.Queue()
         await new_queue.put({'url': video_url, 'is_single': True})
         
@@ -1168,11 +1199,13 @@ async def play_next(interaction: discord.Interaction, query: str):
         
         embed = Embed(
             title=get_messages("play_next_added", guild_id),
-            description=f"[{video['title']}]({video['webpage_url']})",
+            description=f"[{video.get('title', 'Unknown Title')}]({video_url})",
             color=0xC7CEEA if is_kawaii else discord.Color.blue()
         )
         if video.get("thumbnail"):
             embed.set_thumbnail(url=video["thumbnail"])
+        if is_kawaii:
+            embed.set_footer(text="☆⌒(≧▽° )")
         await interaction.followup.send(embed=embed)
     except Exception as e:
         embed = Embed(
@@ -1180,8 +1213,8 @@ async def play_next(interaction: discord.Interaction, query: str):
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
-        logger.error(f"Error: {e}")
-
+        logger.error(f"Error processing /playnext for {query}: {e}")
+        
 # /nowplaying command
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
