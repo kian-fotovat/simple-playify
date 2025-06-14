@@ -121,15 +121,19 @@ No problem! Playify is running 24/7. Invite it to your server:
 
 ---
 
+Voici une version modifiée du passage pour qu’il couvre à la fois les utilisateurs en **auto-hébergement** *et* ceux qui utilisent la version **hébergée par toi** :
+
+---
+
 ## (・Д・)ノ♥ Privacy First
 
-**Your music, your business.** Playify doesn’t store or collect any user data. Logs are kept locally for debugging and never leave your machine. No tracking, no analytics, no nonsense.
+Your music, your business. Whether you host it yourself or use the hosted Playify bot, **no user data is ever collected or stored**.
 
-If something breaks, check the console logs. If it works, enjoy the tunes!
+* If you're self-hosting: logs stay **local**, only used for debugging — no tracking, no analytics, no nonsense.
+* If you're using the public Playify bot: only minimal logs (like errors) are kept **temporarily** to help fix bugs. **No playback history, no user tracking, ever.**
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/a39773b9-3362-41ba-b23d-475368f1d07e" alt="Debug Screenshot" width="700">
-</p>
+If something breaks, I check the logs.
+If it works, enjoy the tunes 🎶
 
 ---
 
