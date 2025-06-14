@@ -719,7 +719,6 @@ async def play(interaction: discord.Interaction, query: str):
         "format": "bestaudio/best",
         "quiet": True,
         "no_warnings": True,
-        "default_search": "ytsearch1",
         "extract_flat": True,
         "noplaylist": True,
         "no_color": True,
@@ -756,7 +755,7 @@ async def play(interaction: discord.Interaction, query: str):
             if "entries" in info and info["entries"]:
                 for entry in info["entries"][:3]:  # Check top 3 results
                     try:
-                        video_url = entry["url"]  # Corrected from "webpage_url" to "url"
+                        video_url = entry["url"]
                         video_title = entry.get("title", "Unknown Title")
                         logger.info(f"Found YouTube URL: {video_url} (Title: {video_title})")
                         url_cache[cache_key] = video_url
@@ -822,21 +821,35 @@ async def play(interaction: discord.Interaction, query: str):
             query = f"{track_name} {artist_name}"
             try:
                 cache_key = sanitize_query(query).lower()
-                if cache_key in url_cache:
-                    video_url = url_cache[cache_key]
-                    info = {"title": track_name, "webpage_url": video_url, "thumbnail": None}
-                else:
-                    info = await extract_info_async(ydl_opts, query)
-                    video_url = info["entries"][0]["webpage_url"] if "entries" in info else info["webpage_url"]
-                    url_cache[cache_key] = video_url
+                # Utiliser des options spécifiques pour récupérer la miniature
+                ydl_opts_full = {
+                    "format": "bestaudio/best",
+                    "quiet": True,
+                    "no_warnings": True,
+                    "noplaylist": True,
+                    "no_color": True,
+                    "socket_timeout": 10,
+                    "force_generic_extractor": True,
+                }
+                sanitized_query = sanitize_query(query)
+                search_query = f"ytsearch:{sanitized_query}"
+                info = await extract_info_async(ydl_opts_full, search_query)
+                video = info["entries"][0] if "entries" in info and info["entries"] else None
+                if not video:
+                    raise Exception("No results found")
+                video_url = video.get("webpage_url", video.get("url"))
+                if not video_url:
+                    raise KeyError("No valid URL found in video metadata")
+                logger.debug(f"Metadata for single track: {video}")
+                url_cache[cache_key] = video_url
                 await music_player.queue.put({'url': video_url, 'is_single': True})
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
-                    description=f"[{info['title']}]({video_url})",
+                    description=f"[{video.get('title', track_name)}]({video_url})",
                     color=0xC7CEEA if is_kawaii else discord.Color.blue()
                 )
-                if info.get("thumbnail"):
-                    embed.set_thumbnail(url=info["thumbnail"])
+                if video.get("thumbnail"):
+                    embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
                 await interaction.followup.send(embed=embed)
@@ -939,7 +952,7 @@ async def play(interaction: discord.Interaction, query: str):
                     
                 # Create initial embed
                 embed = Embed(
-                    title=f"Processing {platform} Playlist",  # <-- Maintenant platform est défini
+                    title=f"Processing {platform} Playlist",
                     description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks),
                     color=0xFFB6C1 if is_kawaii else discord.Color.blue()
                 )
@@ -992,14 +1005,19 @@ async def play(interaction: discord.Interaction, query: str):
                 "format": "bestaudio/best",
                 "quiet": True,
                 "no_warnings": True,
-                "default_search": "ytsearch1",  # Recherche YouTube directe
-                "noplaylist": True,  # Assure qu'on ne récupère pas de playlist
+                "extract_flat": True,
+                "noplaylist": True,
                 "no_color": True,
                 "socket_timeout": 10,
                 "force_generic_extractor": True,
             }
-            info = await extract_info_async(ydl_opts, query)
-            video = info["entries"][0] if "entries" in info else info
+            # Ajouter le préfixe ytsearch: si la requête n'est pas une URL
+            sanitized_query = sanitize_query(query)
+            search_query = f"ytsearch:{sanitized_query}"
+            info = await extract_info_async(ydl_opts, search_query)
+            video = info["entries"][0] if "entries" in info and info["entries"] else None
+            if not video:
+                raise Exception("No results found")
             video_url = video.get("webpage_url", video.get("url"))
             if not video_url:
                 raise KeyError("No valid URL found in video metadata")
@@ -1026,7 +1044,7 @@ async def play(interaction: discord.Interaction, query: str):
 
     if not music_player.current_task or music_player.current_task.done():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
-
+                                
 # /queue command
 @bot.tree.command(name="queue", description="Show the current queue")
 async def queue(interaction: discord.Interaction):
