@@ -1001,20 +1001,18 @@ async def play(interaction: discord.Interaction, query: str):
             logger.error(f"Error: {e}")
     else:
         try:
-            ydl_opts = {
+            ydl_opts_full = {
                 "format": "bestaudio/best",
                 "quiet": True,
                 "no_warnings": True,
-                "extract_flat": True,
                 "noplaylist": True,
                 "no_color": True,
                 "socket_timeout": 10,
                 "force_generic_extractor": True,
             }
-            # Ajouter le préfixe ytsearch: si la requête n'est pas une URL
             sanitized_query = sanitize_query(query)
             search_query = f"ytsearch:{sanitized_query}"
-            info = await extract_info_async(ydl_opts, search_query)
+            info = await extract_info_async(ydl_opts_full, search_query)
             video = info["entries"][0] if "entries" in info and info["entries"] else None
             if not video:
                 raise Exception("No results found")
@@ -1022,6 +1020,7 @@ async def play(interaction: discord.Interaction, query: str):
             if not video_url:
                 raise KeyError("No valid URL found in video metadata")
             
+            logger.debug(f"Metadata for keyword search: {video}")
             await music_player.queue.put({'url': video_url, 'is_single': True})
             
             embed = Embed(
@@ -1044,7 +1043,7 @@ async def play(interaction: discord.Interaction, query: str):
 
     if not music_player.current_task or music_player.current_task.done():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
-                                
+                                        
 # /queue command
 @bot.tree.command(name="queue", description="Show the current queue")
 async def queue(interaction: discord.Interaction):
