@@ -748,12 +748,11 @@ async def play(interaction: discord.Interaction, query: str):
                 "socket_timeout": 10,
             }
             
-            # Explicitly force search with "ytsearch:" prefix
             search_query = f"ytsearch:{sanitized_query}"
             info = await extract_info_async(ydl_opts_search, search_query)
             
             if "entries" in info and info["entries"]:
-                for entry in info["entries"][:3]:  # Check top 3 results
+                for entry in info["entries"][:3]:
                     try:
                         video_url = entry["url"]
                         video_title = entry.get("title", "Unknown Title")
@@ -765,7 +764,6 @@ async def play(interaction: discord.Interaction, query: str):
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_query}")
             
-            # Fallback to track title only
             sanitized_track = sanitize_query(track_name)
             logger.info(f"Fallback search: {sanitized_track}")
             search_query = f"ytsearch:{sanitized_track}"
@@ -783,7 +781,6 @@ async def play(interaction: discord.Interaction, query: str):
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_track}")
             
-            # Fallback to artist only
             sanitized_artist = sanitize_query(artist_name)
             logger.info(f"Fallback search: {sanitized_artist}")
             search_query = f"ytsearch:{sanitized_artist}"
@@ -801,7 +798,6 @@ async def play(interaction: discord.Interaction, query: str):
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_artist}")
             
-            # No results found
             logger.warning(f"No YouTube results for {sanitized_query}, {sanitized_track}, or {sanitized_artist}")
             url_cache[cache_key] = None
             return cache_key, None, track_name, artist_name
@@ -821,7 +817,6 @@ async def play(interaction: discord.Interaction, query: str):
             query = f"{track_name} {artist_name}"
             try:
                 cache_key = sanitize_query(query).lower()
-                # Utiliser des options spécifiques pour récupérer la miniature
                 ydl_opts_full = {
                     "format": "bestaudio/best",
                     "quiet": True,
@@ -842,7 +837,8 @@ async def play(interaction: discord.Interaction, query: str):
                     raise KeyError("No valid URL found in video metadata")
                 logger.debug(f"Metadata for single track: {video}")
                 url_cache[cache_key] = video_url
-                await music_player.queue.put({'url': video_url, 'is_single': True})
+                # Ajout de l'indicateur skip_now_playing
+                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
                     description=f"[{video.get('title', track_name)}]({video_url})",
@@ -861,7 +857,6 @@ async def play(interaction: discord.Interaction, query: str):
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            # Send initial processing message
             embed = Embed(
                 title=f"Processing Spotify Playlist",
                 description="Starting...",
@@ -887,10 +882,10 @@ async def play(interaction: discord.Interaction, query: str):
                             failed_tracks.append(f"{result[2]} by {result[3]}")
                     else:
                         _, video_url, _, _ = result
+                        # Pas de skip_now_playing pour les playlists
                         await music_player.queue.put({'url': video_url, 'is_single': False})
                     processed += 1
                     
-                    # Update progress every 10 tracks or at the end
                     if processed % 10 == 0 or processed == total_tracks:
                         progress = processed / total_tracks
                         bar = create_loading_bar(progress)
@@ -923,7 +918,6 @@ async def play(interaction: discord.Interaction, query: str):
             await message.edit(embed=embed)
     elif soundcloud_regex.match(query) or youtube_regex.match(query) or ytmusic_regex.match(query) or bandcamp_regex.match(query):
         try:
-            # Déterminer la plateforme
             platform = ""
             if soundcloud_regex.match(query):
                 platform = "SoundCloud"
@@ -950,7 +944,6 @@ async def play(interaction: discord.Interaction, query: str):
                 total_tracks = len(info["entries"])
                 processed = 0
                     
-                # Create initial embed
                 embed = Embed(
                     title=f"Processing {platform} Playlist",
                     description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks),
@@ -959,10 +952,10 @@ async def play(interaction: discord.Interaction, query: str):
                 message = await interaction.followup.send(embed=embed)
                 for entry in info["entries"]:
                     if entry:
+                        # Pas de skip_now_playing pour les playlists
                         await music_player.queue.put({'url': entry['url'], 'is_single': False})
                         processed += 1
                         
-                        # Update progress every 10 tracks or at the end
                         if processed % 10 == 0 or processed == total_tracks:
                             progress = processed / total_tracks
                             bar = create_loading_bar(progress)
@@ -973,7 +966,6 @@ async def play(interaction: discord.Interaction, query: str):
                             embed.description = new_description
                             await message.edit(embed=embed)
                 
-                # Final success message
                 if info["entries"] and info["entries"][0]:
                     thumbnail = info["entries"][0].get("thumbnail")
                     embed.title = get_messages("ytmusic_playlist_added", guild_id) if ytmusic_regex.match(query) else get_messages("playlist_added", guild_id)
@@ -983,7 +975,8 @@ async def play(interaction: discord.Interaction, query: str):
                         embed.set_thumbnail(url=thumbnail)
                     await message.edit(embed=embed)
             else:
-                await music_player.queue.put({'url': info["webpage_url"], 'is_single': True})
+                # Ajout de skip_now_playing pour une piste unique
+                await music_player.queue.put({'url': info["webpage_url"], 'is_single': True, 'skip_now_playing': True})
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
                     description=f"[{info['title']}]({info['webpage_url']})",
@@ -1021,7 +1014,8 @@ async def play(interaction: discord.Interaction, query: str):
                 raise KeyError("No valid URL found in video metadata")
             
             logger.debug(f"Metadata for keyword search: {video}")
-            await music_player.queue.put({'url': video_url, 'is_single': True})
+            # Ajout de skip_now_playing pour une recherche par titre
+            await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
             
             embed = Embed(
                 title=get_messages("song_added", guild_id),
@@ -1043,7 +1037,7 @@ async def play(interaction: discord.Interaction, query: str):
 
     if not music_player.current_task or music_player.current_task.done():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
-                                        
+
 # /queue command
 @bot.tree.command(name="queue", description="Show the current queue")
 async def queue(interaction: discord.Interaction):
@@ -1276,6 +1270,7 @@ async def play_audio(guild_id):
                                     for entry in info["entries"]:
                                         entry_video_id = get_video_id(entry["url"])
                                         if entry_video_id and entry_video_id != current_video_id:
+                                            # Pas de skip_now_playing pour les pistes d'autoplay
                                             await music_player.queue.put({'url': entry["url"], 'is_single': True})
                             except Exception as e:
                                 logger.error(f"Erreur YouTube Mix : {e}")
@@ -1300,6 +1295,7 @@ async def play_audio(guild_id):
                                         for entry in info["entries"]:
                                             entry_track_id = get_soundcloud_track_id(entry["url"])
                                             if entry_track_id and entry_track_id != current_track_id:
+                                                # Pas de skip_now_playing pour les pistes d'autoplay
                                                 await music_player.queue.put({'url': entry["url"], 'is_single': True})
                                 except Exception as e:
                                     logger.error(f"Erreur SoundCloud Station : {e}")
@@ -1311,6 +1307,7 @@ async def play_audio(guild_id):
             track_info = await music_player.queue.get()
             video_url = track_info['url']
             is_single = track_info['is_single']
+            skip_now_playing = track_info.get('skip_now_playing', False)
             
             if music_player.queue.qsize() == 0:
                 music_player.last_was_single = is_single
@@ -1339,7 +1336,8 @@ async def play_audio(guild_id):
                 thumbnail = info.get("thumbnail")
                 webpage_url = info.get("webpage_url", video_url)
 
-                if not is_single and music_player.text_channel:
+                # Envoyer le message "Now Playing" uniquement si skip_now_playing est False
+                if music_player.text_channel and not skip_now_playing:
                     embed = Embed(
                         title=get_messages("now_playing_title", guild_id),
                         description=get_messages("now_playing_description", guild_id).format(
@@ -1365,7 +1363,8 @@ async def play_audio(guild_id):
                     await asyncio.sleep(1)
 
                 if music_player.loop_current:
-                    await music_player.queue.put({'url': video_url, 'is_single': is_single})
+                    # Conserver skip_now_playing pour les pistes en boucle
+                    await music_player.queue.put({'url': video_url, 'is_single': is_single, 'skip_now_playing': skip_now_playing})
                     continue
 
             except Exception as e:
@@ -1374,7 +1373,7 @@ async def play_audio(guild_id):
 
     except Exception as e:
         logger.error(f"Erreur dans play_audio pour guild {guild_id}: {e}")
-
+                
 # /pause command
 @bot.tree.command(name="pause", description="Pause the current playback")
 async def pause(interaction: discord.Interaction):
