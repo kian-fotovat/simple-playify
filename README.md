@@ -8,96 +8,124 @@
 
 ## ＼(ノºДº)ノ What is Playify?
 
-Playify is a minimalist Discord music bot.
+Playify is a minimalist Discord music bot that gets the job done. No fluff, no fuss—just pure music playback with a touch of charm.
 
-- No web UI.
-- No premium tier.
-- No bloat.
+- **No web UI.** Just clean, simple commands.
+- **No premium tier.** Everything’s free, always.
+- **No limits.** Play giant playlists, queue endless tracks, vibe without restrictions.
 
-Just clean commands and proper sound.  
-You type `play`, it plays. You type `stop`, it stops. Revolutionary.
-
-**No limits whatsoever — whether it’s the number of tracks in a playlist or anything else. Spotify support is fully functional (with one small caveat).**
+**Supports YouTube, SoundCloud, Spotify, and Bandcamp.** Type `/play`, and let the music roll.
 
 ---
 
 ## (＾□＾) Spotify Support
 
-Yes, it plays Spotify tracks. Fully.
+Playify handles Spotify like a pro:
 
-- ✅ Individual tracks? Works fine.  
-- ✅ Small or giant playlists? Absolutely.  
-- ⚠️ **Playlists created by Spotify (e.g. "This Is", "Your Mix", "Release Radar") are not supported — blame the API.**
+- ✅ **Individual tracks**: Plays them instantly.
+- ✅ **Playlists**: From small to massive, it’s all good.
+- ⚠️ **Spotify-curated playlists** (e.g., "This Is", "Your Mix", "Release Radar") aren’t supported due to API limitations. Blame Spotify, not us.
 
 ---
 
 ## (｡‿‿｡) Features
 
-- Music from YouTube, SoundCloud, and Spotify  
-- Commands you already know: `play`, `pause`, `skip`, etc.  
-- Custom playlists (stored locally)  
-- Actually fast — no stupid queue lag  
-- Built with `yt-dlp`, `FFmpeg`, `asyncio` and pure resentment
+- Play music from **YouTube**, **SoundCloud**, **Spotify**, and **Bandcamp**.
+- Intuitive commands: `/play`, `/pause`, `/skip`, `/queue`, and more.
+- **Autoplay** for similar tracks (YouTube Mix, SoundCloud Stations).
+- **Looping** and **shuffling** for ultimate playlist control.
+- **Kawaii mode** for extra cute responses (toggle with `/kaomoji`).
+- **Multilingual**: English and French support (set with `/language`).
+- Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a sprinkle of chaos.
 
 ---
 
-## (◕‿◕)ノ Self-hosting?
+## (◕‿◕)ノ Self-Hosting Playify
 
-Yeah, you can.
+Want to run Playify yourself? It’s straightforward.
 
 ### Requirements
 
-- Python 3.9+  
-- FFmpeg  
-- A Discord bot token  
-- Spotify API creds (if you care)
+- **Python 3.9+**: [Download here](https://www.python.org/downloads/).
+- **FFmpeg**: For audio processing. Install it:
+  - **Ubuntu/Debian**: `sudo apt update && sudo apt install ffmpeg`
+  - **macOS**: `brew install ffmpeg`
+  - **Windows**: Download from [FFmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
+- **Git**: To clone the repo.
+- **Discord Bot Token**: Get it from the [Discord Developer Portal](https://discord.com/developers/applications).
+- **Spotify API Credentials** (optional, for Spotify support): Create an app on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
 
-### Setup
+### Setup Steps
 
-```bash
-git clone https://github.com/alan7383/playify.git
-cd playify
-pip install -r requirements.txt
-````
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/alan7383/playify.git
+   cd playify
+   ```
 
-Create a `.env` file:
+2. **Set up a virtual environment** (recommended):
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-```env
-DISCORD_TOKEN=your_token_here
-```
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   If `requirements.txt` is missing, install manually:
+   ```bash
+   pip install discord.py yt-dlp spotipy cachetools python-dotenv
+   ```
 
-And run it:
+4. **Create a `.env` file** in the project root:
+   ```env
+   DISCORD_TOKEN=your_discord_bot_token
+   SPOTIFY_CLIENT_ID=your_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+   ```
 
-```bash
-python main.py
-```
+5. **Run the bot**:
+   ```bash
+   python main.py
+   ```
 
-Done. No PhD required.
+6. **Invite the bot** to your server:
+   - Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+   - Create an application, add a bot, and enable **Guilds** and **Voice States** intents.
+   - Generate an invite link with permissions: `Connect`, `Speak`, `Send Messages`.
+   - Add the bot to your server and test with `/play`.
+
+### Optional: Run 24/7
+To keep the bot running on a VPS (e.g., DigitalOcean, AWS):
+- Use `pm2` to manage the process:
+  ```bash
+  npm install -g pm2
+  pm2 start main.py --interpreter python3
+  pm2 save
+  pm2 startup
+  ```
+
+### Troubleshooting
+- **FFmpeg not found**: Ensure FFmpeg is installed and added to your system PATH.
+- **Spotify errors**: Verify your Spotify API credentials and ensure your app is set up correctly.
+- **Bot not responding**: Check the Discord token and ensure the bot has proper permissions.
 
 ---
 
-## (´・ω・\`)ノ Don’t want to self-host?
+## (´・ω・\`)ノ Don’t Want to Self-Host?
 
-Bot is already running 24/7.
-You can just invite it:
+No problem! Playify is running 24/7. Invite it to your server:
 
 👉 [Add to Discord](https://alan7383.github.io/playify/)
 
 ---
 
-## (・Д・)ノ♥ Your privacy, your music.
+## (・Д・)ノ♥ Privacy First
 
-**Will you see what I’m playing?**
-Nope. Your music taste stays between you and your headphones.
+**Your music, your business.** Playify doesn’t store or collect any user data. Logs are kept locally for debugging and never leave your machine. No tracking, no analytics, no nonsense.
 
-**Playify doesn’t store or collect any user data.**
-It logs basic playback stuff *locally* to help with debugging — and that’s it.
-No tracking, no history, no analytics.
-**Nothing leaves your machine. Ever.**
-
-If something breaks, I check the console.
-If it works, we vibe.
-If it doesn’t, enjoy the silence (or not).
+If something breaks, check the console logs. If it works, enjoy the tunes!
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/a39773b9-3362-41ba-b23d-475368f1d07e" alt="Debug Screenshot" width="700">
@@ -105,23 +133,26 @@ If it doesn’t, enjoy the silence (or not).
 
 ---
 
-## (≧□≦)ノ Contribute?
+## (≧□≦)ノ Contribute
 
-You can fork, PR, whatever.
-But don’t expect a quick merge unless it fixes something annoying.
+Got ideas? Fork the repo, make a PR, or report issues. If it fixes something annoying, it might get merged faster.
 
 ---
 
-## (･∀･)♡ Support
+## (･∀･)♡ Support the Chaos
 
-Wanna support the chaos?
+Keep Playify ad-free and running smoothly:
 
 👉 [Paypal](https://www.paypal.com/paypalme/alanmussot1)
 
-It helps keep it ad-free. And maybe I’ll fix bugs faster. Maybe.
+Your support might make bug fixes *slightly* faster. No promises.
 
 ---
 
 ## (⊙‿‿⊙) License
 
-MIT. Do whatever you want with it.
+MIT License. Do whatever you want with it, just don’t break anything (too badly).
+
+---
+
+<p align="center">Built with 💢 and ☕ by alan7383</p>
