@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playify - Discord Music Bot</title>
   <link rel="icon" type="image/x-icon" href="playify.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
     @font-face {
       font-family: 'SequelGeoWide';
@@ -346,6 +345,79 @@
       60% { transform: translateY(-5px); }
     }
 
+    /* Announcement Section */
+    .announcement {
+      padding: 60px 5%;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(0, 0, 0, 0.9));
+      position: relative;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .announcement::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, circle, rgba(138, 43, 226, 0.2) 0%, transparent 70%);
+      top: -50px;
+      left: -50px;
+      animation: float 10s ease-in-out infinite;
+    }
+
+    .announcement::after {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, circle, rgba(153, 50, 204, 0.15) 0%, transparent 70%);
+      bottom: -50px;
+      right: -50px;
+      animation: float 12s ease-in-out infinite reverse;
+    }
+
+    .announcement h2 {
+      font-size: 2.5rem;
+      font-family: 'SequelGeoWide', sans-serif;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+      margin-bottom: 20px;
+    }
+
+    .announcement p {
+      font-size: 1.2rem;
+      max-width: 800px;
+      margin: 0 auto 20px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .announcement .highlight {
+      display: block;
+      font-size: 1.1rem;
+      font-style: italic;
+      color: var(--text);
+      background: rgba(20, 20, 20, 0.6);
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(138, 43, 226, 0.2);
+      margin: 15px auto;
+      max-width: 600px;
+    }
+
+    .announcement .support-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 30px;
+      font-size: 1rem;
+      margin-top: 20px;
+      text-align: center;
+    }
+
     /* Features Section */
     .features {
       padding: 100px 5%;
@@ -655,7 +727,7 @@
       background: rgba(138, 43, 226, 0.1);
       padding: 10px 20px;
       border-radius: 50px;
-      border: 1px solid rgba(138, 43, 226, 0.2);
+      border: 1 solid rgba(138, 43, 226, 0.2);
       backdrop-filter: blur(5px);
     }
 
@@ -693,6 +765,7 @@
 
     .footer-column ul li {
       margin-bottom: 10px;
+      line-height: none;
     }
 
     .footer-column ul li a {
@@ -719,20 +792,23 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: none;
+      background: transparent;
       color: var(--text);
       transition: all 0.3s ease;
+      border: 1px solid rgba(138, 43, 226, 0.2);
     }
 
     .social-links a:hover {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      background: linear-gradient(135deg(to bottom, var(--primary)), var(--secondary));
       transform: translateY(-3px);
+      border-color: transparent;
+      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
     }
 
     .copyright {
       margin-top: 60px;
       padding-top: 30px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255px, 255, 0.1);
       color: var(--text-secondary);
       font-size: 0.9rem;
     }
@@ -753,7 +829,7 @@
     }
 
     @media (max-width: 480px) {
-      .platforms-grid {
+       .platforms-grid {
         grid-template-columns: 1fr;
         max-width: 300px;
       }
@@ -790,104 +866,37 @@
       left: 0;
     }
 
-    /* Celebration Popup */
-    .celebration-popup {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: rgba(138, 43, 226, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(138, 43, 226, 0.2);
-      border-radius: 12px;
-      padding: 12px 20px;
-      color: var(--text);
-      font-size: 0.95rem;
-      z-index: 1001;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.15);
-      animation: slideIn 0.6s ease-out forwards;
-      opacity: 0;
-      max-width: 300px;
-    }
-
-    .celebration-popup.fade-out {
-      animation: slideOut 0.8s ease-in forwards;
-    }
-
-    @keyframes slideIn {
-      0% { transform: translateX(100%); opacity: 0; }
-      100% { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes slideOut {
-      0% { transform: translateX(0); opacity: 1; }
-      100% { transform: translateX(20px); opacity: 0; }
-    }
-
-    .popup-content {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1;
-    }
-
-    .popup-button {
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-family: 'Rajdhani', sans-serif;
-      font-weight: 600;
-    }
-
-    .popup-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
-    }
-
-    .celebration-popup i {
-      color: #9370DB;
-      font-size: 1.3rem;
-      animation: float 3s ease-in-out infinite;
-      text-shadow: 0 0 10px rgba(147, 112, 219, 0.5);
-    }
-
-    .celebration-popup span {
-      background: linear-gradient(90deg, #8A2BE2, #9370DB);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-size: 200% auto;
-      animation: shimmer 3s linear infinite;
-      font-weight: 600;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-5px) rotate(10deg); }
-    }
-
-    @keyframes shimmer {
-      0% { background-position: 0% center; }
-      100% { background-position: 200% center; }
-    }
-
     @media (max-width: 1024px) {
       h1 {
         font-size: 6rem;
       }
+
+      .announcement h2 {
+        font-size: 2rem;
+      }
+
     }
 
     @media (max-width: 768px) {
       h1 {
         font-size: 4rem;
         padding: 0 15px;
+      }
+
+      .announcement h2 {
+        font-size: 1.8rem;
+      }
+
+      .announcement p {
+        font-size: 1rem;
+      }
+
+      .announcement .highlight {
+        font-size: 0.9rem;
+      }
+
+      .announcement .support-button {
+        font-size: 0.9rem;
       }
     }
 
@@ -897,25 +906,35 @@
         padding: 0 10px;
         letter-spacing: 1px;
       }
+
+      .announcement h2 {
+        font-size: 1.5rem;
+      }
+
+      .announcement p {
+        font-size: 0.9rem;
+      }
+
+      .announcement .highlight {
+        font-size: 0.8rem;
+      }
+
+      .announcement .support-button {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
 <body>
-  <!-- Celebration Popup -->
-  <div class="celebration-popup">
-    <i class="fas fa-sparkles"></i>
-    <div class="popup-content">
-      <span>🎉 400+ servers reached! Thank you for your amazing support!</span>
-    </div>
-  </div>
-
   <!-- Particle Background -->
   <div id="particles-js"></div>
 
   <!-- Navigation -->
-  <nav>
+  <nav class="nav">
     <div class="logo">PLAYIFY</div>
     <div class="nav-links">
+      <a href="#features">Home</a>
       <a href="#features">Features</a>
       <a href="#platforms">Platforms</a>
       <a href="#how-it-works">How It Works</a>
@@ -931,13 +950,23 @@
     </div>
     <p class="fade-in delay-1">The ultimate music experience for Discord with crystal clear audio and intuitive controls.</p>
     <div class="button-container fade-in delay-2">
-      <a href="https://discord.com/oauth2/authorize?client_id=1370846940354576556&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add to Discord</a>
+      <a href="https://discord.com/oauth2/authorize?client_id=137084447035656556&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add to Discord</a>
       <a href="#features" class="button secondary-button">Explore Features</a>
     </div>
     <div class="scroll-down fade-in delay-3">
       Scroll down
       <i class="fas fa-chevron-down"></i>
     </div>
+  </section>
+
+  <!-- Announcement Section -->
+  <section class="announcement fade-in">
+    <h2>🎉 Spotify Support is LIVE!</h2>
+    <p>After months of dedicated effort, Playify now fully supports Spotify with seamless playlist playback.</p>
+    <p class="highlight">Only Spotify-made playlists (This Is, Radar, etc.) aren’t supported due to API limitations.</p>
+    <a href="https://www.paypal.com/paypalme/alanmussot1" target="_blank" class="button primary-button support-button">
+      <i class="fab fa-paypal"></i> Support the Dev!
+    </a>
   </section>
 
   <!-- Features Section -->
@@ -949,14 +978,14 @@
           <i class="fas fa-music"></i>
         </div>
         <h3 class="feature-title">High Quality Audio</h3>
-        <p class="feature-desc">Enjoy crystal clear audio streaming with minimal interruptions.</p>
+        <p class="feature-desc">Enjoy crystal-clear audio streaming with minimal interruptions.</p>
       </div>
       <div class="feature-card fade-in delay-1">
         <div class="feature-icon">
           <i class="fas fa-sliders-h"></i>
         </div>
         <h3 class="feature-title">Advanced Controls</h3>
-        <p class="feature-desc">Full control via slash commands with real-time feedback and intuitive UI.</p>
+        <p class="feature-desc">Full control via intuitive slash commands with real-time feedback.</p>
       </div>
       <div class="feature-card fade-in delay-2">
         <div class="feature-icon">
@@ -970,14 +999,14 @@
           <i class="fas fa-robot"></i>
         </div>
         <h3 class="feature-title">24/7 Availability</h3>
-        <p class="feature-desc">Features auto-reconnect to maintain music playback in case of disconnections.</p>
+        <p class="feature-desc">Features auto-reconnect to maintain music playback in case of interruptions.</p>
       </div>
       <div class="feature-card fade-in delay-1">
         <div class="feature-icon">
           <i class="fas fa-cat"></i>
         </div>
         <h3 class="feature-title">Kaomoji Mode</h3>
-        <p class="feature-desc">Toggle kaomoji mode to make the bot's responses more fun with Japanese emoticons.</p>
+        <p class="feature-desc">Toggle kaomoji mode for fun responses with Japanese emoticons.</p>
       </div>
       <div class="feature-card fade-in delay-2">
         <div class="feature-icon">
@@ -992,9 +1021,9 @@
   <!-- Supported Platforms Section -->
   <section id="platforms" class="platforms">
     <h2 class="section-title fade-in">SUPPORTED PLATFORMS</h2>
-    <p class="fade-in" style="max-width: 800px; margin: 0 auto 50px; color: var(--text-secondary); font-size: 1.2rem;">
-      Playify supports music from multiple platforms. You can use direct URLs or simply search by keywords. 
-      All platforms support songs, albums, and playlists, except Spotify where playlist support is currently in beta.
+    <p class="fade-in" style="max-width: 800px; margin: 0 auto 50px; font-size: 1.2rem; color: var(--text-secondary);">
+      Playify supports music from multiple platforms. Use direct URLs or search by keywords. 
+      All platforms support songs, albums, and playlists. For Spotify, user-made playlists work seamlessly, but Spotify-made playlists (e.g., This Is, Radar) are not supported due to API limitations.
     </p>
     <div class="platforms-grid">
       <a href="https://open.spotify.com" target="_blank" class="platform-card fade-in">
@@ -1019,7 +1048,7 @@
       <div class="step fade-in">
         <div class="step-number">1</div>
         <h3 class="step-title">Add to Discord</h3>
-        <p class="step-desc">Click the "Add to Discord" button and select your server.</p>
+        <p class="step-desc">Click "Add to Discord" and select your server.</p>
       </div>
       <div class="step fade-in delay-1">
         <div class="step-number">2</div>
@@ -1029,7 +1058,7 @@
       <div class="step fade-in delay-2">
         <div class="step-number">3</div>
         <h3 class="step-title">Enjoy the Music</h3>
-        <p class="step-desc">Control playback with intuitive commands and enjoy high quality audio.</p>
+        <p class="step-desc">Control playback with intuitive commands and enjoy high-quality audio.</p>
       </div>
     </div>
   </section>
@@ -1055,7 +1084,7 @@
         </div>
       </div>
       
-      <a href="https://discord.com/oauth2/authorize?client_id=1370846940354576556&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add Playify Now</a>
+      <a href="https://discord.com/oauth2/authorize?client_id=137084470356556&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add Playify Now</a>
     </div>
   </section>
 
@@ -1066,7 +1095,8 @@
         <h3>PLAYIFY</h3>
         <p style="color: var(--text-secondary); margin-bottom: 20px;">The music bot for Discord that delivers premium quality with a sleek interface.</p>
         <div class="social-links">
-          <a href="https://github.com/alan7383/playify" target="_blank"><i class="fab fa-github"></i></a>
+          <a href="https://github.com/alan7383/playify" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+          <a href="https://x.com/PlayifyBot" target="_blank"><i class="fa-brands fa-twitter"></i></a>
         </div>
       </div>
       <div class="footer-column" style="text-align: center;">
@@ -1078,144 +1108,146 @@
           <li><a href="commands.html">Commands</a></li>
           <li><a href="https://github.com/alan7383/playify" target="_blank">GitHub</a></li>
         </ul>
-      </div>
+        </div>
       <div class="footer-column">
         <h3>Support</h3>
         <p style="color: var(--text-secondary); margin-bottom: 15px;">Help us keep Playify running and improving!</p>
         <a href="https://www.paypal.com/paypalme/alanmussot1" target="_blank" class="button primary-button" style="padding: 10px 20px; font-size: 0.9rem;">
-          <i class="fab fa-paypal"></i> Support on PayPal
+          <i class="fab fa-paypal"></i>
+          Support on PayPal
         </a>
+        </div>
       </div>
-    </div>
-    <div class="copyright">
+    <div class="footer-copyright">
       © 2025 Playify by @alananasssss. All rights reserved.
     </div>
-  </footer>
+    </footer>
+  </div>
 
   <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script> -->
   <script>
     // Initialize particles.js
     let currentParticles = 0;
     const maxParticles = 50;
     const duration = 10000; // 10 secondes
-    const interval = 200; // Mettre à jour toutes les 200ms
+    const interval = 200; // 200ms
     const steps = duration / interval;
     const particlesPerStep = maxParticles / steps;
 
     const updateParticles = () => {
       currentParticles = Math.min(currentParticles + particlesPerStep, maxParticles);
       particlesJS("particles-js", {
-        "particles": {
-          "number": {
-            "value": Math.floor(currentParticles),
-            "density": {
-              "enable": true,
-              "value_area": 800
-            }
-          },
-          "color": {
-            "value": "#8A2BE2"
-          },
-          "shape": {
-            "type": "circle",
-            "stroke": {
-              "width": 0,
-              "color": "#000000"
+        particles: {
+          number: {
+            value: Math.floor(currentParticles),
+            density: {
+              enable: true,
+              value_area: 800
             },
-            "polygon": {
-              "nb_sides": 5
-            }
           },
-          "opacity": {
-            "value": 0.4,
-            "random": false,
-            "anim": {
-              "enable": false,
-              "speed": 1,
-              "opacity_min": 0.1,
-              "sync": false
-            }
+          color: {
+            value: "#8A2BE2"
           },
-          "size": {
-            "value": 3,
-            "random": true,
-            "anim": {
-              "enable": false,
-              "speed": 40,
-              "size_min": 0.1,
-              "sync": false
-            }
+          shape: {
+            type: "circle",
+            stroke: {
+              width: 0,
+              color: "#000000"
+            },
+            polygon: {
+              nb_sides: 5
+            },
           },
-          "line_linked": {
-            "enable": true,
-            "distance": 150,
-            "color": "#8A2BE2",
-            "opacity": 0.2,
-            "width": 1
+          opacity: {
+            value: 0.4,
+            random: false,
+            anim: {
+              enable: false,
+              speed: 1,
+              opacity_min: 0.1,
+              sync: false,
+            },
           },
-          "move": {
-            "enable": true,
-            "speed": 2,
-            "direction": "none",
-            "random": false,
-            "straight": false,
-            "out_mode": "out",
-            "bounce": false,
-            "attract": {
-              "enable": false,
-              "rotateX": 600,
-              "rotateY": 1200
-            }
-          }
+          size: {
+            value: 3,
+            random: true,
+            anim: {
+              enable: false,
+              speed: 40,
+              size_min: 0.1,
+              sync: false,
+            },
+          },
+          line_linked: {
+            enable: true,
+            distance: 150,
+            color: "#8A2BE2",
+            opacity: 0.2,
+            width: 1,
+          },
+          move: {
+            enable: true,
+            speed: 2,
+            direction: "none",
+            random: false,
+            straight: false,
+            out_mode: "out",
+            bounce: false,
+            attract: {
+              enable: false,
+              rotateX: 600,
+              rotateY: 1200,
+            },
+          },
         },
-        "interactivity": {
-          "detect_on": "canvas",
-          "events": {
-            "onhover": {
-              "enable": true,
-              "mode": "grab"
+        interactivity: {
+          detect_on: "canvas",
+          events: {
+            onhover: {
+              enable: true,
+              mode: "grab",
             },
-            "onclick": {
-              "enable": true,
-              "mode": "push"
+            onclick: {
+              enable: true,
+              mode: "push",
             },
-            "resize": true
+            resize: true,
           },
-          "modes": {
-            "grab": {
-              "distance": 140,
-              "line_linked": {
-                "opacity": 0.5
-              }
+          modes: {
+            grab: {
+              distance: 140,
+              line_linked: {
+                opacity: 0.5,
+              },
             },
-            "bubble": {
-              "distance": 400,
-              "size": 40,
-              "duration": 2,
-              "opacity": 8,
-              "speed": 3
+            bubble: {
+              distance: 400,
+              size: 40,
+              duration: 2,
+              opacity: 8,
+              speed: 3,
             },
-            "repulse": {
-              "distance": 200,
-              "duration": 0.4
+            repulse: {
+              distance: 200,
+              duration: 0.4,
             },
-            "push": {
-              "particles_nb": 4
+            push: {
+              particles_nb: 4,
             },
-            "remove": {
-              "particles_nb": 2
-            }
-          }
+            remove: {
+              particles_nb: 2,
+            },
+          },
         },
-        "retina_detect": true
+        retina_detect: true,
       });
     };
 
-    // Démarrer avec 0 particules
+    // Start with 0 particles
     updateParticles();
 
-    // Mettre à jour progressivement jusqu'à 10 secondes
+    // Update particles gradually
     const particleInterval = setInterval(() => {
       if (currentParticles >= maxParticles) {
         clearInterval(particleInterval);
@@ -1261,17 +1293,6 @@
         });
       });
     });
-
-    // Auto-hide popup after 5 seconds
-    setTimeout(() => {
-      const popup = document.querySelector('.celebration-popup');
-      if (popup) {
-        popup.classList.add('fade-out');
-        setTimeout(() => {
-          popup.remove();
-        }, 800);
-      }
-    }, 5000);
 
     // Particle creation function
     function createParticles() {
