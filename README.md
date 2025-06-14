@@ -131,6 +131,8 @@ Your music, your business. Whether you host it yourself or use the hosted Playif
 If something breaks, I check the logs.
 If it works, enjoy the tunes 🎶
 
+![a39773b9-3362-41ba-b23d-475368f1d07e](https://github.com/user-attachments/assets/9ddd2662-b2fc-4781-a174-d1162149a695)
+
 ---
 
 ## (≧□≦)ノ Contribute
