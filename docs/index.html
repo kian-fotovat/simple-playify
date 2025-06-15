@@ -239,12 +239,12 @@
     }
 
     .particle {
-      position: absolute;
-      pointer-events: none;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      border-radius: 50%;
-      opacity: 0;
-      animation: particleFloat 3s ease-out infinite;
+    position: absolute;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 50%;
+    opacity: 0;
+    animation: particleFloat 3s ease-out; /* Suppression de 'infinite' */
     }
 
     @keyframes particleFloat {
@@ -1326,7 +1326,7 @@
       }
     }
 
-    setInterval(createParticles, 3000);
+    setInterval(createParticles, 1000); // Toutes les 1 seconde
     createParticles();
   </script>
 </body>
