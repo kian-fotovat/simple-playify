@@ -30,7 +30,7 @@ Playify handles Spotify like a pro:
 
 ## (｡‿‿｡) Features
 
-- Play music from **YouTube**, **SoundCloud**, **Spotify**, and **Bandcamp**.
+- Play music from **YouTube**, **SoundCloud**, **Spotify**, **Deezer** and **Bandcamp**.
 - Intuitive commands: `/play`, `/pause`, `/skip`, `/queue`, and more.
 - **Autoplay** for similar tracks (YouTube Mix, SoundCloud Stations).
 - **Looping** and **shuffling** for ultimate playlist control.
