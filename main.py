@@ -10,6 +10,7 @@ import random
 from urllib.parse import urlparse, parse_qs
 from cachetools import TTLCache
 import logging
+import requests
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,8 +25,8 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Spotify configuration
-SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
-SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE'
+SPOTIFY_CLIENT_ID = 'clientidhere'
+SPOTIFY_CLIENT_SECRET = 'clientsecrethere'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
@@ -138,6 +139,18 @@ def get_messages(message_key, guild_id):
                 "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
                 "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
             },
+            "deezer_error": {
+                "normal": "Error processing the Deezer link. It may be private, region-locked, or invalid.",
+                "kawaii": "(´；ω；`) Oh no! Problem with the Deezer link... maybe it’s shy or hidden?"
+            },
+            "deezer_playlist_added": {
+                "normal": "🎶 Deezer Playlist Added",
+                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ DEEZER PLAYLIST"
+            },
+            "deezer_playlist_description": {
+                "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+                "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+            },
             "song_added": {
                 "normal": "🎵 Added to Queue",
                 "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
@@ -152,7 +165,7 @@ def get_messages(message_key, guild_id):
             },
             "ytmusic_playlist_added": {
                 "normal": "🎶 YouTube Music Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ YOUTUBE MUSIC PLAYLIST"
+                "kawaii": "☆*:.｡.o(� # ≧▽≦)o.｡.:*☆ YOUTUBE MUSIC PLAYLIST"
             },
             "ytmusic_playlist_description": {
                 "normal": "**{count} tracks** being added...",
@@ -313,6 +326,18 @@ def get_messages(message_key, guild_id):
                 "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST SPOTIFY"
             },
             "spotify_playlist_description": {
+                "normal": "**{count} chansons** ajoutées, {failed} échouées.\n{failed_tracks}",
+                "kawaii": "**{count} chansons** ajoutées, {failed} n’ont pas pu rejoindre ! (´･ω･`)\n{failed_tracks}"
+            },
+            "deezer_error": {
+                "normal": "Erreur lors du traitement du lien Deezer. Il peut être privé, restreint à une région ou invalide.",
+                "kawaii": "(´；ω；`) Oh non ! Problème avec le lien Deezer... peut-être qu’il est timide ou caché ?"
+            },
+            "deezer_playlist_added": {
+                "normal": "🎶 Playlist Deezer ajoutée",
+                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST DEEZER"
+            },
+            "deezer_playlist_description": {
                 "normal": "**{count} chansons** ajoutées, {failed} échouées.\n{failed_tracks}",
                 "kawaii": "**{count} chansons** ajoutées, {failed} n’ont pas pu rejoindre ! (´･ω･`)\n{failed_tracks}"
             },
@@ -647,6 +672,104 @@ async def process_spotify_url(url, interaction):
         await interaction.followup.send(embed=embed, ephemeral=True)
         return None
 
+# Process Deezer URLs
+async def process_deezer_url(url, interaction):
+    guild_id = interaction.guild_id
+    try:
+        # Nettoyer l'URL pour extraire le type et l'ID
+        parsed_url = urlparse(url)
+        path_parts = parsed_url.path.strip('/').split('/')
+        # Supprimer le code langue (ex. 'fr') si présent
+        if len(path_parts) > 1 and len(path_parts[0]) == 2:
+            path_parts = path_parts[1:]
+        if len(path_parts) < 2:
+            raise ValueError("Invalid Deezer URL format")
+
+        resource_type = path_parts[0]
+        resource_id = path_parts[1].split('?')[0]
+        
+        base_api_url = "https://api.deezer.com"
+        logger.info(f"Fetching Deezer {resource_type} with ID {resource_id} from URL {url}")
+
+        # Requête avec timeout
+        response = requests.get(f"{base_api_url}/{resource_type}/{resource_id}", timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'error' in data:
+            raise Exception(f"Deezer API error: {data['error']['message']}")
+
+        tracks = []
+        if resource_type == 'track':
+            logger.info(f"Processing Deezer track: {data.get('title', 'Unknown Title')}")
+            track_name = data.get('title', 'Unknown Title')
+            artist_name = data.get('artist', {}).get('name', 'Unknown Artist')
+            tracks.append((track_name, artist_name))
+        
+        elif resource_type == 'playlist':
+            logger.info(f"Processing Deezer playlist: {data.get('title', 'Unknown Playlist')}")
+            if not data.get('tracks', {}).get('data'):
+                raise ValueError("No tracks found in the playlist or playlist is empty")
+            for track in data['tracks']['data']:
+                track_name = track.get('title', 'Unknown Title')
+                artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
+                tracks.append((track_name, artist_name))
+            logger.info(f"Extracted {len(tracks)} tracks from playlist {resource_id}")
+        
+        elif resource_type == 'album':
+            logger.info(f"Processing Deezer album: {data.get('title', 'Unknown Album')}")
+            if not data.get('tracks', {}).get('data'):
+                raise ValueError("No tracks found in the album or album is empty")
+            for track in data['tracks']['data']:
+                track_name = track.get('title', 'Unknown Title')
+                artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
+                tracks.append((track_name, artist_name))
+            logger.info(f"Extracted {len(tracks)} tracks from album {resource_id}")
+        
+        elif resource_type == 'artist':
+            logger.info(f"Processing Deezer artist: {data.get('name', 'Unknown Artist')}")
+            top_tracks_response = requests.get(f"{base_api_url}/artist/{resource_id}/top?limit=10", timeout=10)
+            top_tracks_response.raise_for_status()
+            top_tracks_data = top_tracks_response.json()
+            if not top_tracks_data.get('data'):
+                raise ValueError("No top tracks found for the artist")
+            for track in top_tracks_data['data']:
+                track_name = track.get('title', 'Unknown Title')
+                artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
+                tracks.append((track_name, artist_name))
+            logger.info(f"Extracted {len(tracks)} top tracks for artist {resource_id}")
+        
+        if not tracks:
+            raise ValueError("No valid tracks found in the Deezer resource")
+        
+        logger.info(f"Successfully processed Deezer {resource_type} with {len(tracks)} tracks")
+        return tracks
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error fetching Deezer URL {url}: {e}")
+        embed = Embed(
+            description="Erreur réseau lors de la récupération des données Deezer. Réessayez plus tard.",
+            color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        return None
+    except ValueError as e:
+        logger.error(f"Invalid Deezer data for URL {url}: {e}")
+        embed = Embed(
+            description=f"Erreur : {str(e)}",
+            color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error processing Deezer URL {url}: {e}")
+        embed = Embed(
+            description=get_messages("deezer_error", guild_id),
+            color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        return None
+    
 # /kaomoji command
 @bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
 @app_commands.default_permissions(administrator=True)
@@ -710,6 +833,7 @@ async def play(interaction: discord.Interaction, query: str):
     await interaction.response.defer()
 
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+    deezer_regex = re.compile(r'^(https?://)?(www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+$')
     soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
     youtube_regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$')
     ytmusic_regex = re.compile(r'^(https?://)?(music\.youtube\.com)/.+$')
@@ -910,6 +1034,122 @@ async def play(interaction: discord.Interaction, query: str):
             failed_text = "\nFailed tracks (up to 5):\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("spotify_playlist_added", guild_id)
             embed.description = get_messages("spotify_playlist_description", guild_id).format(
+                count=processed - failed,
+                failed=failed,
+                failed_tracks=failed_text
+            )
+            embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
+            await message.edit(embed=embed)
+    elif deezer_regex.match(query):
+        logger.info(f"Processing Deezer URL: {query}")
+        deezer_tracks = await process_deezer_url(query, interaction)
+        if not deezer_tracks:
+            logger.warning(f"No tracks returned for Deezer URL: {query}")
+            embed = Embed(
+                description="Aucune piste Deezer n'a pu être traitée. Vérifiez l'URL ou réessayez.",
+                color=0xFFB6C1 if is_kawaii else discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        if len(deezer_tracks) == 1:
+            track_name, artist_name = deezer_tracks[0]
+            query = f"{track_name} {artist_name}"
+            logger.info(f"Searching YouTube for single Deezer track: {query}")
+            try:
+                cache_key = sanitize_query(query).lower()
+                ydl_opts_full = {
+                    "format": "bestaudio/best",
+                    "quiet": True,
+                    "no_warnings": True,
+                    "noplaylist": True,
+                    "no_color": True,
+                    "socket_timeout": 10,
+                    "force_generic_extractor": True,
+                }
+                sanitized_query = sanitize_query(query)
+                search_query = f"ytsearch:{sanitized_query}"
+                info = await extract_info_async(ydl_opts_full, search_query)
+                video = info["entries"][0] if "entries" in info and info["entries"] else None
+                if not video:
+                    raise Exception(f"No YouTube results found for {sanitized_query}")
+                video_url = video.get("webpage_url", video.get("url"))
+                if not video_url:
+                    raise KeyError("No valid URL found in video metadata")
+                logger.info(f"Found YouTube URL for Deezer track: {video_url}")
+                url_cache[cache_key] = video_url
+                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
+                embed = Embed(
+                    title=get_messages("song_added", guild_id),
+                    description=f"[{video.get('title', track_name)}]({video_url})",
+                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
+                )
+                if video.get("thumbnail"):
+                    embed.set_thumbnail(url=video["thumbnail"])
+                if is_kawaii:
+                    embed.set_footer(text="☆⌒(≧▽° )")
+                await interaction.followup.send(embed=embed)
+            except Exception as e:
+                logger.error(f"Error converting Deezer track to YouTube for {query}: {e}")
+                embed = Embed(
+                    description=get_messages("search_error", guild_id),
+                    color=0xFFB6C1 if is_kawaii else discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            embed = Embed(
+                title="Processing Deezer Playlist",
+                description="Starting...",
+                color=0xFFB6C1 if is_kawaii else discord.Color.blue()
+            )
+            message = await interaction.followup.send(embed=embed)
+            
+            total_tracks = len(deezer_tracks)
+            processed = 0
+            failed = 0
+            failed_tracks = []
+            batch_size = 50
+            
+            logger.info(f"Processing {total_tracks} tracks from Deezer playlist")
+            for i in range(0, total_tracks, batch_size):
+                batch = deezer_tracks[i:i + batch_size]
+                tasks = [search_track(track) for track in batch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                for result in results:
+                    if isinstance(result, Exception) or result[1] is None:
+                        failed += 1
+                        if len(failed_tracks) < 5:
+                            failed_tracks.append(f"{result[2]} by {result[3]}")
+                    else:
+                        _, video_url, _, _ = result
+                        await music_player.queue.put({'url': video_url, 'is_single': False})
+                    processed += 1
+                    
+                    if processed % 10 == 0 or processed == total_tracks:
+                        progress = processed / total_tracks
+                        bar = create_loading_bar(progress)
+                        description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
+                            processed=processed,
+                            total=total_tracks
+                        )
+                        embed.description = description
+                        await message.edit(embed=embed)
+                await asyncio.sleep(0.1)
+            
+            logger.info(f"Deezer playlist processed: {processed - failed} tracks added, {failed} failed")
+            
+            if processed - failed == 0:
+                embed = Embed(
+                    description="⚠️ Aucune piste n'a pu être ajoutée à la file d'attente.",
+                    color=0xFFB6C1 if is_kawaii else discord.Color.red()
+                )
+                await message.edit(embed=embed)
+                return
+
+            failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            embed.title = get_messages("deezer_playlist_added", guild_id)
+            embed.description = get_messages("deezer_playlist_description", guild_id).format(
                 count=processed - failed,
                 failed=failed,
                 failed_tracks=failed_text
