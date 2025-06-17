@@ -14,7 +14,7 @@ Playify is a minimalist Discord music bot that gets the job done. No fluff, no f
 - **No premium tier.** Everything’s free, always.
 - **No limits.** Play giant playlists, queue endless tracks, vibe without restrictions.
 
-**Supports YouTube, SoundCloud, Spotify, and Bandcamp.** Type `/play`, and let the music roll.
+**Supports YouTube, SoundCloud, Spotify, Deezer and Bandcamp.** Type `/play`, and let the music roll.
 
 ---
 
