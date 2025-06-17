@@ -25,8 +25,8 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Spotify configuration
-SPOTIFY_CLIENT_ID = 'clientidhere'
-SPOTIFY_CLIENT_SECRET = 'clientsecrethere'
+SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
+SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
@@ -691,49 +691,80 @@ async def process_deezer_url(url, interaction):
         base_api_url = "https://api.deezer.com"
         logger.info(f"Fetching Deezer {resource_type} with ID {resource_id} from URL {url}")
 
-        # Requête avec timeout
-        response = requests.get(f"{base_api_url}/{resource_type}/{resource_id}", timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        if 'error' in data:
-            raise Exception(f"Deezer API error: {data['error']['message']}")
-
         tracks = []
         if resource_type == 'track':
+            # Requête pour une piste unique
+            response = requests.get(f"{base_api_url}/track/{resource_id}", timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if 'error' in data:
+                raise Exception(f"Deezer API error: {data['error']['message']}")
             logger.info(f"Processing Deezer track: {data.get('title', 'Unknown Title')}")
             track_name = data.get('title', 'Unknown Title')
             artist_name = data.get('artist', {}).get('name', 'Unknown Artist')
             tracks.append((track_name, artist_name))
-        
+
         elif resource_type == 'playlist':
-            logger.info(f"Processing Deezer playlist: {data.get('title', 'Unknown Playlist')}")
-            if not data.get('tracks', {}).get('data'):
-                raise ValueError("No tracks found in the playlist or playlist is empty")
-            for track in data['tracks']['data']:
-                track_name = track.get('title', 'Unknown Title')
-                artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
-                tracks.append((track_name, artist_name))
-            logger.info(f"Extracted {len(tracks)} tracks from playlist {resource_id}")
+            # Requête initiale pour la playlist avec pagination
+            next_url = f"{base_api_url}/playlist/{resource_id}/tracks"
+            total_tracks = 0
+            fetched_tracks = 0
+            
+            while next_url:
+                response = requests.get(next_url, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                
+                if 'error' in data:
+                    raise Exception(f"Deezer API error: {data['error']['message']}")
+                
+                if not data.get('data'):
+                    raise ValueError("No tracks found in the playlist or playlist is empty")
+                
+                # Ajouter les pistes de la page actuelle
+                for track in data['data']:
+                    track_name = track.get('title', 'Unknown Title')
+                    artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
+                    tracks.append((track_name, artist_name))
+                
+                fetched_tracks += len(data['data'])
+                total_tracks = data.get('total', fetched_tracks)
+                logger.info(f"Fetched {fetched_tracks}/{total_tracks} tracks from playlist {resource_id}")
+                
+                # Vérifier s'il y a une page suivante
+                next_url = data.get('next')
+                if next_url:
+                    logger.info(f"Fetching next page: {next_url}")
+                
+            logger.info(f"Processing Deezer playlist: {data.get('title', 'Unknown Playlist')} with {len(tracks)} tracks")
         
         elif resource_type == 'album':
-            logger.info(f"Processing Deezer album: {data.get('title', 'Unknown Album')}")
-            if not data.get('tracks', {}).get('data'):
+            # Requête pour un album
+            response = requests.get(f"{base_api_url}/album/{resource_id}/tracks", timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if 'error' in data:
+                raise Exception(f"Deezer API error: {data['error']['message']}")
+            if not data.get('data'):
                 raise ValueError("No tracks found in the album or album is empty")
-            for track in data['tracks']['data']:
+            logger.info(f"Processing Deezer album: {data.get('title', 'Unknown Album')}")
+            for track in data['data']:
                 track_name = track.get('title', 'Unknown Title')
                 artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
                 tracks.append((track_name, artist_name))
             logger.info(f"Extracted {len(tracks)} tracks from album {resource_id}")
         
         elif resource_type == 'artist':
-            logger.info(f"Processing Deezer artist: {data.get('name', 'Unknown Artist')}")
-            top_tracks_response = requests.get(f"{base_api_url}/artist/{resource_id}/top?limit=10", timeout=10)
-            top_tracks_response.raise_for_status()
-            top_tracks_data = top_tracks_response.json()
-            if not top_tracks_data.get('data'):
+            # Requête pour les top tracks d'un artiste
+            response = requests.get(f"{base_api_url}/artist/{resource_id}/top?limit=10", timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if 'error' in data:
+                raise Exception(f"Deezer API error: {data['error']['message']}")
+            if not data.get('data'):
                 raise ValueError("No top tracks found for the artist")
-            for track in top_tracks_data['data']:
+            logger.info(f"Processing Deezer artist: {data.get('name', 'Unknown Artist')}")
+            for track in data['data']:
                 track_name = track.get('title', 'Unknown Title')
                 artist_name = track.get('artist', {}).get('name', 'Unknown Artist')
                 tracks.append((track_name, artist_name))
@@ -769,7 +800,7 @@ async def process_deezer_url(url, interaction):
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
         return None
-    
+        
 # /kaomoji command
 @bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
 @app_commands.default_permissions(administrator=True)
@@ -1784,7 +1815,7 @@ async def on_ready():
                     return
                 
                 statuses = [
-                    ("your Bandcamp links 🎶", discord.ActivityType.listening),
+                    ("your Deezer links 🎶", discord.ActivityType.listening),
                     ("/play [link] 🔥", discord.ActivityType.listening),
                     (f"music on {len(bot.guilds)} servers 🎶", discord.ActivityType.playing)
                 ]
