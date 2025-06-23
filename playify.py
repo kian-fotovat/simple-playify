@@ -1274,13 +1274,61 @@ async def set_language(interaction: discord.Interaction, language: str):
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# NOUVELLE FONCTION - Recherche optimisée pour les mots-clés
+async def search_and_get_video_info(query: str):
+    """
+    Recherche une vidéo par mot-clé de manière optimisée en deux étapes.
+    1. Recherche rapide pour trouver l'URL du premier résultat.
+    2. Extraction complète des métadonnées pour cette seule URL.
+    Retourne un dictionnaire complet de la vidéo ou None en cas d'échec.
+    """
+    try:
+        # Étape 1 : Recherche "plate" et ultra-rapide du premier résultat
+        ydl_opts_search = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": True, # Très important pour la vitesse
+            "force_generic_extractor": True,
+            "socket_timeout": 10,
+        }
+        # On ne cherche que le premier résultat avec "ytsearch1:"
+        info_search = await extract_info_async(ydl_opts_search, f"ytsearch1:{query}")
+        
+        if not info_search or not info_search.get("entries"):
+            logger.warning(f"Recherche rapide n'a donné aucun résultat pour '{query}'")
+            return None
+            
+        # On récupère l'URL du premier résultat
+        video_url = info_search["entries"][0].get("url")
+        if not video_url:
+            logger.error("Le premier résultat de la recherche rapide n'a pas d'URL.")
+            return None
+
+        # Étape 2 : Extraction complète des métadonnées pour cette URL unique
+        ydl_opts_details = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True, # S'assurer de ne traiter qu'une seule vidéo
+            "force_generic_extractor": True,
+            "socket_timeout": 10,
+        }
+        video_details = await extract_info_async(ydl_opts_details, video_url)
+        
+        # On retourne le dictionnaire complet avec titre, URL, miniature, etc.
+        return video_details
+
+    except Exception as e:
+        logger.error(f"Erreur dans search_and_get_video_info pour '{query}': {e}")
+        return None
+
 @bot.tree.command(name="play", description="Jouer un lien ou chercher une chanson")
 @app_commands.describe(query="Lien ou titre de la chanson/vidéo à jouer")
 async def play(interaction: discord.Interaction, query: str):
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
-    
     if not interaction.user.voice or not interaction.user.voice.channel:
         embed = Embed(
             description=get_messages("no_voice_channel", guild_id),
@@ -1288,7 +1336,6 @@ async def play(interaction: discord.Interaction, query: str):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
-
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         try:
             music_player.voice_client = await interaction.user.voice.channel.connect()
@@ -1300,10 +1347,8 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             logger.error(f"Error: {e}")
             return
-
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
-
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
     soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
@@ -1313,7 +1358,6 @@ async def play(interaction: discord.Interaction, query: str):
     apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
     tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
     amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
-
     ydl_opts = {
         "format": "bestaudio/best",
         "quiet": True,
@@ -1324,19 +1368,16 @@ async def play(interaction: discord.Interaction, query: str):
         "socket_timeout": 10,
         "force_generic_extractor": True,
     }
-
     async def search_track(track):
         track_name, artist_name = track
         original_query = f"{track_name} {artist_name}"
         sanitized_query = sanitize_query(original_query)
         cache_key = sanitized_query.lower()
         logger.info(f"Searching YouTube for: {original_query} (Sanitized: {sanitized_query})")
-        
         try:
             if cache_key in url_cache:
                 logger.info(f"Cache hit for {cache_key}")
                 return cache_key, url_cache[cache_key], track_name, artist_name
-            
             ydl_opts_search = {
                 "format": "bestaudio/best",
                 "quiet": True,
@@ -1346,10 +1387,8 @@ async def play(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
             }
-            
             search_query = f"ytsearch:{sanitized_query}"
             info = await extract_info_async(ydl_opts_search, search_query)
-            
             if "entries" in info and info["entries"]:
                 for entry in info["entries"][:3]:
                     try:
@@ -1362,7 +1401,6 @@ async def play(interaction: discord.Interaction, query: str):
                         logger.warning(f"Skipping unavailable video for {sanitized_query}: {e}")
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_query}")
-            
             sanitized_track = sanitize_query(track_name)
             logger.info(f"Fallback search: {sanitized_track}")
             search_query = f"ytsearch:{sanitized_track}"
@@ -1379,7 +1417,6 @@ async def play(interaction: discord.Interaction, query: str):
                         logger.warning(f"Skipping unavailable video for {sanitized_track}: {e}")
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_track}")
-            
             sanitized_artist = sanitize_query(artist_name)
             logger.info(f"Fallback search: {sanitized_artist}")
             search_query = f"ytsearch:{sanitized_artist}"
@@ -1396,656 +1433,248 @@ async def play(interaction: discord.Interaction, query: str):
                         logger.warning(f"Skipping unavailable video for {sanitized_artist}: {e}")
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_artist}")
-            
             logger.warning(f"No YouTube results for {sanitized_query}, {sanitized_track}, or {sanitized_artist}")
             url_cache[cache_key] = None
             return cache_key, None, track_name, artist_name
-        
         except Exception as e:
             logger.error(f"Failed to search YouTube for {sanitized_query}: {e}")
             url_cache[cache_key] = None
             return cache_key, None, track_name, artist_name
 
+    single_track_search_query = None
+
     if spotify_regex.match(query):
         spotify_tracks = await process_spotify_url(query, interaction)
-        if not spotify_tracks:
-            return
-
+        if not spotify_tracks: return
         if len(spotify_tracks) == 1:
             track_name, artist_name = spotify_tracks[0]
-            query = f"{track_name} {artist_name}"
-            try:
-                cache_key = sanitize_query(query).lower()
-                ydl_opts_full = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "noplaylist": True,
-                    "no_color": True,
-                    "socket_timeout": 10,
-                    "force_generic_extractor": True,
-                }
-                sanitized_query = sanitize_query(query)
-                search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
-                video = info["entries"][0] if "entries" in info and info["entries"] else None
-                if not video:
-                    raise Exception("No results found")
-                video_url = video.get("webpage_url", video.get("url"))
-                if not video_url:
-                    raise KeyError("No valid URL found in video metadata")
-                logger.debug(f"Metadata for single track: {video}")
-                url_cache[cache_key] = video_url
-                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{video.get('title', track_name)}]({video_url})",
-                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                )
-                if video.get("thumbnail"):
-                    embed.set_thumbnail(url=video["thumbnail"])
-                if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
-            except Exception as e:
-                logger.error(f"Erreur de conversion Spotify pour {query}: {e}")
-                embed = Embed(
-                    description=get_messages("search_error", guild_id),
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+            single_track_search_query = f"{track_name} {artist_name}"
         else:
-            embed = Embed(
-                title="Spotify playlist processing",
-                description="Starting...",
-                color=0xFFB6C1 if is_kawaii else discord.Color.blue()
-            )
+            embed = Embed(title="Spotify playlist processing", description="Starting...", color=0xFFB6C1 if is_kawaii else discord.Color.blue())
             message = await interaction.followup.send(embed=embed)
-            
-            total_tracks = len(spotify_tracks)
-            processed = 0
-            failed = 0
-            failed_tracks = []
-            batch_size = 50
-            
-            for i in range(0, total_tracks, batch_size):
-                batch = spotify_tracks[i:i + batch_size]
+            total_tracks, processed, failed, failed_tracks = len(spotify_tracks), 0, 0, []
+            for i in range(0, total_tracks, 50):
+                batch = spotify_tracks[i:i + 50]
                 tasks = [search_track(track) for track in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                
                 for result in results:
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
-                        if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                        if len(failed_tracks) < 5: failed_tracks.append(f"{result[2]} par {result[3]}")
                     else:
-                        _, video_url, _, _ = result
-                        await music_player.queue.put({'url': video_url, 'is_single': False})
+                        _, video_url, original_title, original_artist = result
+                        queue_item = {'url': video_url, 'title': f"{original_title} - {original_artist}", 'webpage_url': video_url, 'is_single': False}
+                        await music_player.queue.put(queue_item)
                     processed += 1
-                    
                     if processed % 10 == 0 or processed == total_tracks:
-                        progress = processed / total_tracks
-                        bar = create_loading_bar(progress)
-                        description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                            processed=processed,
-                            total=total_tracks
-                        )
-                        embed.description = description
+                        embed.description = f"{create_loading_bar(processed/total_tracks)}\n" + get_messages("loading_playlist", guild_id).format(processed=processed, total=total_tracks)
                         await message.edit(embed=embed)
-                await asyncio.sleep(0.1)
-            
-            logger.info(f"Playlist Spotify traitée : {processed - failed} pistes ajoutées, {failed} échouées")
-            
             if processed - failed == 0:
-                embed = Embed(
-                    description="⚠️ Aucune piste n'a pu être ajoutée.",
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await message.edit(embed=embed)
+                await message.edit(embed=Embed(description="⚠️ Aucune piste n'a pu être ajoutée.", color=0xFF9AA2 if is_kawaii else discord.Color.red()))
                 return
-
             failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("spotify_playlist_added", guild_id)
-            embed.description = get_messages("spotify_playlist_description", guild_id).format(
-                count=processed - failed,
-                failed=failed,
-                failed_tracks=failed_text
-            )
+            embed.description = get_messages("spotify_playlist_description", guild_id).format(count=processed - failed, failed=failed, failed_tracks=failed_text)
             embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
             await message.edit(embed=embed)
-    elif deezer_regex.match(query):
-        logger.info(f"Processing Deezer URL: {query}")
-        deezer_tracks = await process_deezer_url(query, interaction)
-        if not deezer_tracks:
-            logger.warning(f"No tracks returned for Deezer URL: {query}")
-            embed = Embed(
-                description="Aucune piste Deezer n'a pu être traitée. Vérifiez l'URL ou réessayez.",
-                color=0xFFB6C1 if is_kawaii else discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
 
+    elif deezer_regex.match(query):
+        deezer_tracks = await process_deezer_url(query, interaction)
+        if not deezer_tracks: return
         if len(deezer_tracks) == 1:
             track_name, artist_name = deezer_tracks[0]
-            query = f"{track_name} {artist_name}"
-            logger.info(f"Searching YouTube for single Deezer track: {query}")
-            try:
-                cache_key = sanitize_query(query).lower()
-                ydl_opts_full = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "noplaylist": True,
-                    "no_color": True,
-                    "socket_timeout": 10,
-                    "force_generic_extractor": True,
-                }
-                sanitized_query = sanitize_query(query)
-                search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
-                video = info["entries"][0] if "entries" in info and info["entries"] else None
-                if not video:
-                    raise Exception(f"No YouTube results found for {sanitized_query}")
-                video_url = video.get("webpage_url", video.get("url"))
-                if not video_url:
-                    raise KeyError("No valid URL found in video metadata")
-                logger.info(f"Found YouTube URL for Deezer track: {video_url}")
-                url_cache[cache_key] = video_url
-                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{video.get('title', track_name)}]({video_url})",
-                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                )
-                if video.get("thumbnail"):
-                    embed.set_thumbnail(url=video["thumbnail"])
-                if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
-            except Exception as e:
-                logger.error(f"Error converting Deezer track to YouTube for {query}: {e}")
-                embed = Embed(
-                    description=get_messages("search_error", guild_id),
-                    color=0xFFB6C1 if is_kawaii else discord.Color.red()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+            single_track_search_query = f"{track_name} {artist_name}"
         else:
-            embed = Embed(
-                title="Deezer playlist processing",
-                description="Starting...",
-                color=0xFFB6C1 if is_kawaii else discord.Color.blue()
-            )
+            embed = Embed(title="Deezer playlist processing", description="Starting...", color=0xFFB6C1 if is_kawaii else discord.Color.blue())
             message = await interaction.followup.send(embed=embed)
-            
-            total_tracks = len(deezer_tracks)
-            processed = 0
-            failed = 0
-            failed_tracks = []
-            batch_size = 50
-            
-            logger.info(f"Processing {total_tracks} tracks from Deezer playlist")
-            for i in range(0, total_tracks, batch_size):
-                batch = deezer_tracks[i:i + batch_size]
+            total_tracks, processed, failed, failed_tracks = len(deezer_tracks), 0, 0, []
+            for i in range(0, total_tracks, 50):
+                batch = deezer_tracks[i:i + 50]
                 tasks = [search_track(track) for track in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                
                 for result in results:
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
-                        if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                        if len(failed_tracks) < 5: failed_tracks.append(f"{result[2]} par {result[3]}")
                     else:
-                        _, video_url, _, _ = result
-                        await music_player.queue.put({'url': video_url, 'is_single': False})
+                        _, video_url, original_title, original_artist = result
+                        queue_item = {'url': video_url, 'title': f"{original_title} - {original_artist}", 'webpage_url': video_url, 'is_single': False}
+                        await music_player.queue.put(queue_item)
                     processed += 1
-                    
                     if processed % 10 == 0 or processed == total_tracks:
-                        progress = processed / total_tracks
-                        bar = create_loading_bar(progress)
-                        description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                            processed=processed,
-                            total=total_tracks
-                        )
-                        embed.description = description
+                        embed.description = f"{create_loading_bar(processed/total_tracks)}\n" + get_messages("loading_playlist", guild_id).format(processed=processed, total=total_tracks)
                         await message.edit(embed=embed)
-                await asyncio.sleep(0.1)
-            
-            logger.info(f"Playlist Deezer traitée : {processed - failed} pistes ajoutées, {failed} échouées")
-            
             if processed - failed == 0:
-                embed = Embed(
-                    description="⚠️ Aucune piste n'a pu être ajoutée à la file d'attente.",
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await message.edit(embed=embed)
+                await message.edit(embed=Embed(description="⚠️ Aucune piste n'a pu être ajoutée.", color=0xFF9AA2 if is_kawaii else discord.Color.red()))
                 return
-
             failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("deezer_playlist_added", guild_id)
-            embed.description = get_messages("deezer_playlist_description", guild_id).format(
-                count=processed - failed,
-                failed=failed,
-                failed_tracks=failed_text
-            )
+            embed.description = get_messages("deezer_playlist_description", guild_id).format(count=processed - failed, failed=failed, failed_tracks=failed_text)
             embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
             await message.edit(embed=embed)
+
     elif apple_music_regex.match(query):
         apple_tracks = await process_apple_music_url(query, interaction)
-        if not apple_tracks:
-            return
+        if not apple_tracks: return
         if len(apple_tracks) == 1:
             track_name, artist_name = apple_tracks[0]
-            query = f"{track_name} {artist_name}"
-            try:
-                cache_key = sanitize_query(query).lower()
-                ydl_opts_full = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "noplaylist": True,
-                    "no_color": True,
-                    "socket_timeout": 10,
-                    "force_generic_extractor": True,
-                }
-                sanitized_query = sanitize_query(query)
-                search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
-                video = info["entries"][0] if "entries" in info and info["entries"] else None
-                if not video:
-                    raise Exception("Aucun résultat trouvé")
-                video_url = video.get("webpage_url", video.get("url"))
-                if not video_url:
-                    raise KeyError("Aucune URL valide trouvée dans les métadonnées vidéo")
-                logger.debug(f"Métadonnées pour une piste Apple Music unique : {video}")
-                url_cache[cache_key] = video_url
-                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{video.get('title', track_name)}]({video_url})",
-                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                )
-                if video.get("thumbnail"):
-                    embed.set_thumbnail(url=video["thumbnail"])
-                if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
-            except Exception as e:
-                logger.error(f"Erreur de conversion Apple Music pour {query} : {e}")
-                embed = Embed(
-                    description=get_messages("search_error", guild_id),
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+            single_track_search_query = f"{track_name} {artist_name}"
         else:
-            embed = Embed(
-                title="Apple Music playlist processing",
-                description="Starting...",
-                color=0xFFB6C1 if is_kawaii else discord.Color.blue()
-            )
+            embed = Embed(title="Apple Music playlist processing", description="Starting...", color=0xFFB6C1 if is_kawaii else discord.Color.blue())
             message = await interaction.followup.send(embed=embed)
-            total_tracks = len(apple_tracks)
-            processed = 0
-            failed = 0
-            failed_tracks = []
-            batch_size = 50
-            for i in range(0, total_tracks, batch_size):
-                batch = apple_tracks[i:i + batch_size]
+            total_tracks, processed, failed, failed_tracks = len(apple_tracks), 0, 0, []
+            for i in range(0, total_tracks, 50):
+                batch = apple_tracks[i:i + 50]
                 tasks = [search_track(track) for track in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 for result in results:
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
-                        if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                        if len(failed_tracks) < 5: failed_tracks.append(f"{result[2]} par {result[3]}")
                     else:
-                        _, video_url, _, _ = result
-                        await music_player.queue.put({'url': video_url, 'is_single': False})
+                        _, video_url, original_title, original_artist = result
+                        queue_item = {'url': video_url, 'title': f"{original_title} - {original_artist}", 'webpage_url': video_url, 'is_single': False}
+                        await music_player.queue.put(queue_item)
                     processed += 1
                     if processed % 10 == 0 or processed == total_tracks:
-                        progress = processed / total_tracks
-                        bar = create_loading_bar(progress)
-                        description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                            processed=processed,
-                            total=total_tracks
-                        )
-                        embed.description = description
+                        embed.description = f"{create_loading_bar(processed/total_tracks)}\n" + get_messages("loading_playlist", guild_id).format(processed=processed, total=total_tracks)
                         await message.edit(embed=embed)
-                await asyncio.sleep(0.1)
             if processed - failed == 0:
-                embed = Embed(
-                    description="⚠️ Aucune piste n'a pu être ajoutée.",
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await message.edit(embed=embed)
+                await message.edit(embed=Embed(description="⚠️ Aucune piste n'a pu être ajoutée.", color=0xFF9AA2 if is_kawaii else discord.Color.red()))
                 return
             failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("apple_music_playlist_added", guild_id)
-            embed.description = get_messages("apple_music_playlist_description", guild_id).format(
-                count=processed - failed,
-                failed=failed,
-                failed_tracks=failed_text
-            )
+            embed.description = get_messages("apple_music_playlist_description", guild_id).format(count=processed - failed, failed=failed, failed_tracks=failed_text)
             embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
             await message.edit(embed=embed)
+
     elif tidal_regex.match(query):
         tidal_tracks = await process_tidal_url(query, interaction)
-        if not tidal_tracks:
-            return
-
+        if not tidal_tracks: return
         if len(tidal_tracks) == 1:
             track_name, artist_name = tidal_tracks[0]
-            query = f"{track_name} {artist_name}"
-            try:
-                cache_key = sanitize_query(query).lower()
-                ydl_opts_full = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "noplaylist": True,
-                    "no_color": True,
-                    "socket_timeout": 10,
-                    "force_generic_extractor": True,
-                }
-                sanitized_query = sanitize_query(query)
-                search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
-                video = info["entries"][0] if "entries" in info and info["entries"] else None
-                if not video:
-                    raise Exception("Aucun résultat trouvé")
-                video_url = video.get("webpage_url", video.get("url"))
-                if not video_url:
-                    raise KeyError("Aucune URL valide trouvée dans les métadonnées vidéo")
-                logger.debug(f"Métadonnées pour une piste Tidal unique : {video}")
-                url_cache[cache_key] = video_url
-                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{video.get('title', track_name)}]({video_url})",
-                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                )
-                if video.get("thumbnail"):
-                    embed.set_thumbnail(url=video["thumbnail"])
-                if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
-            except Exception as e:
-                logger.error(f"Erreur de conversion Tidal pour {query} : {e}")
-                embed = Embed(
-                    description=get_messages("search_error", guild_id),
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+            single_track_search_query = f"{track_name} {artist_name}"
         else:
-            embed = Embed(
-                title="Tidal mix/playlist processing",
-                description="Starting...",
-                color=0xFFB6C1 if is_kawaii else discord.Color.blue()
-            )
+            embed = Embed(title="Tidal mix/playlist processing", description="Starting...", color=0xFFB6C1 if is_kawaii else discord.Color.blue())
             message = await interaction.followup.send(embed=embed)
-            total_tracks = len(tidal_tracks)
-            processed = 0
-            failed = 0
-            failed_tracks = []
-            batch_size = 50
-            for i in range(0, total_tracks, batch_size):
-                batch = tidal_tracks[i:i + batch_size]
+            total_tracks, processed, failed, failed_tracks = len(tidal_tracks), 0, 0, []
+            for i in range(0, total_tracks, 50):
+                batch = tidal_tracks[i:i + 50]
                 tasks = [search_track(track) for track in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 for result in results:
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
-                        if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                        if len(failed_tracks) < 5: failed_tracks.append(f"{result[2]} par {result[3]}")
                     else:
-                        _, video_url, _, _ = result
-                        await music_player.queue.put({'url': video_url, 'is_single': False})
+                        _, video_url, original_title, original_artist = result
+                        queue_item = {'url': video_url, 'title': f"{original_title} - {original_artist}", 'webpage_url': video_url, 'is_single': False}
+                        await music_player.queue.put(queue_item)
                     processed += 1
                     if processed % 10 == 0 or processed == total_tracks:
-                        progress = processed / total_tracks
-                        bar = create_loading_bar(progress)
-                        description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                            processed=processed,
-                            total=total_tracks
-                        )
-                        embed.description = description
+                        embed.description = f"{create_loading_bar(processed/total_tracks)}\n" + get_messages("loading_playlist", guild_id).format(processed=processed, total=total_tracks)
                         await message.edit(embed=embed)
-                await asyncio.sleep(0.1)
             if processed - failed == 0:
-                embed = Embed(
-                    description="⚠️ Aucune piste n'a pu être ajoutée.",
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await message.edit(embed=embed)
+                await message.edit(embed=Embed(description="⚠️ Aucune piste n'a pu être ajoutée.", color=0xFF9AA2 if is_kawaii else discord.Color.red()))
                 return
             failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("tidal_playlist_added", guild_id)
-            embed.description = get_messages("tidal_playlist_description", guild_id).format(
-                count=processed - failed,
-                failed=failed,
-                failed_tracks=failed_text
-            )
+            embed.description = get_messages("tidal_playlist_description", guild_id).format(count=processed - failed, failed=failed, failed_tracks=failed_text)
             embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
             await message.edit(embed=embed)
 
     elif amazon_music_regex.match(query):
-        logger.info(f"Tentative de traitement d'une URL Amazon Music : {query}")
         amazon_tracks = await process_amazon_music_url(query, interaction)
-        if not amazon_tracks:
-            logger.error(f"Aucune piste Amazon Music extraite pour {query}")
-            return
-
+        if not amazon_tracks: return
         if len(amazon_tracks) == 1:
             track_name, artist_name = amazon_tracks[0]
-            query = f"{track_name} {artist_name}"
-            try:
-                cache_key = sanitize_query(query).lower()
-                ydl_opts_full = {
-                    "format": "bestaudio/best",
-                    "quiet": True,
-                    "no_warnings": True,
-                    "noplaylist": True,
-                    "no_color": True,
-                    "socket_timeout": 10,
-                    "force_generic_extractor": True,
-                }
-                sanitized_query = sanitize_query(query)
-                search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
-                video = info["entries"][0] if "entries" in info and info["entries"] else None
-                if not video:
-                    raise Exception("Aucun résultat trouvé")
-                video_url = video.get("webpage_url", video.get("url"))
-                if not video_url:
-                    raise KeyError("Aucune URL valide trouvée dans les métadonnées vidéo")
-                logger.debug(f"Métadonnées pour une piste Amazon Music unique : {video}")
-                url_cache[cache_key] = video_url
-                await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{video.get('title', track_name)}]({video_url})",
-                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                )
-                if video.get("thumbnail"):
-                    embed.set_thumbnail(url=video["thumbnail"])
-                if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
-            except Exception as e:
-                logger.error(f"Erreur de conversion Amazon Music pour {query} : {e}")
-                embed = Embed(
-                    description=get_messages("search_error", guild_id),
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+            single_track_search_query = f"{track_name} {artist_name}"
         else:
-            embed = Embed(
-                title="Amazon Music playlist processing",
-                description="Starting...",
-                color=0xFFB6C1 if is_kawaii else discord.Color.blue()
-            )
+            embed = Embed(title="Amazon Music playlist processing", description="Starting...", color=0xFFB6C1 if is_kawaii else discord.Color.blue())
             message = await interaction.followup.send(embed=embed)
-            total_tracks = len(amazon_tracks)
-            processed = 0
-            failed = 0
-            failed_tracks = []
-            batch_size = 50
-            for i in range(0, total_tracks, batch_size):
-                batch = amazon_tracks[i:i + batch_size]
+            total_tracks, processed, failed, failed_tracks = len(amazon_tracks), 0, 0, []
+            for i in range(0, total_tracks, 50):
+                batch = amazon_tracks[i:i + 50]
                 tasks = [search_track(track) for track in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 for result in results:
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
-                        if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                        if len(failed_tracks) < 5: failed_tracks.append(f"{result[2]} par {result[3]}")
                     else:
-                        _, video_url, _, _ = result
-                        await music_player.queue.put({'url': video_url, 'is_single': False})
+                        _, video_url, original_title, original_artist = result
+                        queue_item = {'url': video_url, 'title': f"{original_title} - {original_artist}", 'webpage_url': video_url, 'is_single': False}
+                        await music_player.queue.put(queue_item)
                     processed += 1
                     if processed % 10 == 0 or processed == total_tracks:
-                        progress = processed / total_tracks
-                        bar = create_loading_bar(progress)
-                        description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                            processed=processed,
-                            total=total_tracks
-                        )
-                        embed.description = description
+                        embed.description = f"{create_loading_bar(processed/total_tracks)}\n" + get_messages("loading_playlist", guild_id).format(processed=processed, total=total_tracks)
                         await message.edit(embed=embed)
-                await asyncio.sleep(0.1)
             if processed - failed == 0:
-                embed = Embed(
-                    description="⚠️ Aucune piste n'a pu être ajoutée.",
-                    color=0xFF9AA2 if is_kawaii else discord.Color.red()
-                )
-                await message.edit(embed=embed)
+                await message.edit(embed=Embed(description="⚠️ Aucune piste n'a pu être ajoutée.", color=0xFF9AA2 if is_kawaii else discord.Color.red()))
                 return
             failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("amazon_music_playlist_added", guild_id)
-            embed.description = get_messages("amazon_music_playlist_description", guild_id).format(
-                count=processed - failed,
-                failed=failed,
-                failed_tracks=failed_text
-            )
+            embed.description = get_messages("amazon_music_playlist_description", guild_id).format(count=processed - failed, failed=failed, failed_tracks=failed_text)
             embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
             await message.edit(embed=embed)
 
     elif soundcloud_regex.match(query) or youtube_regex.match(query) or ytmusic_regex.match(query) or bandcamp_regex.match(query):
         try:
-            platform = ""
-            if soundcloud_regex.match(query):
-                platform = "SoundCloud"
-            elif ytmusic_regex.match(query):
-                platform = "YouTube Music"
-            elif youtube_regex.match(query):
-                platform = "YouTube"
-            elif bandcamp_regex.match(query):
-                platform = "Bandcamp"
-            elif amazon_music_regex.match(query):
-                platform = "Amazon Music"
-                
-            ydl_opts_playlist = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "extract_flat": "in_playlist",
-                "noplaylist": False,
-                "no_color": True,
-                "socket_timeout": 10,
-                "force_generic_extractor": True,
-            }
+            platform = "SoundCloud" if soundcloud_regex.match(query) else "YouTube Music" if ytmusic_regex.match(query) else "YouTube" if youtube_regex.match(query) else "Bandcamp"
+            ydl_opts_playlist = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "extract_flat": "in_playlist", "noplaylist": False, "no_color": True, "socket_timeout": 10, "force_generic_extractor": True}
             info = await extract_info_async(ydl_opts_playlist, query)
-            
             if "entries" in info:
                 total_tracks = len(info["entries"])
                 processed = 0
-                    
-                embed = Embed(
-                    title=f"{platform} playlist processing",
-                    description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks),
-                    color=0xFFB6C1 if is_kawaii else discord.Color.blue()
-                )
+                embed = Embed(title=f"{platform} playlist processing", description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
                 message = await interaction.followup.send(embed=embed)
                 for entry in info["entries"]:
                     if entry:
-                        await music_player.queue.put({'url': entry['url'], 'is_single': False})
+                        queue_item = {'url': entry['url'], 'title': entry.get('title', 'Titre inconnu'), 'webpage_url': entry.get('webpage_url', entry['url']), 'is_single': False}
+                        await music_player.queue.put(queue_item)
                         processed += 1
-                        
                         if processed % 10 == 0 or processed == total_tracks:
-                            progress = processed / total_tracks
-                            bar = create_loading_bar(progress)
-                            new_description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                                processed=processed, 
-                                total=total_tracks
-                            )
-                            embed.description = new_description
+                            embed.description = f"{create_loading_bar(processed/total_tracks)}\n" + get_messages("loading_playlist", guild_id).format(processed=processed, total=total_tracks)
                             await message.edit(embed=embed)
-                
                 if info["entries"] and info["entries"][0]:
                     thumbnail = info["entries"][0].get("thumbnail")
                     embed.title = get_messages("ytmusic_playlist_added", guild_id) if ytmusic_regex.match(query) else get_messages("playlist_added", guild_id)
                     embed.description = get_messages("ytmusic_playlist_description", guild_id).format(count=total_tracks) if ytmusic_regex.match(query) else get_messages("playlist_description", guild_id).format(count=total_tracks)
                     embed.color = 0xE2F0CB if is_kawaii else discord.Color.green()
-                    if thumbnail:
-                        embed.set_thumbnail(url=thumbnail)
+                    if thumbnail: embed.set_thumbnail(url=thumbnail)
                     await message.edit(embed=embed)
             else:
-                await music_player.queue.put({'url': info["webpage_url"], 'is_single': True, 'skip_now_playing': True})
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{info['title']}]({info['webpage_url']})",
-                    color=0xFFDAC1 if is_kawaii else discord.Color.blue()
-                )
-                if info.get("thumbnail"):
-                    embed.set_thumbnail(url=info["thumbnail"])
+                queue_item = {'url': info.get('webpage_url', info['url']), 'title': info.get('title', 'Titre inconnu'), 'webpage_url': info.get('webpage_url', info['url']), 'is_single': True, 'skip_now_playing': True}
+                await music_player.queue.put(queue_item)
+                embed = Embed(title=get_messages("song_added", guild_id), description=f"[{info['title']}]({info['webpage_url']})", color=0xFFDAC1 if is_kawaii else discord.Color.blue())
+                if info.get("thumbnail"): embed.set_thumbnail(url=info["thumbnail"])
                 await interaction.followup.send(embed=embed)
         except Exception as e:
-            embed = Embed(
-                description=get_messages("video_error", guild_id),
-                color=0xFF9AA2 if is_kawaii else discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=Embed(description=get_messages("video_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True)
             logger.error(f"Error: {e}")
+
     else:
+        final_query = single_track_search_query if single_track_search_query else query
         try:
-            ydl_opts_full = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "noplaylist": True,
-                "no_color": True,
-                "socket_timeout": 10,
-                "force_generic_extractor": True,
-            }
-            sanitized_query = sanitize_query(query)
+            ydl_opts_full = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True, "no_color": True, "socket_timeout": 10, "force_generic_extractor": True}
+            sanitized_query = sanitize_query(final_query)
             search_query = f"ytsearch:{sanitized_query}"
             info = await extract_info_async(ydl_opts_full, search_query)
             video = info["entries"][0] if "entries" in info and info["entries"] else None
-            if not video:
-                raise Exception("No results found")
+            if not video: raise Exception("No results found")
             video_url = video.get("webpage_url", video.get("url"))
-            if not video_url:
-                raise KeyError("No valid URL found in video metadata")
+            if not video_url: raise KeyError("No valid URL found in video metadata")
             
-            logger.debug(f"Metadata for keyword search: {video}")
-            await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
+            queue_item = {'url': video_url, 'title': video.get('title', 'Unknown Title'), 'webpage_url': video_url, 'is_single': True, 'skip_now_playing': True}
+            await music_player.queue.put(queue_item)
             
-            embed = Embed(
-                title=get_messages("song_added", guild_id),
-                description=f"[{video.get('title', 'Unknown Title')}]({video_url})",
-                color=0xB5EAD7 if is_kawaii else discord.Color.blue()
-            )
-            if video.get("thumbnail"):
-                embed.set_thumbnail(url=video["thumbnail"])
-            if is_kawaii:
-                embed.set_footer(text="☆⌒(≧▽° )")
+            embed = Embed(title=get_messages("song_added", guild_id), description=f"[{video.get('title', 'Unknown Title')}]({video_url})", color=0xB5EAD7 if is_kawaii else discord.Color.blue())
+            if video.get("thumbnail"): embed.set_thumbnail(url=video["thumbnail"])
+            if is_kawaii: embed.set_footer(text="☆⌒(≧▽° )")
             await interaction.followup.send(embed=embed)
         except Exception as e:
-            embed = Embed(
-                description=get_messages("search_error", guild_id),
-                color=0xFF9AA2 if is_kawaii else discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            logger.error(f"Error searching for {query}: {e}")
+            await interaction.followup.send(embed=Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True)
+            logger.error(f"Error searching for {final_query}: {e}")
 
     if not music_player.current_task or music_player.current_task.done():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
@@ -2053,11 +1682,11 @@ async def play(interaction: discord.Interaction, query: str):
 # /queue command
 @bot.tree.command(name="queue", description="Show the current queue")
 async def queue(interaction: discord.Interaction):
-    await interaction.response.defer()
+    await interaction.response.defer() 
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
-    
+
     if music_player.queue.qsize() == 0:
         embed = Embed(
             description=get_messages("queue_empty", guild_id),
@@ -2065,31 +1694,29 @@ async def queue(interaction: discord.Interaction):
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
         return
-    
-    queue_items = list(music_player.queue._queue)[:5]
+
+    # On lit simplement les données qui sont DÉJÀ dans la file. C'est ultra rapide.
+    # On peut même se permettre d'en afficher plus, par exemple 10.
+    queue_items = list(music_player.queue._queue)[:10]
     next_songs = []
+
     for item in queue_items:
-        try:
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "extract_flat": True,
-                "force_generic_extractor": True,
-            }
-            info = await extract_info_async(ydl_opts, item['url'])
-            title = info.get("title", "Unknown Title")
-            url = info.get("webpage_url", item['url'])
-            next_songs.append(get_messages("queue_song", guild_id).format(title=title, url=url))
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction des infos : {e}")
-            next_songs.append("- Chanson inconnue")
-    
+        # On récupère le titre et l'url qui ont été stockés à l'avance
+        title = item.get("title", "Titre en cours de chargement...")
+        url = item.get("webpage_url", "#")  # Lien vers la page web, pas le flux audio
+
+        # On s'assure que le titre n'est pas trop long pour l'affichage
+        if len(title) > 60:
+            title = title[:57] + "..."
+
+        next_songs.append(get_messages("queue_song", guild_id).format(title=title, url=url))
+
     embed = Embed(
         title=get_messages("queue_title", guild_id),
         description=get_messages("queue_description", guild_id).format(count=music_player.queue.qsize()),
         color=0xB5EAD7 if is_kawaii else discord.Color.blue()
     )
+
     if next_songs:
         embed.add_field(
             name=get_messages("queue_next", guild_id),
@@ -2121,7 +1748,6 @@ async def play_next(interaction: discord.Interaction, query: str):
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
-    
     if not interaction.user.voice or not interaction.user.voice.channel:
         embed = Embed(
             description=get_messages("no_voice_channel", guild_id),
@@ -2129,7 +1755,6 @@ async def play_next(interaction: discord.Interaction, query: str):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
-
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         try:
             music_player.voice_client = await interaction.user.voice.channel.connect()
@@ -2141,18 +1766,16 @@ async def play_next(interaction: discord.Interaction, query: str):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             logger.error(f"Error: {e}")
             return
-
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
-
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
-
     try:
+        video_url = None
+        video = None
         if spotify_regex.match(query):
             spotify_tracks = await process_spotify_url(query, interaction)
             if not spotify_tracks or len(spotify_tracks) != 1:
                 raise Exception("Only single Spotify tracks are supported for /playnext")
-            
             track_name, artist_name = spotify_tracks[0]
             search_query = f"ytsearch:{sanitize_query(f'{track_name} {artist_name}')}"
             ydl_opts = {
@@ -2169,9 +1792,6 @@ async def play_next(interaction: discord.Interaction, query: str):
             if not video:
                 raise Exception("No results found")
             video_url = video.get("webpage_url", video.get("url"))
-            if not video_url:
-                raise KeyError("No valid URL found in video metadata")
-            
             logger.debug(f"Metadata for Spotify track: {video}")
         else:
             ydl_opts = {
@@ -2188,18 +1808,25 @@ async def play_next(interaction: discord.Interaction, query: str):
             info = await extract_info_async(ydl_opts, search_query)
             video = info["entries"][0] if "entries" in info and info["entries"] else info
             video_url = video.get("webpage_url", video.get("url"))
-            if not video_url:
-                raise KeyError("No valid URL found in video metadata")
-            
             logger.debug(f"Metadata for non-Spotify query: {video}")
+            
+        if not video_url or not video:
+            raise KeyError("No valid URL or video metadata found")
 
         new_queue = asyncio.Queue()
-        await new_queue.put({'url': video_url, 'is_single': True})
+        
+        # Crée un objet riche avec toutes les informations nécessaires pour /queue
+        queue_item = {
+            'url': video.get("webpage_url", video_url), # L'URL stable pour la relecture
+            'title': video.get('title', 'Titre inconnu'),
+            'webpage_url': video.get('webpage_url', video_url), # L'URL à afficher
+            'is_single': True
+        }
+        await new_queue.put(queue_item)
         
         while not music_player.queue.empty():
             item = await music_player.queue.get()
             await new_queue.put(item)
-        
         music_player.queue = new_queue
         
         embed = Embed(
@@ -2252,7 +1879,6 @@ async def play_audio(guild_id):
     try:
         is_kawaii = get_mode(guild_id)
         music_player = get_player(guild_id)
-        
         while True:
             if music_player.queue.qsize() == 0:
                 if music_player.autoplay_enabled and music_player.last_was_single and music_player.current_url:
@@ -2262,7 +1888,6 @@ async def play_audio(guild_id):
                             color=0xFFB6C1 if is_kawaii else discord.Color.blue()
                         )
                         await music_player.text_channel.send(embed=embed)
-                    
                     if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url:
                         mix_playlist_url = get_mix_playlist_url(music_player.current_url)
                         if mix_playlist_url:
@@ -2282,7 +1907,13 @@ async def play_audio(guild_id):
                                     for entry in info["entries"]:
                                         entry_video_id = get_video_id(entry["url"])
                                         if entry_video_id and entry_video_id != current_video_id:
-                                            await music_player.queue.put({'url': entry["url"], 'is_single': True})
+                                            queue_item = {
+                                                'url': entry['url'],
+                                                'title': entry.get('title', 'Titre inconnu'),
+                                                'webpage_url': entry.get('webpage_url', entry['url']),
+                                                'is_single': True
+                                            }
+                                            await music_player.queue.put(queue_item)
                             except Exception as e:
                                 logger.error(f"Erreur YouTube Mix : {e}")
                     elif "soundcloud.com" in music_player.current_url:
@@ -2306,31 +1937,42 @@ async def play_audio(guild_id):
                                         for entry in info["entries"]:
                                             entry_track_id = get_soundcloud_track_id(entry["url"])
                                             if entry_track_id and entry_track_id != current_track_id:
-                                                await music_player.queue.put({'url': entry["url"], 'is_single': True})
+                                                queue_item = {
+                                                    'url': entry['url'],
+                                                    'title': entry.get('title', 'Titre inconnu'),
+                                                    'webpage_url': entry.get('webpage_url', entry['url']),
+                                                    'is_single': True
+                                                }
+                                                await music_player.queue.put(queue_item)
                                 except Exception as e:
                                     logger.error(f"Erreur SoundCloud Station : {e}")
                 else:
                     music_player.current_task = None
                     music_player.current_info = None
                     break
-
-            track_info = await music_player.queue.get()
-            video_url = track_info['url']
-            is_single = track_info['is_single']
-            skip_now_playing = track_info.get('skip_now_playing', False)
             
+            track_data = await music_player.queue.get()
+            video_url = track_data.get('url') # URL stable à traiter par yt-dlp
+            if not video_url:
+                logger.warning(f"Item sans URL dans la file pour guild {guild_id}, skip.")
+                continue
+
+            is_single = track_data.get('is_single', True)
+            skip_now_playing = track_data.get('skip_now_playing', False)
+
             if music_player.queue.qsize() == 0:
                 music_player.last_was_single = is_single
             else:
                 music_player.last_was_single = False
-            
             music_player.current_url = video_url
+            
             try:
                 if not music_player.voice_client or not music_player.voice_client.is_connected():
                     if music_player.text_channel:
                         await music_player.text_channel.guild.voice_client.disconnect()
                         music_player.voice_client = await music_player.text_channel.guild.voice_channels[0].connect()
-
+                
+                # On doit toujours faire cet appel pour obtenir une URL de flux audio valide (elles expirent)
                 ydl_opts = {
                     "format": "bestaudio/best",
                     "quiet": True,
@@ -2342,9 +1984,12 @@ async def play_audio(guild_id):
                 info = await extract_info_async(ydl_opts, video_url)
                 music_player.current_info = info
                 audio_url = info["url"]
-                title = info.get("title", "Unknown Title")
+
+                # On utilise les infos les plus fraîches, mais on se rabat sur celles
+                # déjà stockées si jamais l'API ne renvoie rien.
+                title = info.get("title", track_data.get('title', "Titre inconnu"))
                 thumbnail = info.get("thumbnail")
-                webpage_url = info.get("webpage_url", video_url)
+                webpage_url = info.get("webpage_url", track_data.get('webpage_url', video_url))
 
                 if music_player.text_channel and not skip_now_playing:
                     embed = Embed(
@@ -2358,29 +2003,28 @@ async def play_audio(guild_id):
                     if thumbnail:
                         embed.set_thumbnail(url=thumbnail)
                     await music_player.text_channel.send(embed=embed)
-
+                
                 ffmpeg_options = {
                     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
                     "options": "-vn",
                 }
                 music_player.voice_client.play(
                     discord.FFmpegPCMAudio(audio_url, **ffmpeg_options),
-                    after=lambda e: logger.error(f"Erreur : {e}") if e else None
+                    after=lambda e: logger.error(f"Erreur de lecture: {e}") if e else None
                 )
-
+                
                 while music_player.voice_client.is_playing() or music_player.voice_client.is_paused():
                     await asyncio.sleep(1)
 
+                # Pour la boucle, on remet l'item original dans la file pour conserver toutes ses infos
                 if music_player.loop_current:
-                    await music_player.queue.put({'url': video_url, 'is_single': is_single, 'skip_now_playing': skip_now_playing})
+                    await music_player.queue.put(track_data)
                     continue
-
             except Exception as e:
                 logger.error(f"Erreur de lecture audio pour {video_url}: {e}")
                 continue
-
     except Exception as e:
-        logger.error(f"Erreur dans play_audio pour guild {guild_id}: {e}")
+        logger.error(f"Erreur fatale dans play_audio pour guild {guild_id}: {e}")
 
 # /pause command
 @bot.tree.command(name="pause", description="Pause the current playback")
@@ -2553,7 +2197,7 @@ async def on_ready():
                 
                 statuses = [
                     ("your Deezer links 🎶", discord.ActivityType.listening),
-                    ("/play [links] 🔥", discord.ActivityType.listening),
+                    ("/play [link] 🔥", discord.ActivityType.listening),
                     (f"{len(bot.guilds)} servers 🎶", discord.ActivityType.playing)
                 ]
                 
