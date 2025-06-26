@@ -106,7 +106,7 @@
       nav {
         padding: 15px 20px;
       }
-            .logo {
+      .logo {
         font-size: 1.5rem;
       }
       .nav-links {
@@ -200,7 +200,7 @@
     }
     @-moz-keyframes gentleDrift {
       0% { transform: translate3d(0, 0, 0); }
-      25% { transform: translate3d(-8px, -10px, 0); }
+      25% { transform: translate3 PrisonBreakd(-8px, -10px, 0); }
       50% { transform: translate3d(10px, -6px, 0); }
       75% { transform: translate3d(-6px, 8px, 0); }
       100% { transform: translate3d(0, 0, 0); }
@@ -210,12 +210,12 @@
       50% { transform: translateY(-10px) scale(1.02); }
     }
     .particle {
-    position: absolute;
-    pointer-events: none;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    border-radius: 50%;
-    opacity: 0;
-    animation: particleFloat 3s ease-out; /* Suppression de 'infinite' */
+      position: absolute;
+      pointer-events: none;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      border-radius: 50%;
+      opacity: 0;
+      animation: particleFloat 3s ease-out;
     }
     @keyframes particleFloat {
       0% { transform: translate(0, 0) scale(0); opacity: 0.8; }
@@ -345,18 +345,6 @@
       margin: 0 auto 20px;
       color: var(--text-secondary);
       line-height: 1.6;
-    }
-    .announcement .highlight {
-      display: block;
-      font-size: 1.1rem;
-      font-style: italic;
-      color: var(--text);
-      background: rgba(20, 20, 20, 0.6);
-      padding: 10px 20px;
-      border-radius: 10px;
-      border: 1px solid rgba(138, 43, 226, 0.2);
-      margin: 15px auto;
-      max-width: 600px;
     }
     .announcement .support-button {
       display: inline-flex;
@@ -491,7 +479,7 @@
     .platform-card:active {
       transform: translateY(-4px) scale(0.95);
     }
-    .platform-icon { /* For Font Awesome icons */
+    .platform-icon {
       font-size: 2.5rem;
       color: var(--primary);
       transition: all 0.4s ease;
@@ -502,20 +490,17 @@
       transform: scale(1.2);
       filter: drop-shadow(0 0 20px rgba(138, 43, 226, 0.3));
     }
-    /* SVG Styling - New CSS for your custom SVG icons */
     .platform-icon-svg {
-      width: 60%; /* Adjust size as needed */
-      height: 60%; /* Adjust size as needed */
-      fill: var(--primary) !important; /* Default fill color from your primary variable */
+      width: 60%;
+      height: 60%;
+      fill: var(--primary) !important;
       transition: all 0.4s ease;
       position: relative;
       z-index: 1;
-      /* Important: these override potential inline styles from original SVGs */
       background: none !important;
-      stroke: none !important; /* Ensure no stroke unless intended by the SVG itself */
+      stroke: none !important;
     }
     .platform-card:hover .platform-icon-svg {
-      /* fill: var(--text) !important; /* Ligne commentée ou supprimée pour empêcher le blanc */
       transform: scale(1.2);
       filter: drop-shadow(0 0 20px rgba(138, 43, 226, 0.3));
     }
@@ -533,7 +518,7 @@
       .platform-icon {
         font-size: 2.2rem;
       }
-      .platform-icon-svg { /* Responsive adjustments for SVGs */
+      .platform-icon-svg {
         width: 50%;
         height: 50%;
       }
@@ -549,7 +534,7 @@
       .platform-icon {
         font-size: 2rem;
       }
-      .platform-icon-svg { /* Responsive adjustments for SVGs */
+      .platform-icon-svg {
         width: 45%;
         height: 45%;
       }
@@ -665,7 +650,7 @@
       background: rgba(138, 43, 226, 0.1);
       padding: 10px 20px;
       border-radius: 50px;
-      border: 1 solid rgba(138, 43, 226, 0.2);
+      border: 1px solid rgba(138, 43, 226, 0.2);
       backdrop-filter: blur(5px);
     }
     .no-limits-item i {
@@ -734,7 +719,7 @@
     .copyright {
       margin-top: 60px;
       padding-top: 30px;
-      border-top: 1px solid rgba(255, 255px, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-secondary);
       font-size: 0.9rem;
     }
@@ -756,7 +741,7 @@
       .platform-icon {
         font-size: 2.2rem;
       }
-      .platform-icon-svg { /* Responsive adjustments for SVGs */
+      .platform-icon-svg {
         width: 50%;
         height: 50%;
       }
@@ -772,7 +757,7 @@
       .platform-icon {
         font-size: 2rem;
       }
-      .platform-icon-svg { /* Responsive adjustments for SVGs */
+      .platform-icon-svg {
         width: 45%;
         height: 45%;
       }
@@ -821,9 +806,6 @@
       .announcement p {
         font-size: 1rem;
       }
-      .announcement .highlight {
-        font-size: 0.9rem;
-      }
       .announcement .support-button {
         font-size: 0.9rem;
       }
@@ -839,9 +821,6 @@
       }
       .announcement p {
         font-size: 0.9rem;
-      }
-      .announcement .highlight {
-        font-size: 0.8rem;
       }
       .announcement .support-button {
         padding: 10px 20px;
@@ -879,8 +858,7 @@
   </section>
   <section class="announcement fade-in">
     <h2>🎉 Spotify Support is LIVE!</h2>
-    <p>After months of dedicated effort, Playify now fully supports Spotify with seamless playlist playback.</p>
-    <p class="highlight">Only Spotify-made playlists (This Is, Radar, etc.) aren't supported due to API limitations.</p>
+    <p>After months of dedicated effort, Playify now fully supports Spotify with seamless playback for all playlists, including Spotify-made playlists like This Is and Radar.</p>
     <a href="https://www.paypal.com/paypalme/alanmussot1" target="_blank" class="button primary-button support-button">
       <i class="fab fa-paypal"></i> Support the Dev!
     </a>
@@ -935,8 +913,7 @@
   <section id="platforms" class="platforms">
     <h2 class="section-title fade-in">SUPPORTED PLATFORMS</h2>
     <p class="fade-in" style="max-width: 800px; margin: 0 auto 50px; font-size: 1.2rem; color: var(--text-secondary);">
-      Playify supports music from multiple platforms. Use direct URLs or search by keywords.
-      All platforms support songs, albums, and playlists. For Spotify, user-made playlists work seamlessly, but Spotify-made playlists (e.g., This Is, Radar) are not supported due to API limitations.
+      Playify supports music from multiple platforms. Use direct URLs or search by keywords. All platforms support songs, albums, and playlists.
     </p>
     <div class="platforms-grid">
       <a href="https://open.spotify.com" target="_blank" class="platform-card fade-in">
@@ -977,13 +954,11 @@
            C42.243,31.99,41.757,35.281,39.882,36.892z"/>
         </svg>
       </a>
-    
       <a href="https://music.apple.com/" target="_blank" class="platform-card fade-in delay-5">
         <svg class="platform-icon-svg" viewBox="0 0 50 50" fill="currentColor">
           <path d="M37,4H13c-4.962,0-9,4.037-9,9v24c0,4.963,4.038,9,9,9h24c4.962,0,9-4.037,9-9V13C46,8.037,41.962,4,37,4z M35,27v4v0.021 h-0.002C34.986,33.768,32.749,36,30,36h-0.5c-0.987,0-1.933-0.42-2.596-1.152c-0.662-0.731-0.985-1.718-0.887-2.705 C26.195,30.38,27.787,29,29.643,29H31c1.103,0,2-0.897,2-2v-9.795l-12,2.25V30v4c0,2.757-2.243,5-5,5h-0.5 c-0.987,0-1.933-0.42-2.596-1.152c-0.662-0.731-0.985-1.718-0.887-2.705C12.195,33.38,13.787,32,15.643,32H17c1.103,0,2-0.897,2-2 V15.353c0-0.963,0.687-1.79,1.633-1.966l12.591-2.36c0.439-0.083,0.891,0.033,1.234,0.319C34.803,11.632,35,12.053,35,12.5V27z"/>
         </svg>
       </a>
-    
       <a href="https://tidal.com/" target="_blank" class="platform-card fade-in delay-6">
         <svg class="platform-icon-svg" viewBox="0 0 48 48" fill="currentColor">
           <path d="M10.3333,12.3333l6.8334,6.8334L24,12.3333l6.8333,6.8334,6.8334-6.8334L44.5,19.1667,37.6667,26l-6.8334-6.8333L24,26l6.8333,6.8333L24,39.6667l-6.8333-6.8334L24,26l-6.8333-6.8333L10.3333,26,3.5,19.1667Z"/>
@@ -994,13 +969,10 @@
           <defs>
             <mask id="youtubeMusicThinHoleMask">
               <rect x="0" y="0" width="48" height="48" fill="white"/>
-      
               <path fill="none" stroke="black" stroke-width="1.5" stroke-miterlimit="10" d="M24,14c5.5,0,10,4.476,10,10s-4.476,10-10,10s-10-4.476-10-10S18.5,14,24,14"/>
             </mask>
           </defs>
-      
           <circle cx="24" cy="24" r="20" fill="var(--primary)" mask="url(#youtubeMusicThinHoleMask)"/>
-      
           <polygon points="21,29 29,24 21,19" fill="var(--darker)"/>
         </svg>
       </a>
@@ -1030,7 +1002,7 @@
     <div class="fade-in">
       <h2>READY TO ENHANCE YOUR SERVER?</h2>
       <p>Join communities enjoying the ultimate music experience. Playify is free forever with no hidden costs.</p>
-            <div class="no-limits fade-in delay-1">
+      <div class="no-limits fade-in delay-1">
         <div class="no-limits-item">
           <i class="fas fa-infinity"></i>
           <span>No playlist limits</span>
@@ -1044,7 +1016,7 @@
           <span>Completely free</span>
         </div>
       </div>
-            <a href="https://discord.com/oauth2/authorize?client_id=1370846940354576556&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add Playify Now</a>
+      <a href="https://discord.com/oauth2/authorize?client_id=1370846940354576556&permissions=8&integration_type=0&scope=bot" target="_blank" class="button primary-button">Add Playify Now</a>
     </div>
   </section>
   <footer>
@@ -1084,8 +1056,8 @@
     // Initialize particles.js
     let currentParticles = 0;
     const maxParticles = 50;
-    const duration = 10000; // 10 secondes
-    const interval = 200; // 200ms
+    const duration = 10000;
+    const interval = 200;
     const steps = duration / interval;
     const particlesPerStep = maxParticles / steps;
     const updateParticles = () => {
@@ -1196,9 +1168,7 @@
         retina_detect: true,
       });
     };
-    // Start with 0 particles
     updateParticles();
-    // Update particles gradually
     const particleInterval = setInterval(() => {
       if (currentParticles >= maxParticles) {
         clearInterval(particleInterval);
@@ -1206,9 +1176,8 @@
         updateParticles();
       }
     }, interval);
-    // Scroll reveal animation
     const fadeElements = document.querySelectorAll('.fade-in');
-        const appearOptions = {
+    const appearOptions = {
       threshold: 0.1,
       rootMargin: "0px 0px -50px 0px"
     };
@@ -1230,7 +1199,6 @@
         appearOnScroll.observe(fadeElement);
       }
     });
-    // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
@@ -1239,32 +1207,31 @@
         });
       });
     });
-    // Particle creation function
     function createParticles() {
       const wrapper = document.querySelector('.h1-wrapper');
       const rect = wrapper.getBoundingClientRect();
-            for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 3; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
-                const size = Math.random() * 4 + 4;
+        const size = Math.random() * 4 + 4;
         particle.style.width = `${size}px`;
         particle.style.height = `${size}px`;
-                const x = Math.random() * rect.width;
+        const x = Math.random() * rect.width;
         const y = Math.random() * rect.height;
         particle.style.left = `${x}px`;
         particle.style.top = `${y}px`;
-                const tx = (Math.random() - 0.5) * 100;
+        const tx = (Math.random() - 0.5) * 100;
         const ty = -Math.random() * 100 - 50;
         particle.style.setProperty('--tx', `${tx}px`);
         particle.style.setProperty('--ty', `${ty}px`);
-                particle.style.animationDelay = `${Math.random() * 2}s`;
-                wrapper.appendChild(particle);
-                particle.addEventListener('animationend', () => {
+        particle.style.animationDelay = `${Math.random() * 2}s`;
+        wrapper.appendChild(particle);
+        particle.addEventListener('animationend', () => {
           particle.remove();
         });
       }
     }
-    setInterval(createParticles, 1000); // Toutes les 1 seconde
+    setInterval(createParticles, 1000);
     createParticles();
   </script>
 </body>
