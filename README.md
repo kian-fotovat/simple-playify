@@ -22,9 +22,11 @@ Playify is a minimalist Discord music bot that gets the job done. No fluff, no f
 
 Playify handles Spotify like a pro:
 
-- ✅ **Individual tracks**: Plays them instantly.
-- ✅ **Playlists**: From small to massive, it’s all good.
-- ⚠️ **Spotify-curated playlists** (e.g., "This Is", "Your Mix", "Release Radar") aren’t supported due to API limitations. Blame Spotify, not us.
+* ✅ **Individual tracks** – Plays them instantly.
+* ✅ **Personal and public playlists** – From small to massive, no problem.
+* ✅ **Spotify-curated playlists** (e.g., *This Is*, *Your Mix*, *Release Radar*) – Now fully supported thanks to [SpotifyScraper](https://github.com/AliAkhtari78/SpotifyScraper), which bypasses the official API limitations. 🎉
+
+> 🔄 *Note: For dynamic playlists like radios or mixes, the content may differ slightly from what you see in your own Spotify app. These playlists are constantly updated and personalized by Spotify.*
 
 ---
 
@@ -46,16 +48,12 @@ Want to run Playify yourself? It’s straightforward.
 
 ### Requirements
 
-- **Python 3.9+**: [Download here](https://www.python.org/downloads/).
-- **FFmpeg**: For audio processing. Install it:
-  - **Ubuntu/Debian**: `sudo apt update && sudo apt install ffmpeg`
-  - **macOS**: `brew install ffmpeg`
-  - **Windows**: Download from [FFmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
-- **Playwright**: For processing Apple Music, Tidal, and Amazon Music links. Install it:
-   ```bash
-   playwright install
-  ````
+* **Python 3.9+**: [Download here](https://www.python.org/downloads/).
+* **FFmpeg**: For audio processing. Install it:
 
+  * **Ubuntu/Debian**: `sudo apt update && sudo apt install ffmpeg`
+  * **macOS**: `brew install ffmpeg`
+  * **Windows**: Download from [FFmpeg.org](https://ffmpeg.org/download.html) and add to PATH.
 * **Git**: To clone the repo.
 * **Discord Bot Token**: Get it from the [Discord Developer Portal](https://discord.com/developers/applications).
 * **Spotify API Credentials** (optional, for Spotify support): Create an app on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
@@ -69,32 +67,30 @@ Want to run Playify yourself? It’s straightforward.
    cd playify
    ```
 
-2. **Install dependencies**:
+2. **Install Python dependencies**:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-   If `requirements.txt` is missing, install manually:
+3. **Install Playwright browsers** (after installing requirements):
 
    ```bash
-   pip install discord.py yt-dlp spotipy cachetools python-dotenv playwright
+   playwright install
    ```
 
-3. **Run the bot**:
+4. **Run the bot**:
 
    ```bash
    python playify.py
    ```
 
-4. **Invite the bot** to your server:
+5. **Invite the bot** to your server:
 
    * Go to the [Discord Developer Portal](https://discord.com/developers/applications).
    * Create an application, add a bot, and enable **Guilds** and **Voice States** intents.
    * Generate an invite link with permissions: `Connect`, `Speak`, `Send Messages`.
    * Add the bot to your server and test with `/play`.
-
----
 
 ### Troubleshooting
 
