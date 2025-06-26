@@ -1,17 +1,24 @@
 import discord
 from discord.ext import commands
 from discord import app_commands, Embed
+from discord.ui import View, Button
+from discord import ButtonStyle
 import asyncio
 import yt_dlp
 import re
 import spotipy
+import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from spotify_scraper import SpotifyClient # <-- CORRIGÉ ICI
+from spotify_scraper.core.exceptions import SpotifyScraperError
 import random
 from urllib.parse import urlparse, parse_qs
 from cachetools import TTLCache
 import logging
 import requests
 from playwright.async_api import async_playwright
+import json # Ajout de cet import
+import math
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,14 +32,27 @@ intents.voice_states = True
 # Create the bot
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Spotify configuration
-SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
-SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE'
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-    client_id=SPOTIFY_CLIENT_ID,
-    client_secret=SPOTIFY_CLIENT_SECRET,
-    requests_timeout=15
-))
+# Client pour l'API Officielle (rapide et prioritaire)
+SPOTIFY_CLIENT_ID = 'CLIENTIDHERE' # Votre ID
+SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE' # Votre Secret
+try:
+    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET
+    ))
+    logger.info("Client API Spotipy initialisé avec succès.")
+except Exception as e:
+    sp = None
+    logger.error(f"Impossible d'initialiser le client Spotipy : {e}")
+
+# Client pour le Scraper (plan B, avec Selenium)
+try:
+    # On utilise le nom correct de la classe, sans alias
+    spotify_scraper_client = SpotifyClient(browser_type="selenium") # <-- CORRIGÉ ICI
+    logger.info("Client SpotifyScraper initialisé avec succès en mode Selenium.")
+except Exception as e:
+    spotify_scraper_client = None
+    logger.error(f"Impossible d'initialiser SpotifyScraper : {e}")
 
 # Cache for YouTube searches (2-hour TTL, size for 500+ servers)
 url_cache = TTLCache(maxsize=75000, ttl=7200)
@@ -612,139 +632,104 @@ def get_soundcloud_station_url(track_id):
         return f"https://soundcloud.com/discover/sets/track-stations:{track_id}"
     return None
 
-# Process Spotify URLs
+# --- FONCTION FINALE PROCESS_SPOTIFY_URL (Architecture en Cascade) ---
+# CETTE FONCTION EST MAINTENANT CORRECTE ET NE DOIT PAS ÊTRE MODIFIÉE
 async def process_spotify_url(url, interaction):
-    try:
-        parsed_url = urlparse(url)
-        clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
-        resource_id = clean_url.split('/')[-1].split('?')[0]
-        logger.info(f"Processing Spotify URL: {clean_url} (ID: {resource_id})")
-
-        sp.auth_manager.get_access_token(as_dict=False)
-
-        if 'playlist' in clean_url:
-            try:
-                playlist_info = await retry_spotify_call(sp.playlist, resource_id)
-                logger.info(f"Playlist found: {playlist_info.get('name', 'Unknown')} (Public: {playlist_info.get('public', False)})")
-                
-                if not playlist_info['public']:
-                    embed = Embed(
-                        description="⚠️ Cette playlist est privée ou inaccessible.",
-                        color=0xFFB6C1 if get_mode(interaction.guild_id) else discord.Color.red()
-                    )
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    return None
-                
-                total_tracks = playlist_info['tracks']['total']
-                logger.info(f"Total tracks in playlist: {total_tracks}")
-                
-                if total_tracks == 0:
-                    embed = Embed(
-                        description="⚠️ La playlist est vide.",
-                        color=0xFFB6C1 if get_mode(interaction.guild_id) else discord.Color.red()
-                    )
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    return None
-                
-                tracks = []
-                offset = 0
-                limit = 100
-
-                while offset < total_tracks:
-                    try:
-                        results = await retry_spotify_call(
-                            sp.playlist_tracks,
-                            resource_id,
-                            limit=limit,
-                            offset=offset,
-                            fields="items(track(name,artists(name)))"
-                        )
-                        tracks.extend([item['track'] for item in results['items'] if item['track']])
-                        offset += limit
-                        await asyncio.sleep(0.2)
-                        logger.info(f"Fetched {len(tracks)}/{total_tracks} tracks from playlist {resource_id}")
-                    except spotipy.exceptions.SpotifyException:
-                        results = await retry_spotify_call(
-                            sp.playlist_tracks,
-                            resource_id,
-                            limit=limit,
-                            offset=offset,
-                            fields="items(track(name,artists(name)))",
-                            market="US"
-                        )
-                        tracks.extend([item['track'] for item in results['items'] if item['track']])
-                        offset += limit
-                        await asyncio.sleep(0.2)
-                
-                if not tracks:
-                    embed = Embed(
-                        description="⚠️ Aucune piste valide trouvée dans la playlist.",
-                        color=0xFFB6C1 if get_mode(interaction.guild_id) else discord.Color.red()
-                    )
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    return None
-                
-                return [(track['name'], track['artists'][0]['name']) for track in tracks]
+    """
+    Traite une URL Spotify avec une architecture en cascade :
+    1. Tente avec l'API officielle (spotipy) pour vitesse et complétude.
+    2. En cas d'échec (ex: playlist éditoriale), bascule sur le scraper (spotifyscraper) en secours.
+    """
+    guild_id = interaction.guild_id
+    clean_url = url.split('?')[0]
+    
+    # --- MÉTHODE 1 : API OFFICIELLE (SPOTIPY) ---
+    if sp:
+        try:
+            logger.info(f"Tentative 1 : API officielle (Spotipy) pour {clean_url}")
+            tracks_to_return = []
             
-            except spotipy.exceptions.SpotifyException as se:
-                logger.error(f"Erreur de validation Spotify pour playlist {resource_id}: {se}")
-                try:
-                    playlist_info = await retry_spotify_call(sp.playlist, resource_id, market="US")
-                    total_tracks = playlist_info['tracks']['total']
-                    tracks = []
-                    offset = 0
-                    limit = 100
-                    while offset < total_tracks:
-                        results = await retry_spotify_call(
-                            sp.playlist_tracks,
-                            resource_id,
-                            limit=limit,
-                            offset=offset,
-                            market="US"
-                        )
-                        tracks.extend([item['track'] for item in results['items'] if item['track']])
-                        offset += limit
-                        await asyncio.sleep(0.2)
-                    return [(track['name'], track['artists'][0]['name']) for track in tracks]
-                except spotipy.exceptions.SpotifyException as se_fallback:
-                    logger.error(f"Fallback failed for playlist {resource_id}: {se_fallback}")
-                    embed = Embed(
-                        description=get_messages("spotify_error", interaction.guild_id),
-                        color=0xFFB6C1 if get_mode(interaction.guild_id) else discord.Color.red()
-                    )
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    return None
-        elif 'track' in clean_url:
-            track = await retry_spotify_call(sp.track, resource_id)
-            return [(track['name'], track['artists'][0]['name'])]
-        elif 'album' in clean_url:
-            results = await retry_spotify_call(sp.album_tracks, resource_id, limit=50)
-            tracks = results['items']
-            while results['next']:
-                results = await retry_spotify_call(sp.next, results)
-                tracks.extend(results['items'])
-                await asyncio.sleep(0.2)
-            return [(item['name'], item['artists'][0]['name']) for item in tracks]
-        elif 'artist' in clean_url:
-            results = await retry_spotify_call(sp.artist_top_tracks, resource_id)
-            return [(track['name'], track['artists'][0]['name']) for track in results['tracks']]
-    except spotipy.exceptions.SpotifyException as se:
-        logger.error(f"Erreur Spotify globale : {se}")
-        embed = Embed(
-            description=f"Erreur Spotify : {se.http_status} - {se.msg}",
-            color=0xFFB6C1 if get_mode(interaction.guild_id) else discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed, ephemeral=True)
-        return None
-    except Exception as e:
-        logger.error(f"Erreur inattendue : {e}")
-        embed = Embed(
-            description=get_messages("spotify_error", interaction.guild_id),
-            color=0xFFB6C1 if get_mode(interaction.guild_id) else discord.Color.red()
-        )
-        await interaction.followup.send(embed=embed, ephemeral=True)
-        return None
+            loop = asyncio.get_event_loop()
+            
+            if 'playlist' in clean_url:
+                results = await loop.run_in_executor(None, lambda: sp.playlist_items(clean_url, fields='items.track.name,items.track.artists.name,next', limit=100))
+                while results:
+                    for item in results['items']:
+                        if item and item.get('track'):
+                            track = item['track']
+                            tracks_to_return.append((track['name'], track['artists'][0]['name']))
+                    if results['next']:
+                        results = await loop.run_in_executor(None, lambda: sp.next(results))
+                    else:
+                        results = None
+            
+            elif 'album' in clean_url:
+                results = await loop.run_in_executor(None, lambda: sp.album_tracks(clean_url, limit=50))
+                while results:
+                    for track in results['items']:
+                        tracks_to_return.append((track['name'], track['artists'][0]['name']))
+                    if results['next']:
+                        results = await loop.run_in_executor(None, lambda: sp.next(results))
+                    else:
+                        results = None
 
+            elif 'track' in clean_url:
+                 track = await loop.run_in_executor(None, lambda: sp.track(clean_url))
+                 tracks_to_return.append((track['name'], track['artists'][0]['name']))
+
+            elif 'artist' in clean_url:
+                results = await loop.run_in_executor(None, lambda: sp.artist_top_tracks(clean_url))
+                for track in results['tracks']:
+                    tracks_to_return.append((track['name'], track['artists'][0]['name']))
+
+            if not tracks_to_return:
+                 raise ValueError("Aucune piste trouvée via l'API.")
+
+            logger.info(f"Succès avec Spotipy : {len(tracks_to_return)} pistes récupérées.")
+            return tracks_to_return
+
+        except Exception as e:
+            logger.warning(f"L'API Spotipy a échoué pour {clean_url} (Raison: {e}). Passage au plan B : SpotifyScraper.")
+
+    # --- MÉTHODE 2 : SECOURS (SPOTIFYSCRAPER) ---
+    if spotify_scraper_client:
+        try:
+            logger.info(f"Tentative 2 : Scraper (SpotifyScraper) pour {clean_url}")
+            tracks_to_return = []
+            loop = asyncio.get_event_loop()
+
+            if 'playlist' in clean_url:
+                data = await loop.run_in_executor(None, lambda: spotify_scraper_client.get_playlist_info(clean_url))
+                for track in data.get('tracks', []):
+                    tracks_to_return.append((track.get('name', 'Titre inconnu'), track.get('artists', [{}])[0].get('name', 'Artiste inconnu')))
+            
+            elif 'album' in clean_url:
+                data = await loop.run_in_executor(None, lambda: spotify_scraper_client.get_album_info(clean_url))
+                for track in data.get('tracks', []):
+                    tracks_to_return.append((track.get('name', 'Titre inconnu'), track.get('artists', [{}])[0].get('name', 'Artiste inconnu')))
+
+            elif 'track' in clean_url:
+                data = await loop.run_in_executor(None, lambda: spotify_scraper_client.get_track_info(clean_url))
+                tracks_to_return.append((data.get('name', 'Titre inconnu'), data.get('artists', [{}])[0].get('name', 'Artiste inconnu')))
+
+            if not tracks_to_return:
+                raise SpotifyScraperError("Le scraper n'a trouvé aucune piste non plus.")
+
+            logger.info(f"Succès avec SpotifyScraper : {len(tracks_to_return)} pistes récupérées (potentiellement limité).")
+            return tracks_to_return
+
+        except Exception as e:
+            logger.error(f"Les deux méthodes (API et Scraper) ont échoué. Erreur finale de SpotifyScraper: {e}", exc_info=True)
+            embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return None
+
+    logger.critical("Aucun client (Spotipy ou SpotifyScraper) n'est fonctionnel.")
+    # Optionnel : envoyer un message d'erreur si aucun client n'est dispo
+    embed = Embed(description="Erreur critique: les services Spotify sont inaccessibles.", color=discord.Color.dark_red())
+    await interaction.followup.send(embed=embed, ephemeral=True)
+    return None
+    
 # Process Deezer URLs
 async def process_deezer_url(url, interaction):
     guild_id = interaction.guild_id
@@ -1241,7 +1226,7 @@ async def process_amazon_music_url(url, interaction):
         if browser:
             await browser.close()
             logger.info("Navigateur Playwright fermé.")
-
+        
 # /kaomoji command
 @bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
 @app_commands.default_permissions(administrator=True)
@@ -2098,7 +2083,7 @@ async def queue(interaction: discord.Interaction):
         )
     
     await interaction.followup.send(embed=embed)
-
+    
 # /clearqueue command
 @bot.tree.command(name="clearqueue", description="Clear the current queue")
 async def clear_queue(interaction: discord.Interaction):
@@ -2553,7 +2538,7 @@ async def on_ready():
                 
                 statuses = [
                     ("your Deezer links 🎶", discord.ActivityType.listening),
-                    ("/play [links] 🔥", discord.ActivityType.listening),
+                    ("/play [link] 🔥", discord.ActivityType.listening),
                     (f"{len(bot.guilds)} servers 🎶", discord.ActivityType.playing)
                 ]
                 
