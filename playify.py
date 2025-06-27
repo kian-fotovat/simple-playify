@@ -45,15 +45,15 @@ except Exception as e:
     sp = None
     logger.error(f"Impossible d'initialiser le client Spotipy : {e}")
 
-# Client pour le Scraper (plan B, avec Selenium)
+# Client pour le Scraper (plan B, sans Selenium)
 try:
-    # On utilise le nom correct de la classe, sans alias
-    spotify_scraper_client = SpotifyClient(browser_type="selenium") # <-- CORRIGÉ ICI
-    logger.info("Client SpotifyScraper initialisé avec succès en mode Selenium.")
+    # On utilise le mode "requests", plus fiable sur un serveur
+    spotify_scraper_client = SpotifyClient(browser_type="requests") # <-- CORRECTION PROPOSÉE
+    logger.info("Client SpotifyScraper initialisé avec succès en mode requests.")
 except Exception as e:
     spotify_scraper_client = None
     logger.error(f"Impossible d'initialiser SpotifyScraper : {e}")
-
+    
 # Cache for YouTube searches (2-hour TTL, size for 500+ servers)
 url_cache = TTLCache(maxsize=75000, ttl=7200)
 
@@ -862,11 +862,15 @@ async def process_deezer_url(url, interaction):
         return None
     
 # Process Apple Music URLs
+# Process Apple Music URLs (Version finale optimisée)
 async def process_apple_music_url(url, interaction):
     guild_id = interaction.guild_id
+    logger.info(f"Lancement du traitement pour l'URL Apple Music : {url}")
+    
+    clean_url = url.split('?')[0]
+    
     try:
-        parsed_url = urlparse(url)
-        clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+        parsed_url = urlparse(clean_url)
         path_parts = parsed_url.path.strip('/').split('/')
         if len(path_parts) < 3 or "music.apple.com" not in parsed_url.netloc:
             raise ValueError("Invalid Apple Music URL format")
@@ -875,53 +879,54 @@ async def process_apple_music_url(url, interaction):
         logger.info(f"Processing Apple Music URL: {clean_url} (Type: {resource_type})")
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page(user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-            await page.goto(clean_url, wait_until="networkidle")
-            await asyncio.sleep(2)
+            # On reste sur Firefox, qui a fonctionné
+            browser = await p.firefox.launch(headless=True)
+            
+            # User agent cohérent avec Firefox pour plus de discrétion
+            context = await browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
+            )
+            page = await context.new_page()
 
+            await page.route("**/*.{png,jpg,jpeg,svg,woff,woff2}", lambda route: route.abort())
+            logger.info("Optimisation : chargement des images et polices désactivé.")
+            
+            logger.info("Navigation vers la page avec un timeout de 90 secondes...")
+            await page.goto(clean_url, wait_until="domcontentloaded", timeout=90000)
+            logger.info("Page chargée. Extraction des données en cours...")
+
+            # Le reste de la fonction est bon, on ne le change pas.
             tracks = []
             
             if resource_type in ['album', 'playlist']:
-                logger.info("Album/playlist detected. Searching for track list...")
                 await page.wait_for_selector('div.songs-list-row', timeout=15000)
-                track_rows = await page.query_selector_all('div.songs-list-row')
-
-                # --- NEW: Get the main artist of the album first as a fallback ---
                 main_artist_name = "Artiste inconnu"
                 try:
-                    main_artist_selector = '.headings__subtitles a'
-                    main_artist_el = await page.query_selector(main_artist_selector)
+                    main_artist_el = await page.query_selector('.headings__subtitles a')
                     if main_artist_el:
                         main_artist_name = await main_artist_el.inner_text()
-                        logger.info(f"Main artist of the album identified as: {main_artist_name}")
                 except Exception:
-                    logger.warning("Could not determine the main artist of the album.")
+                    logger.warning("Impossible de déterminer l'artiste principal.")
 
-
+                track_rows = await page.query_selector_all('div.songs-list-row')
                 for row in track_rows:
                     try:
                         title_el = await row.query_selector('div.songs-list-row__song-name')
                         title = await title_el.inner_text() if title_el else "Titre inconnu"
-
-                        # --- NEW: More robust artist detection ---
-                        # Method 1: Look for specific artist links within the row (for collaborations)
+                        
                         artist_elements = await row.query_selector_all('div.songs-list-row__by-line a')
                         if artist_elements:
-                            # Join multiple artists if present, e.g., "KAROL G & Eddy Lover"
                             artist_names = [await el.inner_text() for el in artist_elements]
                             artist = " & ".join(artist_names)
                         else:
-                            # Method 2: If no specific artist in the row, use the main album artist
                             artist = main_artist_name
                         
                         if title != "Titre inconnu":
                             tracks.append((title.strip(), artist.strip()))
                     except Exception as e:
-                        logger.warning(f"Could not extract a row from the Apple Music list: {e}")
+                        logger.warning(f"Impossible d'extraire une ligne : {e}")
 
             elif resource_type == 'song':
-                logger.info("Single song detected. Extracting information...")
                 try:
                     title_selector = 'h1.song-header-page__song-header-title'
                     artist_selector = 'div.song-header-page-details a.click-action'
@@ -931,29 +936,22 @@ async def process_apple_music_url(url, interaction):
                     if title and artist:
                         tracks.append((title.strip(), artist.strip()))
                 except Exception:
-                    logger.warning("Direct extraction failed, trying fallback with page title...")
-                    try:
-                        page_title = await page.title()
-                        parts = page_title.split(' par ')
-                        title = parts[0].replace("‎", "").strip()
-                        artist = parts[1].split(' sur Apple')[0].strip()
-                        if title and artist:
-                            tracks.append((title, artist))
-                    except Exception as fallback_e:
-                        raise ValueError(f"All extraction methods for the song failed. Final error: {fallback_e}")
-            
-            else:
-                raise ValueError(f"Unsupported Apple Music resource type: {resource_type}")
+                    page_title = await page.title()
+                    parts = page_title.split(' par ')
+                    title = parts[0].replace("‎", "").strip()
+                    artist = parts[1].split(' sur Apple')[0].strip()
+                    if title and artist:
+                        tracks.append((title, artist))
 
             await browser.close()
             if not tracks:
-                raise ValueError("No tracks found in the Apple Music resource")
+                raise ValueError("Aucune piste trouvée dans la ressource Apple Music")
             
-            logger.info(f"Successfully extracted {len(tracks)} track(s).")
+            logger.info(f"Succès ! {len(tracks)} piste(s) extraite(s).")
             return tracks
 
     except Exception as e:
-        logger.error(f"Error processing Apple Music URL {url}: {e}")
+        logger.error(f"Erreur de traitement de l'URL Apple Music {url}: {e}", exc_info=True)
         embed = Embed(
             description=get_messages("apple_music_error", guild_id),
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
@@ -963,7 +961,7 @@ async def process_apple_music_url(url, interaction):
         except discord.errors.InteractionResponded:
             await interaction.edit_original_response(embed=embed)
         return None
-                                
+        
 # Process Tidal URLs
 async def process_tidal_url(url, interaction):
     guild_id = interaction.guild_id
@@ -2561,4 +2559,4 @@ async def on_ready():
         logger.error(f"Erreur lors de la synchronisation des commandes : {e}")
 
 # Run the bot (replace with your own token)
-bot.run("TOKEN")
+bot.run("TOKEN") 
