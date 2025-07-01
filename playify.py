@@ -9,7 +9,7 @@ import re
 import spotipy
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from spotify_scraper import SpotifyClient # <-- CORRIGÃ‰ ICI
+from spotify_scraper import SpotifyClient
 from spotify_scraper.core.exceptions import SpotifyScraperError
 import random
 from urllib.parse import urlparse, parse_qs
@@ -34,14 +34,14 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Client pour l'API Officielle (rapide et prioritaire)
-SPOTIFY_CLIENT_ID = 'CLIENTIDHERE' # Votre ID
-SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE' # Votre Secret
+SPOTIFY_CLIENT_ID = 'CLIENTID' # Votre ID
+SPOTIFY_CLIENT_SECRET = 'CLIENTSECRET' # Votre Secret
 try:
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
         client_id=SPOTIFY_CLIENT_ID,
         client_secret=SPOTIFY_CLIENT_SECRET
     ))
-    logger.info("Client API Spotipy initialisÃ© avec succès.")
+    logger.info("Client API Spotipy initialisé avec succès.")
 except Exception as e:
     sp = None
     logger.error(f"Impossible d'initialiser le client Spotipy : {e}")
@@ -49,7 +49,7 @@ except Exception as e:
 # Client pour le Scraper (plan B, sans Selenium)
 try:
     # On utilise le mode "requests", plus fiable sur un serveur
-    spotify_scraper_client = SpotifyClient(browser_type="requests") # <-- CORRECTION PROPOSÃ‰E
+    spotify_scraper_client = SpotifyClient(browser_type="requests")
     logger.info("Client SpotifyScraper initialisé avec succès en mode requests.")
 except Exception as e:
     spotify_scraper_client = None
@@ -114,9 +114,9 @@ class MusicPlayer:
         self.loop_current = False
         self.autoplay_enabled = False
         self.last_was_single = False
-        self.start_time = 0  # Temps de dÃ©but de la lecture (en secondes)
-        self.playback_started_at = None # Timestamp du dÃ©but de la lecture
-        self.active_filter = None # Filtre actuellement appliquÃ© au lecteur
+        self.start_time = 0  
+        self.playback_started_at = None 
+        self.active_filter = None 
         self.seek_info = None  # <--- AJOUTEZ CETTE LIGNE
         
 # Server states
@@ -671,17 +671,17 @@ def get_soundcloud_station_url(track_id):
     return None
 
 # --- FONCTION FINALE PROCESS_SPOTIFY_URL (Architecture en Cascade) ---
-# CETTE FONCTION EST MAINTENANT CORRECTE ET NE DOIT PAS ETRE MODIFIEE
+# CETTE FONCTION EST MAINTENANT CORRECTE ET NE DOIT PAS ÊTRE MODIFIÉE
 async def process_spotify_url(url, interaction):
     """
     Traite une URL Spotify avec une architecture en cascade :
-    1. Tente avec l'API officielle (spotipy) pour vitesse et complitude.
+    1. Tente avec l'API officielle (spotipy) pour vitesse et complétude.
     2. En cas d'échec (ex: playlist éditoriale), bascule sur le scraper (spotifyscraper) en secours.
     """
     guild_id = interaction.guild_id
     clean_url = url.split('?')[0]
     
-    # --- MÃ‰THODE 1 : API OFFICIELLE (SPOTIPY) ---
+    # --- MÉTHODE 1 : API OFFICIELLE (SPOTIPY) ---
     if sp:
         try:
             logger.info(f"Tentative 1 : API officielle (Spotipy) pour {clean_url}")
@@ -721,7 +721,7 @@ async def process_spotify_url(url, interaction):
                     tracks_to_return.append((track['name'], track['artists'][0]['name']))
 
             if not tracks_to_return:
-                 raise ValueError("Aucune piste trouvÃ©e via l'API.")
+                 raise ValueError("Aucune piste trouvée via l'API.")
 
             logger.info(f"Succès avec Spotipy : {len(tracks_to_return)} pistes récupérées.")
             return tracks_to_return
@@ -729,7 +729,7 @@ async def process_spotify_url(url, interaction):
         except Exception as e:
             logger.warning(f"L'API Spotipy a échoué pour {clean_url} (Raison: {e}). Passage au plan B : SpotifyScraper.")
 
-    # --- MÃ‰THODE 2 : SECOURS (SPOTIFYSCRAPER) ---
+    # --- MÉTHODE 2 : SECOURS (SPOTIFYSCRAPER) ---
     if spotify_scraper_client:
         try:
             logger.info(f"Tentative 2 : Scraper (SpotifyScraper) pour {clean_url}")
@@ -753,11 +753,11 @@ async def process_spotify_url(url, interaction):
             if not tracks_to_return:
                 raise SpotifyScraperError("Le scraper n'a trouvé aucune piste non plus.")
 
-            logger.info(f"Succès avec SpotifyScraper : {len(tracks_to_return)} pistes récupérées (potentiellement limités).")
+            logger.info(f"Succès avec SpotifyScraper : {len(tracks_to_return)} pistes récupérées (potentiellement limité).")
             return tracks_to_return
 
         except Exception as e:
-            logger.error(f"Les deux méthodes (API et Scraper) ont échoués. Erreur finale de SpotifyScraper: {e}", exc_info=True)
+            logger.error(f"Les deux méthodes (API et Scraper) ont échoué. Erreur finale de SpotifyScraper: {e}", exc_info=True)
             embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
             await interaction.followup.send(embed=embed, ephemeral=True)
             return None
@@ -772,15 +772,15 @@ async def process_spotify_url(url, interaction):
 async def process_deezer_url(url, interaction):
     guild_id = interaction.guild_id
     try:
-        # VÃ©rifier si c'est un lien de partage
+        # Vérifier si c'est un lien de partage
         deezer_share_regex = re.compile(r'^(https?://)?(link\.deezer\.com)/s/.+$')
         if deezer_share_regex.match(url):
             logger.info(f"Detected Deezer share link: {url}. Resolving redirect...")
             response = requests.head(url, allow_redirects=True, timeout=10)
-            response.raise_for_status()  # VÃ©rifier si la requÃªte a rÃ©ussi
+            response.raise_for_status()  # Vérifier si la requÃªte a rÃ©ussi
             resolved_url = response.url
             logger.info(f"Resolved to: {resolved_url}")
-            url = resolved_url  # Remplacer par l'URL rÃ©solue
+            url = resolved_url  # Remplacer par l'URL résolue
 
         parsed_url = urlparse(url)
         path_parts = parsed_url.path.strip('/').split('/')
@@ -1161,7 +1161,7 @@ async def process_amazon_music_url(url, interaction):
                 await page.click('music-button:has-text("Accepter les cookies")', timeout=7000)
                 logger.info("Bannière de cookies acceptÃ©e.")
             except Exception:
-                logger.info("Pas de bannière de cookies trouvÃ©e.")
+                logger.info("Pas de bannière de cookies trouvée.")
 
             tracks = []
 
@@ -1523,7 +1523,7 @@ async def play(interaction: discord.Interaction, query: str):
                 await message.edit(embed=embed)
                 return
 
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("spotify_playlist_added", guild_id)
             embed.description = get_messages("spotify_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1739,7 +1739,7 @@ async def play(interaction: discord.Interaction, query: str):
                 )
                 await message.edit(embed=embed)
                 return
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("apple_music_playlist_added", guild_id)
             embed.description = get_messages("apple_music_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1775,7 +1775,7 @@ async def play(interaction: discord.Interaction, query: str):
                     raise Exception("Aucun résultat trouvé")
                 video_url = video.get("webpage_url", video.get("url"))
                 if not video_url:
-                    raise KeyError("Aucune URL valide trouvÃ©e dans les métadonnées vidéo")
+                    raise KeyError("Aucune URL valide trouvée dans les métadonnées vidéo")
                 logger.debug(f"Métadonnées pour une piste Tidal unique : {video}")
                 url_cache[cache_key] = video_url
                 await music_player.queue.put({'url': video_url, 'is_single': True, 'skip_now_playing': True})
@@ -1838,7 +1838,7 @@ async def play(interaction: discord.Interaction, query: str):
                 )
                 await message.edit(embed=embed)
                 return
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("tidal_playlist_added", guild_id)
             embed.description = get_messages("tidal_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1940,7 +1940,7 @@ async def play(interaction: discord.Interaction, query: str):
                 )
                 await message.edit(embed=embed)
                 return
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nPistes échouées (jusqu'à 5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("amazon_music_playlist_added", guild_id)
             embed.description = get_messages("amazon_music_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -2269,10 +2269,6 @@ async def now_playing(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def play_audio(guild_id, seek_time=0):
-    """
-    Gère la lecture audio pour une guilde.
-    Joue un morceau, applique les filtres, et se charge de lancer le suivant.
-    """
     music_player = get_player(guild_id)
     
     skip_now_playing = False
@@ -2288,7 +2284,7 @@ async def play_audio(guild_id, seek_time=0):
                     embed = Embed(description=get_messages("autoplay_added", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
                     await music_player.text_channel.send(embed=embed)
 
-                if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url:
+                if "youtube.com/watch" in music_player.current_url or "youtu.be/" in music_player.current_url:
                     mix_playlist_url = get_mix_playlist_url(music_player.current_url)
                     if mix_playlist_url:
                         try:
@@ -2322,10 +2318,10 @@ async def play_audio(guild_id, seek_time=0):
                 music_player.current_info = None
                 return
 
-        track_info = await music_player.queue.get()
-        music_player.current_url = track_info['url']
-        music_player.last_was_single = track_info.get('is_single', True)
-        skip_now_playing = track_info.get('skip_now_playing', False)
+    track_info = await music_player.queue.get()
+    music_player.current_url = track_info['url']
+    music_player.last_was_single = track_info.get('is_single', True)
+    skip_now_playing = track_info.get('skip_now_playing', False)
     
     try:
         if not music_player.voice_client or not music_player.voice_client.is_connected():
@@ -2358,26 +2354,21 @@ async def play_audio(guild_id, seek_time=0):
         ffmpeg_options = {"before_options": before_options, "options": "-vn"}
         
         if music_player.active_filter:
-            ffmpeg_options["options"] += f" -af \"{music_player.active_filter}\""
+            ffmpeg_options["options"] += f' -af "{music_player.active_filter}"'
         
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
         
-        # --- LOGIQUE DE CALLBACK CORRIGÉE ---
         def after_playing(error):
             if error:
                 logger.error(f'Erreur après la lecture sur la guilde {guild_id}: {error}')
 
             async def schedule_next():
-                """Fonction async pour gérer la logique post-lecture."""
-                # Gère le seek pour un changement de filtre
                 if music_player.seek_info is not None:
                     new_seek_time = music_player.seek_info
                     music_player.seek_info = None
                     await play_audio(guild_id, seek_time=new_seek_time)
                 
-                # Gère la boucle
                 elif music_player.loop_current:
-                    # Remet le morceau actuel au début de la file d'attente
                     current_track_data = {'url': music_player.current_url, 'is_single': music_player.last_was_single}
                     items = [current_track_data]
                     while not music_player.queue.empty():
@@ -2388,13 +2379,10 @@ async def play_audio(guild_id, seek_time=0):
                     
                     await play_audio(guild_id)
 
-                # Passe au morceau suivant
                 else:
                     await play_audio(guild_id)
             
-            # Crée une tâche pour exécuter la fonction async sur la boucle d'événements du bot
             music_player.current_task = bot.loop.create_task(schedule_next())
-        # --- FIN DE LA LOGIQUE CORRIGÉE ---
 
         music_player.voice_client.play(source, after=after_playing)
         
@@ -2411,14 +2399,14 @@ async def play_audio(guild_id, seek_time=0):
             if music_player.text_channel:
                 await music_player.text_channel.send(embed=embed)
 
-    except Exception as e:
-        logger.error(f"Erreur majeure de lecture audio pour {guild_id} sur l'URL {music_player.current_url}: {e}", exc_info=True)
-        if music_player.text_channel:
-            await music_player.text_channel.send(f"Oops, an error occurred with this track. I'm skipping to the next one.")
-        
-        # Tente de passer au morceau suivant même en cas d'erreur grave
-        after_playing(e)
+    except discord.errors.ClientException as e:
+        logger.error(f"Caught ClientException in play_audio for guild {guild_id}: {e}. This is a logic error; not sending a message or skipping.", exc_info=True)
 
+    except Exception as e:
+        logger.error(f"Major audio playback error for {guild_id} on URL {music_player.current_url}: {e}", exc_info=True)
+        logger.warning(f"An error occurred with track {music_player.current_url} for guild {guild_id}. Skipping to the next one.")
+        after_playing(e)
+        
 # Dictionnaire pour mapper les valeurs des filtres à leur nom d'affichage
 FILTER_DISPLAY_NAMES = {
     "none": "None",
@@ -2710,4 +2698,4 @@ async def on_ready():
         logger.error(f"Erreur lors de la synchronisation des commandes : {e}")
 
 # Run the bot (replace with your own token)
-bot.run("TOKEN<")
+bot.run("TOKEN")
