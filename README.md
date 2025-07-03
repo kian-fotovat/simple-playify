@@ -38,7 +38,6 @@ Playify handles Spotify like a pro:
 - **Looping** and **shuffling** for ultimate playlist control.
 - **Kawaii mode** for extra cute responses (toggle with `/kaomoji`).
 - Apply audio effects with /filter: slowed, reverb, bass boost, nightcore, and more.
-- **Multilingual**: English and French support (set with `/language`).
 - Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a sprinkle of chaos.
 
 ---
