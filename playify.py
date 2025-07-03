@@ -9,7 +9,7 @@ import re
 import spotipy
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from spotify_scraper import SpotifyClient # <-- CORRIGÃ‰ ICI
+from spotify_scraper import SpotifyClient
 from spotify_scraper.core.exceptions import SpotifyScraperError
 import random
 from urllib.parse import urlparse, parse_qs
@@ -17,7 +17,7 @@ from cachetools import TTLCache
 import logging
 import requests
 from playwright.async_api import async_playwright
-import json # Ajout de cet import
+import json
 import math
 import time
 
@@ -33,27 +33,27 @@ intents.voice_states = True
 # Create the bot
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Client pour l'API Officielle (rapide et prioritaire)
-SPOTIFY_CLIENT_ID = 'CLIENTID' # Votre ID
-SPOTIFY_CLIENT_SECRET = 'CLIENTSECRET' # Votre Secret
+# Official API Client (fast and prioritized)
+SPOTIFY_CLIENT_ID = 'CLIENTID'
+SPOTIFY_CLIENT_SECRET = 'CLIENTSECRET' 
 try:
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
         client_id=SPOTIFY_CLIENT_ID,
         client_secret=SPOTIFY_CLIENT_SECRET
     ))
-    logger.info("Client API Spotipy initialisÃ© avec succès.")
+    logger.info("Spotipy API Client successfully initialized.")
 except Exception as e:
     sp = None
-    logger.error(f"Impossible d'initialiser le client Spotipy : {e}")
+    logger.error(f"Could not initialize Spotipy client: {e}")
 
-# Client pour le Scraper (plan B, sans Selenium)
+# Scraper Client (backup plan, without Selenium)
 try:
-    # On utilise le mode "requests", plus fiable sur un serveur
-    spotify_scraper_client = SpotifyClient(browser_type="requests") # <-- CORRECTION PROPOSÃ‰E
-    logger.info("Client SpotifyScraper initialisé avec succès en mode requests.")
+    # Using "requests" mode, more reliable on a server
+    spotify_scraper_client = SpotifyClient(browser_type="requests")
+    logger.info("SpotifyScraper client successfully initialized in requests mode.")
 except Exception as e:
     spotify_scraper_client = None
-    logger.error(f"Impossible d'initialiser SpotifyScraper : {e}")
+    logger.error(f"Could not initialize SpotifyScraper: {e}")
     
 # Cache for YouTube searches (2-hour TTL, size for 500+ servers)
 url_cache = TTLCache(maxsize=75000, ttl=7200)
@@ -114,18 +114,17 @@ class MusicPlayer:
         self.loop_current = False
         self.autoplay_enabled = False
         self.last_was_single = False
-        self.start_time = 0  # Temps de dÃ©but de la lecture (en secondes)
-        self.playback_started_at = None # Timestamp du dÃ©but de la lecture
-        self.active_filter = None # Filtre actuellement appliquÃ© au lecteur
-        self.seek_info = None  # <--- AJOUTEZ CETTE LIGNE
+        self.start_time = 0  # Playback start time (in seconds)
+        self.playback_started_at = None # Timestamp when playback started
+        self.active_filter = None # Filter currently applied to the player
+        self.seek_info = None
         
 # Server states
 music_players = {}  # {guild_id: MusicPlayer()}
 kawaii_mode = {}    # {guild_id: bool}
-server_languages = {}  # {guild_id: "en" or "fr"}
 server_filters = {} # {guild_id: set("filter1", "filter2")}
 
-# Dictionnaire des filtres audio disponibles et leurs options FFmpeg
+# Dictionary of available audio filters and their FFmpeg options
 AUDIO_FILTERS = {
     "slowed": "asetrate=44100*0.8",
     "spedup": "asetrate=44100*1.2",
@@ -151,488 +150,246 @@ def get_filter(guild_id):
 def get_mode(guild_id):
     return kawaii_mode.get(guild_id, False)
 
-# Get language
-def get_language(guild_id):
-    return server_languages.get(guild_id, "en")
+# --- CORRECTED BLOCK FOR MESSAGES AND GET_MESSAGES FUNCTION ---
+messages = {
+    "no_voice_channel": {
+        "normal": "You must be in a voice channel to use this command.",
+        "kawaii": "(>ω<) You must be in a voice channel!"
+    },
+    "connection_error": {
+        "normal": "Error connecting to the voice channel.",
+        "kawaii": "(╥﹏╥) I couldn't connect..."
+    },
+    "spotify_error": {
+        "normal": "Error processing the Spotify link. It may be private, region-locked, or invalid.",
+        "kawaii": "(´；ω；`) Oh no! Problem with the Spotify link... maybe it’s shy or hidden?"
+    },
+    "spotify_playlist_added": {
+        "normal": "🎶 Spotify Playlist Added",
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ SPOTIFY PLAYLIST"
+    },
+    "spotify_playlist_description": {
+        "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+        "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+    },
+    "deezer_error": {
+        "normal": "Error processing the Deezer link. It may be private, region-locked, or invalid.",
+        "kawaii": "(´；ω；`) Oh no! Problem with the Deezer link... maybe it’s shy or hidden?"
+    },
+    "deezer_playlist_added": {
+        "normal": "🎶 Deezer Playlist Added",
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ DEEZER PLAYLIST"
+    },
+    "deezer_playlist_description": {
+        "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+        "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+    },
+    "apple_music_error": {
+        "normal": "Error processing the Apple Music link.",
+        "kawaii": "(´；ω；`) Oops! Trouble with the Apple Music link..."
+    },
+    "apple_music_playlist_added": {
+        "normal": "🎶 Apple Music Playlist Added",
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ APPLE MUSIC PLAYLIST"
+    },
+    "apple_music_playlist_description": {
+        "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+        "kawaii": "**{count} songs** added, {failed} couldn't join! (´･ω･`)\n{failed_tracks}"
+    },
+    "tidal_error": {
+        "normal": "Error processing the Tidal link. It may be private, region-locked, or invalid.",
+        "kawaii": "(´；ω；`) Oh no! Problem with the Tidal link... maybe it’s shy or hidden?"
+    },
+    "tidal_playlist_added": {
+        "normal": "🎶 Tidal Playlist Added",
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ TIDAL PLAYLIST"
+    },
+    "tidal_playlist_description": {
+        "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+        "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+    },
+    "amazon_music_error": {
+        "normal": "Error processing the Amazon Music link.",
+        "kawaii": "(´；ω；`) Oh no! Something is wrong with the Amazon Music link..." 
+    },
+    "amazon_music_playlist_added": {
+        "normal": "🎶 Amazon Music Playlist Added", 
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ AMAZON MUSIC PLAYLIST" 
+    },
+    "amazon_music_playlist_description": {
+        "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}", 
+        "kawaii": "**{count} songs** added, {failed} couldn't join! (´･ω･`)\n{failed_tracks}" 
+    },
+    "song_added": {
+        "normal": "🎵 Added to Queue",
+        "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
+    },
+    "playlist_added": {
+        "normal": "🎶 Playlist Added",
+        "kawaii": "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
+    },
+    "playlist_description": {
+        "normal": "**{count} tracks** added to the queue.",
+        "kawaii": "**{count} songs** added!"
+    },
+    "ytmusic_playlist_added": {
+        "normal": "🎶 YouTube Music Playlist Added",
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ YOUTUBE MUSIC PLAYLIST"
+    },
+    "ytmusic_playlist_description": {
+        "normal": "**{count} tracks** being added...",
+        "kawaii": "**{count} songs** added!"
+    },
+    "video_error": {
+        "normal": "Error adding the video or playlist.",
+        "kawaii": "(´；ω；`) Something went wrong with this video..."
+    },
+    "search_error": {
+        "normal": "Error during search. Try another title.",
+        "kawaii": "(︶︹︺) Couldn't find this song..."
+    },
+    "now_playing_title": {
+        "normal": "🎵 Now Playing",
+        "kawaii": "♫♬ NOW PLAYING ♬♫"
+    },
+    "now_playing_description": {
+        "normal": "[{title}]({url})",
+        "kawaii": "♪(´▽｀) [{title}]({url})"
+    },
+    "pause": {
+        "normal": "⏸️ Playback paused.",
+        "kawaii": "(´･_･`) Music paused..."
+    },
+    "no_playback": {
+        "normal": "No playback in progress.",
+        "kawaii": "(・_・;) Nothing is playing right now..."
+    },
+    "resume": {
+        "normal": "▶️ Playback resumed.",
+        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ Let's go again!"
+    },
+    "no_paused": {
+        "normal": "No playback is paused.",
+        "kawaii": "(´･ω･`) No music is paused..."
+    },
+    "skip": {
+        "normal": "⏭️ Current song skipped.",
+        "kawaii": "(ノ°ο°)ノ Skipped! Next song ~"
+    },
+    "no_song": {
+        "normal": "No song is playing.",
+        "kawaii": "(；一_一) Nothing to skip..."
+    },
+    "loop": {
+        "normal": "🔁 Looping for the current song {state}.",
+        "kawaii": "🔁 Looping for the current song {state}."
+    },
+    "loop_state_enabled": {
+        "normal": "enabled",
+        "kawaii": "enabled (◕‿◕✿)"
+    },
+    "loop_state_disabled": {
+        "normal": "disabled",
+        "kawaii": "disabled (¨_°`)"
+    },
+    "stop": {
+        "normal": "⏹️ Playback stopped and bot disconnected.",
+        "kawaii": "(ﾉ´･ω･)ﾉ ﾐ ┸━┸ All stopped! Bye bye ~"
+    },
+    "not_connected": {
+        "normal": "The bot is not connected to a voice channel.",
+        "kawaii": "(￣ω￣;) I'm not connected..."
+    },
+    "kawaii_toggle": {
+        "normal": "Kawaii mode {state} for this server!",
+        "kawaii": "Kawaii mode {state} for this server!"
+    },
+    "kawaii_state_enabled": {
+        "normal": "enabled",
+        "kawaii": "enabled (◕‿◕✿)"
+    },
+    "kawaii_state_disabled": {
+        "normal": "disabled",
+        "kawaii": "disabled"
+    },
+    "shuffle_success": {
+        "normal": "🔀 Queue shuffled successfully!",
+        "kawaii": "(✿◕‿◕) Queue shuffled! Yay! ~"
+    },
+    "queue_empty": {
+        "normal": "The queue is empty.",
+        "kawaii": "(´･ω･`) No songs in the queue..."
+    },
+    "autoplay_toggle": {
+        "normal": "Autoplay {state}.",
+        "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
+    },
+    "autoplay_state_enabled": {
+        "normal": "enabled",
+        "kawaii": "enabled"
+    },
+    "autoplay_state_disabled": {
+        "normal": "disabled",
+        "kawaii": "disabled"
+    },
+    "autoplay_added": {
+        "normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute)",
+        "kawaii": "♪(´▽｀) Adding similar songs to the queue! ~ (It might take a little while!)"
+    },
+    "queue_title": {
+        "normal": "🎶 Queue",
+        "kawaii": "🎶 Queue (◕‿◕✿)"
+    },
+    "queue_description": {
+        "normal": "There are **{count} songs** in the queue.",
+        "kawaii": "**{count} songs** in the queue! ~"
+    },
+    "queue_next": {
+        "normal": "Next songs:",
+        "kawaii": "Next songs: ♫"
+    },
+    "queue_song": {
+        "normal": "- [{title}]({url})",
+        "kawaii": "- ♪ [{title}]({url})"
+    },
+    "clear_queue_success": {
+        "normal": "✅ Queue cleared.",
+        "kawaii": "(≧▽≦) Queue cleared! ~"
+    },
+    "play_next_added": {
+        "normal": "🎵 Added as next song",
+        "kawaii": "(っ◕‿◕)っ ♫ Added as next song ♫"
+    },
+    "no_song_playing": {
+        "normal": "No song is currently playing.",
+        "kawaii": "(´･ω･`) No music is playing right now..."
+    },
+    "loading_playlist": {
+        "normal": "Processing playlist...\n{processed}/{total} tracks added",
+        "kawaii": "(✿◕‿◕) Processing playlist...\n{processed}/{total} songs added"
+    },
+    "playlist_error": {
+        "normal": "Error processing the playlist. It may be private, region-locked, or invalid.",
+        "kawaii": "(´；ω；`) Oh no! Problem with the playlist... maybe it’s shy or hidden?"
+    },
+    "filter_title": {
+        "normal": "🎧 Audio Filters",
+        "kawaii": "🎧 Filters! ヾ(≧▽≦*)o"
+    },
+    "filter_description": {
+        "normal": "Click on the buttons to enable or disable a filter in real time!",
+        "kawaii": "Clicky clicky to change the sound! ~☆"
+    },
+    "no_filter_playback": {
+    "normal": "Nothing is currently playing to apply a filter on.",
+    "kawaii": "Nothing is playing... (´・ω・`)"
+    },
+}
 
-# Messages based on language and kawaii mode
 def get_messages(message_key, guild_id):
     is_kawaii = get_mode(guild_id)
-    lang = get_language(guild_id)
-    
-    messages = {
-        "en": {
-            "no_voice_channel": {
-                "normal": "You must be in a voice channel to use this command.",
-                "kawaii": "(>ω<) You must be in a voice channel!"
-            },
-            "connection_error": {
-                "normal": "Error connecting to the voice channel.",
-                "kawaii": "(╥﹏╥) I couldn't connect..."
-            },
-            "spotify_error": {
-                "normal": "Error processing the Spotify link. It may be private, region-locked, or invalid.",
-                "kawaii": "(´；ω；`) Oh no! Problem with the Spotify link... maybe it’s shy or hidden?"
-            },
-            "spotify_playlist_added": {
-                "normal": "🎶 Spotify Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ SPOTIFY PLAYLIST"
-            },
-            "spotify_playlist_description": {
-                "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-                "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
-            },
-            "deezer_error": {
-                "normal": "Error processing the Deezer link. It may be private, region-locked, or invalid.",
-                "kawaii": "(´；ω；`) Oh no! Problem with the Deezer link... maybe it’s shy or hidden?"
-            },
-            "deezer_playlist_added": {
-                "normal": "🎶 Deezer Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ DEEZER PLAYLIST"
-            },
-            "deezer_playlist_description": {
-                "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-                "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
-            },
-            "apple_music_error": {
-                "normal": "Error processing the Apple Music link.",
-                "kawaii": "(´；ω；`) Oops! Trouble with the Apple Music link..."
-            },
-            "apple_music_playlist_added": {
-                "normal": "🎶 Apple Music Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ APPLE MUSIC PLAYLIST"
-            },
-            "apple_music_playlist_description": {
-                "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-                "kawaii": "**{count} songs** added, {failed} couldn't join! (´･ω･`)\n{failed_tracks}"
-            },
-            "tidal_error": {
-                "normal": "Error processing the Tidal link. It may be private, region-locked, or invalid.",
-                "kawaii": "(´；ω；`) Oh no! Problem with the Tidal link... maybe it’s shy or hidden?"
-            },
-            "tidal_playlist_added": {
-                "normal": "🎶 Tidal Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ TIDAL PLAYLIST"
-            },
-            "tidal_playlist_description": {
-                "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-                "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
-            },
-            "amazon_music_error": {
-                "normal": "Error processing the Amazon Music link.",
-                "kawaii": "(´；ω；`) Oh no! Something is wrong with the Amazon Music link..." 
-            },
-            "amazon_music_playlist_added": {
-                 "normal": "🎶 Amazon Music Playlist Added", 
-                 "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ AMAZON MUSIC PLAYLIST" 
-            },
-            "amazon_music_playlist_description": {
-                 "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}", 
-                 "kawaii": "**{count} songs** added, {failed} couldn't join! (´･ω･`)\n{failed_tracks}" 
-            },
-            "song_added": {
-                "normal": "🎵 Added to Queue",
-                "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
-            },
-            "playlist_added": {
-                "normal": "🎶 Playlist Added",
-                "kawaii": "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
-            },
-            "playlist_description": {
-                "normal": "**{count} tracks** added to the queue.",
-                "kawaii": "**{count} songs** added!"
-            },
-            "ytmusic_playlist_added": {
-                "normal": "🎶 YouTube Music Playlist Added",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ YOUTUBE MUSIC PLAYLIST"
-            },
-            "ytmusic_playlist_description": {
-                "normal": "**{count} tracks** being added...",
-                "kawaii": "**{count} songs** added!"
-            },
-            "video_error": {
-                "normal": "Error adding the video or playlist.",
-                "kawaii": "(´；ω；`) Something went wrong with this video..."
-            },
-            "search_error": {
-                "normal": "Error during search. Try another title.",
-                "kawaii": "(︶︹︺) Couldn't find this song..."
-            },
-            "now_playing_title": {
-                "normal": "🎵 Now Playing",
-                "kawaii": "♫♬ NOW PLAYING ♬♫"
-            },
-            "now_playing_description": {
-                "normal": "[{title}]({url})",
-                "kawaii": "♪(´▽｀) [{title}]({url})"
-            },
-            "pause": {
-                "normal": "⏸️ Playback paused.",
-                "kawaii": "(´･_･`) Music paused..."
-            },
-            "no_playback": {
-                "normal": "No playback in progress.",
-                "kawaii": "(・_・;) Nothing is playing right now..."
-            },
-            "resume": {
-                "normal": "▶️ Playback resumed.",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ Let's go again!"
-            },
-            "no_paused": {
-                "normal": "No playback is paused.",
-                "kawaii": "(´･ω･`) No music is paused..."
-            },
-            "skip": {
-                "normal": "⏭️ Current song skipped.",
-                "kawaii": "(ノ°ο°)ノ Skipped! Next song ~"
-            },
-            "no_song": {
-                "normal": "No song is playing.",
-                "kawaii": "(；一_一) Nothing to skip..."
-            },
-            "loop": {
-                "normal": "🔁 Looping for the current song {state}.",
-                "kawaii": "🔁 Looping for the current song {state}."
-            },
-            "loop_state_enabled": {
-                "normal": "enabled",
-                "kawaii": "enabled (◕‿◕✿)"
-            },
-            "loop_state_disabled": {
-                "normal": "disabled",
-                "kawaii": "disabled (¨_°`)"
-            },
-            "stop": {
-                "normal": "⏹️ Playback stopped and bot disconnected.",
-                "kawaii": "(ﾉ´･ω･)ﾉ ﾐ ┸━┸ All stopped! Bye bye ~"
-            },
-            "not_connected": {
-                "normal": "The bot is not connected to a voice channel.",
-                "kawaii": "(￣ω￣;) I'm not connected..."
-            },
-            "kawaii_toggle": {
-                "normal": "Kawaii mode {state} for this server!",
-                "kawaii": "Kawaii mode {state} for this server!"
-            },
-            "kawaii_state_enabled": {
-                "normal": "enabled",
-                "kawaii": "enabled (◕‿◕✿)"
-            },
-            "kawaii_state_disabled": {
-                "normal": "disabled",
-                "kawaii": "disabled"
-            },
-            "language_toggle": {
-                "normal": "Language set to {lang} for this server!",
-                "kawaii": "Language set to {lang} for this server! (✿◕‿◕)"
-            },
-            "shuffle_success": {
-                "normal": "🔀 Queue shuffled successfully!",
-                "kawaii": "(✿◕‿◕) Queue shuffled! Yay! ~"
-            },
-            "queue_empty": {
-                "normal": "The queue is empty.",
-                "kawaii": "(´･ω･`) No songs in the queue..."
-            },
-            "autoplay_toggle": {
-                "normal": "Autoplay {state}.",
-                "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
-            },
-            "autoplay_state_enabled": {
-                "normal": "enabled",
-                "kawaii": "enabled"
-            },
-            "autoplay_state_disabled": {
-                "normal": "disabled",
-                "kawaii": "disabled"
-            },
-            "autoplay_added": {
-                "normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute)",
-                "kawaii": "♪(´▽｀) Adding similar songs to the queue! ~ (It might take a little while!)"
-            },
-            "queue_title": {
-                "normal": "🎶 Queue",
-                "kawaii": "🎶 Queue (◕‿◕✿)"
-            },
-            "queue_description": {
-                "normal": "There are **{count} songs** in the queue.",
-                "kawaii": "**{count} songs** in the queue! ~"
-            },
-            "queue_next": {
-                "normal": "Next songs:",
-                "kawaii": "Next songs: ♫"
-            },
-            "queue_song": {
-                "normal": "- [{title}]({url})",
-                "kawaii": "- ♪ [{title}]({url})"
-            },
-            "clear_queue_success": {
-                "normal": "✅ Queue cleared.",
-                "kawaii": "(≧▽≦) Queue cleared! ~"
-            },
-            "play_next_added": {
-                "normal": "🎵 Added as next song",
-                "kawaii": "(っ◕‿◕)っ ♫ Added as next song ♫"
-            },
-            "no_song_playing": {
-                "normal": "No song is currently playing.",
-                "kawaii": "(´･ω･`) No music is playing right now..."
-            },
-            "loading_playlist": {
-                "normal": "Processing playlist...\n{processed}/{total} tracks added",
-                "kawaii": "(✿◕‿◕) Processing playlist...\n{processed}/{total} songs added"
-            },
-            "playlist_error": {
-                "normal": "Error processing the playlist. It may be private, region-locked, or invalid.",
-                "kawaii": "(´；ω；`) Oh no! Problem with the playlist... maybe it’s shy or hidden?"
-            },
-            "filter_title": {
-                "normal": "🎧 Audio Filters",
-                "kawaii": "🎧 Filters! ヾ(≧▽≦*)o"
-            },
-            "filter_description": {
-                "normal": "Click on the buttons to enable or disable a filter in real time!",
-                "kawaii": "Clicky clicky to change the sound! ~☆"
-            },
-        },
-        "fr": {
-            "no_voice_channel": {
-                "normal": "Tu dois être dans un salon vocal pour utiliser cette commande.",
-                "kawaii": "(｡•́︿•̀｡) Tu dois être dans un salon vocal !"
-            },
-            "connection_error": {
-                "normal": "Erreur lors de la connexion au salon vocal.",
-                "kawaii": "(╥﹏╥) Je n'ai pas pu me connecter..."
-            },
-            "spotify_error": {
-                "normal": "Erreur lors du traitement du lien Spotify. Il peut être privé, restreint à une région ou invalide.",
-                "kawaii": "(´；ω；`) Oh non ! Problème avec le lien Spotify... peut-être qu’il est timide ou caché ?"
-            },
-            "spotify_playlist_added": {
-                "normal": "🎶 Playlist Spotify ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST SPOTIFY"
-            },
-            "spotify_playlist_description": {
-                "normal": "**{count} chansons** ajoutées, {failed} échouées.\n{failed_tracks}",
-                "kawaii": "**{count} chansons** ajoutées, {failed} n’ont pas pu rejoindre ! (´･ω･`)\n{failed_tracks}"
-            },
-            "deezer_error": {
-                "normal": "Erreur lors du traitement du lien Deezer. Il peut être privé, restreint à une région ou invalide.",
-                "kawaii": "(´；ω；`) Oh non ! Problème avec le lien Deezer... peut-être qu’il est timide ou caché ?"
-            },
-            "deezer_playlist_added": {
-                "normal": "🎶 Playlist Deezer ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST DEEZER"
-            },
-            "deezer_playlist_description": {
-                "normal": "**{count} chansons** ajoutées, {failed} échouées.\n{failed_tracks}",
-                "kawaii": "**{count} chansons** ajoutées, {failed} n’ont pas pu rejoindre ! (´･ω･`)\n{failed_tracks}"
-            },
-            "apple_music_error": {
-                "normal": "Erreur lors du traitement du lien Apple Music.",
-                "kawaii": "(´；ω；`) Oups ! Problème avec le lien Apple Music..."
-            },
-            "apple_music_playlist_added": {
-                "normal": "🎶 Playlist Apple Music ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST APPLE MUSIC"
-            },
-            "apple_music_playlist_description": {
-                "normal": "**{count} chansons** ajoutées, {failed} échouées.\n{failed_tracks}",
-                "kawaii": "**{count} chansons** ajoutées, {failed} n'ont pas pu rejoindre ! (´･ω･`)\n{failed_tracks}"
-            },
-            "tidal_error": {
-                "normal": "Erreur lors du traitement du lien Tidal. Il peut être privé, restreint à une région ou invalide.",
-                "kawaii": "(´；ω；`) Oh non ! Problème avec le lien Tidal... peut-être qu’il est timide ou caché ?"
-            },
-            "tidal_playlist_added": {
-                "normal": "🎶 Playlist Tidal ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST TIDAL"
-            },
-            "tidal_playlist_description": {
-                "normal": "**{count} chansons** ajoutées, {failed} échouées.\n{failed_tracks}",
-                "kawaii": "**{count} chansons** ajoutées, {failed} n’ont pas pu rejoindre ! (´･ω･`)\n{failed_tracks}"
-            },
-            "amazon_music_error": {
-                "normal": "Erreur lors du traitement du lien Amazon Music.",
-                "kawaii": "(´；ω；`) Oh non ! Il y a un problème avec le lien Amazon Music..."
-            },
-            "amazon_music_playlist_added": {
-                "normal": "🎶 Playlist Amazon Music ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST AMAZON MUSIC"
-            },
-            "amazon_music_playlist_description": {
-                "normal": "**{count} pistes** ajoutées, {failed} échouées.\n{failed_tracks}",
-                "kawaii": "**{count} chansons** ajoutées, {failed} n'ont pas pu être ajoutées ! (´･ω･`)\n{failed_tracks}"
-            },
-            "song_added": {
-                "normal": "🎵 Ajoutée à la file",
-                "kawaii": "(っ◕‿◕)っ ♫ MUSIQUE AJOUTÉE ♫"
-            },
-            "playlist_added": {
-                "normal": "🎶 Playlist ajoutée",
-                "kawaii": "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
-            },
-            "playlist_description": {
-                "normal": "**{count} chansons** ajoutées à la file d'attente.",
-                "kawaii": "**{count} musiques** ajoutées !"
-            },
-            "ytmusic_playlist_added": {
-                "normal": "🎶 Playlist YouTube Music ajoutée",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ PLAYLIST YOUTUBE MUSIC"
-            },
-            "ytmusic_playlist_description": {
-                "normal": "**{count} chansons** en cours d'ajout...",
-                "kawaii": "**{count} musiques** ajoutées !"
-            },
-            "video_error": {
-                "normal": "Erreur lors de l'ajout de la vidéo ou de la playlist.",
-                "kawaii": "(´；ω；`) Problème avec cette vidéo..."
-            },
-            "search_error": {
-                "normal": "Erreur lors de la recherche. Essaye un autre titre.",
-                "kawaii": "(¨_°`) Je n'ai pas trouvé cette musique..."
-            },
-            "now_playing_title": {
-                "normal": "🎶 En cours de lecture",
-                "kawaii": "♫♬ MAINTENANT EN LECTURE ♬♫"
-            },
-            "now_playing_description": {
-                "normal": "[{title}]({url})",
-                "kawaii": "♪(´▽｀) [{title}]({url})"
-            },
-            "pause": {
-                "normal": "⏸️ Lecture mise en pause.",
-                "kawaii": "(´･_･`) Musique en pause..."
-            },
-            "no_playback": {
-                "normal": "Aucune lecture en cours.",
-                "kawaii": "(・_・;) Rien ne joue actuellement..."
-            },
-            "resume": {
-                "normal": "▶️ Lecture reprise.",
-                "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ C'est reparti !"
-            },
-            "no_paused": {
-                "normal": "Aucune lecture mise en pause.",
-                "kawaii": "(´･ω･`) Aucune musique en pause..."
-            },
-            "skip": {
-                "normal": "⏭️ Chanson actuelle ignorée.",
-                "kawaii": "(ノ°ο°)ノ Skippé ! Prochaine musique ~"
-            },
-            "no_song": {
-                "normal": "Aucune chanson en cours.",
-                "kawaii": "(；一_一) Rien à skipper..."
-            },
-            "loop": {
-                "normal": "🔁 Lecture en boucle pour la musique actuelle {state}.",
-                "kawaii": "🔁 Lecture en boucle pour la musique actuelle {state}."
-            },
-            "loop_state_enabled": {
-                "normal": "activée",
-                "kawaii": "activée (◕‿◕✿)"
-            },
-            "loop_state_disabled": {
-                "normal": "désactivée",
-                "kawaii": "désactivée (¨_°`)"
-            },
-            "stop": {
-                "normal": "⏹️ Lecture arrêtée et bot déconnecté.",
-                "kawaii": "(ﾉ´･ω･)ﾉ ﾐ ┸━┸ J'ai tout arrêté ! Bye bye ~"
-            },
-            "not_connected": {
-                "normal": "Le bot n'est pas connecté à un salon vocal.",
-                "kawaii": "(￣ω￣;) Je ne suis pas connecté..."
-            },
-            "kawaii_toggle": {
-                "normal": "Mode kawaii {state} pour ce serveur !",
-                "kawaii": "Mode kawaii {state} pour ce serveur !"
-            },
-            "kawaii_state_enabled": {
-                "normal": "activé",
-                "kawaii": "activé (◕‿◕✿)"
-            },
-            "kawaii_state_disabled": {
-                "normal": "désactivé",
-                "kawaii": "désactivé"
-            },
-            "language_toggle": {
-                "normal": "Langue définie sur {lang} pour ce serveur !",
-                "kawaii": "Langue définie sur {lang} pour ce serveur ! (✿◕‿◕)"
-            },
-            "shuffle_success": {
-                "normal": "🔀 File d'attente mélangée avec succès !",
-                "kawaii": "(✿◕‿◕) File d'attente mélangée ! Youpi ! ~"
-            },
-            "queue_empty": {
-                "normal": "La file d'attente est vide.",
-                "kawaii": "(´･ω･`) Pas de musiques dans la file..."
-            },
-            "autoplay_toggle": {
-                "normal": "Autoplay {state}.",
-                "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
-            },
-            "autoplay_state_enabled": {
-                "normal": "activé",
-                "kawaii": "activé"
-            },
-            "autoplay_state_disabled": {
-                "normal": "désactivé",
-                "kawaii": "désactivé"
-            },
-            "autoplay_added": {
-                "normal": "🎶 Ajout de chansons similaires à la file... (Cela peut prendre jusqu'à 1 minute)",
-                "kawaii": "♪(´▽｀) Ajout de chansons similaires à la file ! ~ (Ça peut prendre un petit moment !)"
-            },
-            "queue_title": {
-                "normal": "🎶 File d'attente",
-                "kawaii": "🎶 File d'attente (◕‿◕✿)"
-            },
-            "queue_description": {
-                "normal": "Il y a **{count} chansons** dans la file d'attente.",
-                "kawaii": "**{count} chansons** dans la file d'attente ! ~"
-            },
-            "queue_next": {
-                "normal": "Chansons suivantes :",
-                "kawaii": "Chansons suivantes : ♫"
-            },
-            "queue_song": {
-                "normal": "- [{title}]({url})",
-                "kawaii": "- ♪ [{title}]({url})"
-            },
-            "clear_queue_success": {
-                "normal": "✅ File d'attente effacée.",
-                "kawaii": "(≧▽≦) File d'attente effacée ! ~"
-            },
-            "play_next_added": {
-                "normal": "🎵 Ajoutée comme prochaine chanson",
-                "kawaii": "(っ◕‿◕)っ ♫ Ajoutée comme prochaine chanson ♫"
-            },
-            "no_song_playing": {
-                "normal": "Aucune chanson n'est actuellement en lecture.",
-                "kawaii": "(´･ω･`) Aucune musique n'est en lecture actuellement..."
-            },
-            "loading_playlist": {
-                "normal": "Traitement de la playlist...\n{processed}/{total} chansons ajoutées",
-                "kawaii": "(✿◕‿◕) Traitement de la playlist...\n{processed}/{total} musiques ajoutées"
-            },
-            "playlist_error": {
-                "normal": "Erreur lors du traitement de la playlist. Elle peut être privée, restreinte à une région ou invalide.",
-                "kawaii": "(´；ω；`) Oh non ! Problème avec la playlist... peut-être qu’elle est timide ou cachée ?"
-            },
-            "filter_title": {
-                "normal": "🎧 Filtres Audio",
-                "kawaii": "🎧 Les filtres ! ヾ(≧▽≦*)o"
-            },
-            "filter_description": {
-                "normal": "Clique sur les boutons pour activer ou désactiver un filtre en temps réel !",
-                "kawaii": "Clic-clic pour changer le son ! ~☆"
-            },
-        }
-    }
-    
     mode = "kawaii" if is_kawaii else "normal"
-    return messages[lang][message_key][mode]
+    return messages[message_key][mode]
 
 # YouTube Mix and SoundCloud Stations utilities
 def get_video_id(url):
@@ -670,21 +427,20 @@ def get_soundcloud_station_url(track_id):
         return f"https://soundcloud.com/discover/sets/track-stations:{track_id}"
     return None
 
-# --- FONCTION FINALE PROCESS_SPOTIFY_URL (Architecture en Cascade) ---
-# CETTE FONCTION EST MAINTENANT CORRECTE ET NE DOIT PAS ETRE MODIFIEE
+# --- FINAL PROCESS_SPOTIFY_URL FUNCTION (Cascade Architecture) ---
 async def process_spotify_url(url, interaction):
     """
-    Traite une URL Spotify avec une architecture en cascade :
-    1. Tente avec l'API officielle (spotipy) pour vitesse et complitude.
-    2. En cas d'échec (ex: playlist éditoriale), bascule sur le scraper (spotifyscraper) en secours.
-    """
+    Processes a Spotify URL with a cascade architecture:
+    1. Tries with the official API (spotipy) for speed and completeness.
+    2. On failure (e.g., editorial playlist), falls back to the scraper (spotifyscraper).
+    """    
     guild_id = interaction.guild_id
     clean_url = url.split('?')[0]
     
-    # --- MÃ‰THODE 1 : API OFFICIELLE (SPOTIPY) ---
+    # --- METHOD 1: OFFICIAL API (SPOTIPY) ---
     if sp:
         try:
-            logger.info(f"Tentative 1 : API officielle (Spotipy) pour {clean_url}")
+            logger.info(f"Attempt 1: Official API (Spotipy) for {clean_url}")
             tracks_to_return = []
             
             loop = asyncio.get_event_loop()
@@ -721,50 +477,50 @@ async def process_spotify_url(url, interaction):
                     tracks_to_return.append((track['name'], track['artists'][0]['name']))
 
             if not tracks_to_return:
-                 raise ValueError("Aucune piste trouvÃ©e via l'API.")
+                 raise ValueError("No tracks found via API.")
 
-            logger.info(f"Succès avec Spotipy : {len(tracks_to_return)} pistes récupérées.")
+            logger.info(f"Success with Spotipy: {len(tracks_to_return)} tracks retrieved.")
             return tracks_to_return
 
         except Exception as e:
-            logger.warning(f"L'API Spotipy a échoué pour {clean_url} (Raison: {e}). Passage au plan B : SpotifyScraper.")
+            logger.warning(f"Spotipy API failed for {clean_url} (Reason: {e}). Switching to plan B: SpotifyScraper.")
 
-    # --- MÃ‰THODE 2 : SECOURS (SPOTIFYSCRAPER) ---
+    # --- METHOD 2: FALLBACK (SPOTIFYSCRAPER) ---
     if spotify_scraper_client:
         try:
-            logger.info(f"Tentative 2 : Scraper (SpotifyScraper) pour {clean_url}")
+            logger.info(f"Attempt 2: Scraper (SpotifyScraper) for {clean_url}")
             tracks_to_return = []
             loop = asyncio.get_event_loop()
 
             if 'playlist' in clean_url:
                 data = await loop.run_in_executor(None, lambda: spotify_scraper_client.get_playlist_info(clean_url))
                 for track in data.get('tracks', []):
-                    tracks_to_return.append((track.get('name', 'Titre inconnu'), track.get('artists', [{}])[0].get('name', 'Artiste inconnu')))
+                    tracks_to_return.append((track.get('name', 'Unknown Title'), track.get('artists', [{}])[0].get('name', 'Unknown Artist')))
             
             elif 'album' in clean_url:
                 data = await loop.run_in_executor(None, lambda: spotify_scraper_client.get_album_info(clean_url))
                 for track in data.get('tracks', []):
-                    tracks_to_return.append((track.get('name', 'Titre inconnu'), track.get('artists', [{}])[0].get('name', 'Artiste inconnu')))
+                    tracks_to_return.append((track.get('name', 'Unknown Title'), track.get('artists', [{}])[0].get('name', 'Unknown Artist')))
 
             elif 'track' in clean_url:
                 data = await loop.run_in_executor(None, lambda: spotify_scraper_client.get_track_info(clean_url))
-                tracks_to_return.append((data.get('name', 'Titre inconnu'), data.get('artists', [{}])[0].get('name', 'Artiste inconnu')))
+                tracks_to_return.append((data.get('name', 'Unknown Title'), data.get('artists', [{}])[0].get('name', 'Unknown Artist')))
 
             if not tracks_to_return:
-                raise SpotifyScraperError("Le scraper n'a trouvé aucune piste non plus.")
+                raise SpotifyScraperError("The scraper could not find any tracks either.")
 
-            logger.info(f"Succès avec SpotifyScraper : {len(tracks_to_return)} pistes récupérées (potentiellement limités).")
+            logger.info(f"Success with SpotifyScraper: {len(tracks_to_return)} tracks retrieved (potentially limited).")
             return tracks_to_return
 
         except Exception as e:
-            logger.error(f"Les deux méthodes (API et Scraper) ont échoués. Erreur finale de SpotifyScraper: {e}", exc_info=True)
+            logger.error(f"Both methods (API and Scraper) failed. Final SpotifyScraper error: {e}", exc_info=True)
             embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
             await interaction.followup.send(embed=embed, ephemeral=True)
             return None
 
-    logger.critical("Aucun client (Spotipy ou SpotifyScraper) n'est fonctionnel.")
-    # Optionnel : envoyer un message d'erreur si aucun client n'est dispo
-    embed = Embed(description="Erreur critique: les services Spotify sont inaccessibles.", color=discord.Color.dark_red())
+    logger.critical("No client (Spotipy or SpotifyScraper) is functional.")
+    # Optional: send an error message if no client is available
+    embed = Embed(description="Critical error: Spotify services are unreachable.", color=discord.Color.dark_red())
     await interaction.followup.send(embed=embed, ephemeral=True)
     return None
     
@@ -772,15 +528,14 @@ async def process_spotify_url(url, interaction):
 async def process_deezer_url(url, interaction):
     guild_id = interaction.guild_id
     try:
-        # VÃ©rifier si c'est un lien de partage
         deezer_share_regex = re.compile(r'^(https?://)?(link\.deezer\.com)/s/.+$')
         if deezer_share_regex.match(url):
             logger.info(f"Detected Deezer share link: {url}. Resolving redirect...")
             response = requests.head(url, allow_redirects=True, timeout=10)
-            response.raise_for_status()  # VÃ©rifier si la requÃªte a rÃ©ussi
+            response.raise_for_status()
             resolved_url = response.url
             logger.info(f"Resolved to: {resolved_url}")
-            url = resolved_url  # Remplacer par l'URL rÃ©solue
+            url = resolved_url 
 
         parsed_url = urlparse(url)
         path_parts = parsed_url.path.strip('/').split('/')
@@ -877,7 +632,7 @@ async def process_deezer_url(url, interaction):
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error fetching Deezer URL {url}: {e}")
         embed = Embed(
-            description="Erreur rÃ©seau lors de la récupération des données Deezer. Réessayez plus tard.",
+            description="Network error while retrieving Deezer data. Please try again later.",
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -885,7 +640,7 @@ async def process_deezer_url(url, interaction):
     except ValueError as e:
         logger.error(f"Invalid Deezer data for URL {url}: {e}")
         embed = Embed(
-            description=f"Erreur : {str(e)}",
+            description=f"Error: {str(e)}",
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -902,54 +657,44 @@ async def process_deezer_url(url, interaction):
 # Process Apple Music URLs
 async def process_apple_music_url(url, interaction):
     guild_id = interaction.guild_id
-    logger.info(f"Lancement du traitement pour l'URL Apple Music : {url}")
+    logger.info(f"Starting processing for Apple Music URL: {url}")
     
     clean_url = url.split('?')[0]
-    
-    try:
-        parsed_url = urlparse(clean_url)
-        path_parts = parsed_url.path.strip('/').split('/')
-        if len(path_parts) < 3 or "music.apple.com" not in parsed_url.netloc:
-            raise ValueError("Invalid Apple Music URL format")
-        
-        resource_type = path_parts[1]
-        logger.info(f"Processing Apple Music URL: {clean_url} (Type: {resource_type})")
+    browser = None  # Initialize the browser to None
 
+    try:
         async with async_playwright() as p:
-            # On reste sur Firefox, qui a fonctionnÃ©
             browser = await p.firefox.launch(headless=True)
-            
-            # User agent cohérent avec Firefox pour plus de discrétion
             context = await browser.new_context(
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
             )
             page = await context.new_page()
 
             await page.route("**/*.{png,jpg,jpeg,svg,woff,woff2}", lambda route: route.abort())
-            logger.info("Optimisation : chargement des images et polices désactivés.")
+            logger.info("Optimization: Disabled loading of images and fonts.")
             
-            logger.info("Navigation vers la page avec un timeout de 90 secondes...")
+            logger.info("Navigating to the page with a 90 second timeout...")
             await page.goto(clean_url, wait_until="domcontentloaded", timeout=90000)
-            logger.info("Page chargée. Extraction des données en cours...")
+            logger.info("Page loaded. Extracting data...")
 
-            # Le reste de la fonction est bon, on ne le change pas.
             tracks = []
+            resource_type = urlparse(clean_url).path.strip('/').split('/')[1]
             
             if resource_type in ['album', 'playlist']:
                 await page.wait_for_selector('div.songs-list-row', timeout=15000)
-                main_artist_name = "Artiste inconnu"
+                main_artist_name = "Unknown Artist"
                 try:
                     main_artist_el = await page.query_selector('.headings__subtitles a')
                     if main_artist_el:
                         main_artist_name = await main_artist_el.inner_text()
                 except Exception:
-                    logger.warning("Impossible de déterminer l'artiste principal.")
+                    logger.warning("Unable to determine the main artist.")
 
                 track_rows = await page.query_selector_all('div.songs-list-row')
                 for row in track_rows:
                     try:
                         title_el = await row.query_selector('div.songs-list-row__song-name')
-                        title = await title_el.inner_text() if title_el else "Titre inconnu"
+                        title = await title_el.inner_text() if title_el else "Unknown Title"
                         
                         artist_elements = await row.query_selector_all('div.songs-list-row__by-line a')
                         if artist_elements:
@@ -958,10 +703,10 @@ async def process_apple_music_url(url, interaction):
                         else:
                             artist = main_artist_name
                         
-                        if title != "Titre inconnu":
+                        if title != "Unknown Title":
                             tracks.append((title.strip(), artist.strip()))
                     except Exception as e:
-                        logger.warning(f"Impossible d'extraire une ligne : {e}")
+                        logger.warning(f"Unable to extract a line: {e}")
 
             elif resource_type == 'song':
                 try:
@@ -974,21 +719,20 @@ async def process_apple_music_url(url, interaction):
                         tracks.append((title.strip(), artist.strip()))
                 except Exception:
                     page_title = await page.title()
-                    parts = page_title.split(' par ')
+                    parts = page_title.split(' by ')
                     title = parts[0].replace("", "").strip()
-                    artist = parts[1].split(' sur Apple')[0].strip()
+                    artist = parts[1].split(' on Apple')[0].strip()
                     if title and artist:
                         tracks.append((title, artist))
 
-            await browser.close()
             if not tracks:
-                raise ValueError("Aucune piste trouvée dans la ressource Apple Music")
+                raise ValueError("No tracks found in Apple Music resource")
             
-            logger.info(f"Succès ! {len(tracks)} piste(s) extraite(s).")
+            logger.info(f"Success! {len(tracks)} track(s) extracted.")
             return tracks
 
     except Exception as e:
-        logger.error(f"Erreur de traitement de l'URL Apple Music {url}: {e}", exc_info=True)
+        logger.error(f"Error processing Apple Music URL {url}: {e}", exc_info=True)
         embed = Embed(
             description=get_messages("apple_music_error", guild_id),
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
@@ -998,22 +742,25 @@ async def process_apple_music_url(url, interaction):
         except discord.errors.InteractionResponded:
             await interaction.edit_original_response(embed=embed)
         return None
-        
+    finally:
+        if browser:
+            await browser.close()
+            logger.info("Playwright (Apple Music) browser closed successfully.")
+
 # Process Tidal URLs
 async def process_tidal_url(url, interaction):
     guild_id = interaction.guild_id
 
-    # --- La fonction interne pour les listes reste inchangangée ---
     async def load_and_extract_all_tracks(page):
-        logger.info("Début du chargement fiable (piste par piste)...")
+        logger.info("Reliable loading begins (track by track)...")
         total_tracks_expected = 0
         try:
             meta_item_selector = 'span[data-test="grid-item-meta-item-count"]'
             meta_text = await page.locator(meta_item_selector).first.inner_text(timeout=3000)
             total_tracks_expected = int(re.search(r'\d+', meta_text).group())
-            logger.info(f"Objectif : Extraire {total_tracks_expected} pistes.")
+            logger.info(f"Goal: Extract {total_tracks_expected} tracks.")
         except Exception:
-            logger.warning("Impossible de déterminer le nombre total de pistes.")
+            logger.warning("Unable to determine the total number of tracks.")
             total_tracks_expected = 0
         track_row_selector = 'div[data-track-id]'
         all_tracks = []
@@ -1022,7 +769,7 @@ async def process_tidal_url(url, interaction):
         max_loops = 500
         for i in range(max_loops):
             if total_tracks_expected > 0 and len(all_tracks) >= total_tracks_expected:
-                logger.info("Toutes les pistes attendues ont été trouvées. Arrêt anticipé.")
+                logger.info("All expected leads have been found. Early shutdown.")
                 break
             track_elements = await page.query_selector_all(track_row_selector)
             if not track_elements and i > 0: break
@@ -1043,16 +790,16 @@ async def process_tidal_url(url, interaction):
             if not new_tracks_found_in_loop and i > 1:
                 stagnation_counter += 1
                 if stagnation_counter >= 5:
-                    logger.info("Stagnation stable. Fin du processus.")
+                    logger.info("Stable stagnation. End of process.")
                     break
             else: stagnation_counter = 0
             if track_elements:
                 await track_elements[-1].scroll_into_view_if_needed(timeout=10000)
                 await asyncio.sleep(0.75)
-        logger.info(f"Processus terminé. Total final des pistes uniques extraites : {len(all_tracks)}")
+        logger.info(f"Process completed. Final total of unique tracks extracted: {len(all_tracks)}")
         return list(dict.fromkeys(all_tracks))
 
-    # --- Logique principale ---
+    browser = None  # Initialize the browser to None
     try:
         clean_url = url.split('?')[0]
         parsed_url = urlparse(clean_url)
@@ -1066,15 +813,14 @@ async def process_tidal_url(url, interaction):
         elif 'video' in path_parts: resource_type = 'video'
 
         if resource_type is None:
-            raise ValueError("URL Tidal non supportée.")
+            raise ValueError("Tidal URL not supported.")
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page(user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-            await page.goto(clean_url, wait_until="domcontentloaded") # Utiliser domcontentloaded est plus rapide
-            logger.info(f"Navigation vers l'URL Tidal ({resource_type}) : {clean_url}")
+            await page.goto(clean_url, wait_until="domcontentloaded")
+            logger.info(f"Navigate to Tidal URL ({resource_type}): {clean_url}")
             
-            # Attente initiale un peu plus longue pour les pages complexes
             await asyncio.sleep(3)
             unique_tracks = []
 
@@ -1082,30 +828,22 @@ async def process_tidal_url(url, interaction):
                 unique_tracks = await load_and_extract_all_tracks(page)
             
             elif resource_type == 'track' or resource_type == 'video':
-                logger.info(f"Extraction d'un mÃ©dia unique ({resource_type})...")
+                logger.info(f"Extracting a single media ({resource_type})...")
                 try:
-                    # Pour les titres et vidéos, on utilise une méthode plus directe
-                    # qui ne dépend pas de la "visibilité" stricte de l'élément.
-                    
-                    # On attend juste que le conteneur principal soit là
                     await page.wait_for_selector('div[data-test="artist-profile-header"], div[data-test="footer-player"]', timeout=10000)
-
                     title_selector = 'span[data-test="now-playing-track-title"], h1[data-test="title"]'
                     artist_selector = 'a[data-test="grid-item-detail-text-title-artist"]'
-                    
-                    # On prend directement le texte du premier élément trouvé, sans attendre sa "visibilité"
                     title = await page.locator(title_selector).first.inner_text(timeout=5000)
                     artist = await page.locator(artist_selector).first.inner_text(timeout=5000)
                     
                     if not title or not artist:
-                        raise ValueError("Titre ou artiste manquant.")
+                        raise ValueError("Missing title or artist.")
                     
-                    logger.info(f"Média unique trouvé : {title.strip()} - {artist.strip()}")
+                    logger.info(f"Unique media found: {title.strip()} - {artist.strip()}")
                     unique_tracks = [(title.strip(), artist.strip())]
 
                 except Exception as e:
-                    # Si la méthode directe échoue, on tente la méthode du titre de la page en dernier recours
-                    logger.warning(f"La méthode d'extraction directe a échoué ({e}), tentative avec le titre de la page...")
+                    logger.warning(f"Direct extraction method failed ({e}), attempting with page title...")
                     try:
                         page_title = await page.title()
                         title, artist = "", ""
@@ -1116,36 +854,39 @@ async def process_tidal_url(url, interaction):
                             parts = page_title.split(' by ')
                             title, artist = parts[0], parts[1].split(' on TIDAL')[0]
                         
-                        if not title or not artist: raise ValueError("Le format du titre de la page est inconnu.")
+                        if not title or not artist: raise ValueError("The page title format is unknown.")
                         
-                        logger.info(f"Média unique trouvé via le titre de la page : {title.strip()} - {artist.strip()}")
+                        logger.info(f"Unique media found via page title: {title.strip()} - {artist.strip()}")
                         unique_tracks = [(title.strip(), artist.strip())]
                     except Exception as fallback_e:
                         await page.screenshot(path=f"tidal_{resource_type}_extraction_failed.png")
-                        raise ValueError(f"Toutes les méthodes d'extraction ont échoué. Erreur finale: {fallback_e}")
+                        raise ValueError(f"All extraction methods failed. Final error: {fallback_e}")
             
             if not unique_tracks:
-                raise ValueError("Aucune piste n'a pu être extraite de la ressource Tidal.")
+                raise ValueError("No tracks could be retrieved from the Tidal resource.")
 
             return unique_tracks
 
     except Exception as e:
-        logger.error(f"Erreur majeure dans process_tidal_url pour {url}: {e}")
+        logger.error(f"Major error in process_tidal_url for {url}: {e}")
         if interaction:
              embed = Embed(description=get_messages("tidal_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
              await interaction.followup.send(embed=embed, ephemeral=True)
         return None
-                                                                                                        
+    finally:
+        if browser:
+            await browser.close()
+            logger.info("Playwright (Tidal) browser closed properly.")
+
 async def process_amazon_music_url(url, interaction):
     guild_id = interaction.guild_id
-    logger.info(f"Lancement du traitement unifié pour l'URL Amazon Music : {url}")
+    logger.info(f"Launching unified processing for Amazon Music URL: {url}")
     
-    # Ã‰tape 1 : Déterminer le type de lien
     is_album = "/albums/" in url
     is_playlist = "/playlists/" in url or "/user-playlists/" in url
     is_track = "/tracks/" in url
 
-    browser = None
+    browser = None  # Initialize the browser to None
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -1155,24 +896,19 @@ async def process_amazon_music_url(url, interaction):
             page = await context.new_page()
             
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            logger.info("Page chargée. Gestion des cookies.")
+            logger.info("Page loaded. Cookie management.")
             
             try:
                 await page.click('music-button:has-text("Accepter les cookies")', timeout=7000)
-                logger.info("Bannière de cookies acceptÃ©e.")
+                logger.info("Cookie banner accepted.")
             except Exception:
-                logger.info("Pas de bannière de cookies trouvÃ©e.")
+                logger.info("No cookie banner found.")
 
             tracks = []
 
-            # --- ETAPE 2: AIGUILLAGE VERS LA BONNE MÃ‰THODE D'EXTRACTION ---
-
             if is_album or is_track:
-                # ======================================================
-                # METHODE POUR ALBUMS ET PISTES (via JSON-LD)
-                # ======================================================
                 page_type = "Album" if is_album else "Piste"
-                logger.info(f"Page de type '{page_type}' détectée. Utilisation de la méthode d'extraction JSON.")
+                logger.info(f"Page of type '{page_type}' detected. Using JSON extraction method.")
                 
                 selector = 'script[type="application/ld+json"]'
                 await page.wait_for_selector(selector, state='attached', timeout=20000)
@@ -1183,7 +919,7 @@ async def process_amazon_music_url(url, interaction):
                 for script_content in json_ld_scripts:
                     data = json.loads(script_content)
                     if data.get('@type') == 'MusicAlbum' or (is_album and 'itemListElement' in data):
-                        album_artist = data.get('byArtist', {}).get('name', 'Artiste inconnu')
+                        album_artist = data.get('byArtist', {}).get('name', 'Unknown Artist')
                         for item in data.get('itemListElement', []):
                             track_name = item.get('name')
                             track_artist = item.get('byArtist', {}).get('name', album_artist)
@@ -1193,26 +929,23 @@ async def process_amazon_music_url(url, interaction):
                         break 
                     elif data.get('@type') == 'MusicRecording':
                         track_name = data.get('name')
-                        track_artist = data.get('byArtist', {}).get('name', 'Artiste inconnu')
+                        track_artist = data.get('byArtist', {}).get('name', 'Unknown Artist')
                         if track_name and track_artist:
                             tracks.append((track_name, track_artist))
                         found_data = True
                         break
                 
                 if not found_data:
-                    raise ValueError(f"Aucune donnée de type 'MusicAlbum' ou 'MusicRecording' trouvée dans les balises JSON-LD.")
+                    raise ValueError(f"No data of type 'MusicAlbum' or 'MusicRecording' found in JSON-LD tags.")
 
             elif is_playlist:
-                # ======================================================
-                # METHODE POUR PLAYLISTS (Extraction rapide)
-                # ======================================================
-                logger.info("Page de type 'Playlist' détectée. Utilisation de l'extraction rapide avant virtualisation.")
+                logger.info("'Playlist' type page detected. Using fast pre-virtualization extraction.")
                 try:
                     await page.wait_for_selector("music-image-row[primary-text]", timeout=20000)
-                    logger.info("Liste de pistes détectée. Attente de 3.5 secondes pour le chargement initial.")
-                    await asyncio.sleep(3.5) # Temps crucial
+                    logger.info("Tracklist detected. Waiting 3.5 seconds for initial load.")
+                    await asyncio.sleep(3.5)
                 except Exception as e:
-                    raise ValueError(f"Impossible de détecter la liste de pistes initiale : {e}")
+                    raise ValueError(f"Unable to detect initial tracklist: {e}")
 
                 js_script_playlist = """
                 () => {
@@ -1235,32 +968,32 @@ async def process_amazon_music_url(url, interaction):
                 tracks = [(track['title'], track['artist']) for track in tracks_data]
 
             else:
-                raise ValueError("URL Amazon Music non reconnue (ni album, ni playlist, ni piste).")
+                raise ValueError("Amazon Music URL not recognized (neither album, nor playlist, nor track).")
 
             if not tracks:
-                raise ValueError("Aucune piste n'a pu être extraite de la page.")
+                raise ValueError("No tracks could be extracted from the page.")
 
-            logger.info(f"Traitement terminé. {len(tracks)} piste(s) trouvée(s). Première piste: {tracks[0]}")
+            logger.info(f"Processing complete. {len(tracks)} track(s) found. First track: {tracks[0]}")
             return tracks
 
     except Exception as e:
-        logger.error(f"Erreur finale dans process_amazon_music_url pour {url}: {e}", exc_info=True)
+        logger.error(f"Final error in process_amazon_music_url for {url}: {e}", exc_info=True)
         if 'page' in locals() and page and not page.is_closed():
              await page.screenshot(path="amazon_music_scrape_failed.png")
-             logger.info("Capture d'écran de l'erreur sauvegardée.")
+             logger.info("Screenshot of the error saved.")
         
         embed = Embed(description=get_messages("amazon_music_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
         try:
             if interaction and not interaction.is_expired():
                 await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as send_error:
-            logger.error(f"Impossible d'envoyer le message d'erreur : {send_error}")
+            logger.error(f"Unable to send error message: {send_error}")
         return None
     finally:
         if browser:
             await browser.close()
-            logger.info("Navigateur Playwright fermée.")
-        
+            logger.info("Playwright (Amazon Music) browser closed successfully.")
+
 # /kaomoji command
 @bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
 @app_commands.default_permissions(administrator=True)
@@ -1272,24 +1005,6 @@ async def toggle_kawaii(interaction: discord.Interaction):
     embed = Embed(
         description=get_messages("kawaii_toggle", guild_id).format(state=state),
         color=0xFFB6C1 if kawaii_mode[guild_id] else discord.Color.blue()
-    )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-# /language command
-@bot.tree.command(name="language", description="Set the bot's language for this server")
-@app_commands.default_permissions(administrator=True)
-@app_commands.choices(language=[
-    app_commands.Choice(name="English", value="en"),
-    app_commands.Choice(name="Français", value="fr")
-])
-async def set_language(interaction: discord.Interaction, language: str):
-    guild_id = interaction.guild_id
-    server_languages[guild_id] = language
-    lang_name = "English" if language == "en" else "Français"
-    
-    embed = Embed(
-        description=get_messages("language_toggle", guild_id).format(lang=lang_name),
-        color=0xFFB6C1 if get_mode(guild_id) else discord.Color.blue()
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -1467,7 +1182,7 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_footer(text="☆⌒(≧▽° )")
                 await interaction.followup.send(embed=embed)
             except Exception as e:
-                logger.error(f"Erreur de conversion Spotify pour {query}: {e}")
+                logger.error(f"Spotify conversion error for {query}: {e}")
                 embed = Embed(
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
@@ -1496,7 +1211,7 @@ async def play(interaction: discord.Interaction, query: str):
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
                         if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                            failed_tracks.append(f"{result[2]} by {result[3]}")
                     else:
                         _, video_url, _, _ = result
                         await music_player.queue.put({'url': video_url, 'is_single': False})
@@ -1523,7 +1238,7 @@ async def play(interaction: discord.Interaction, query: str):
                 await message.edit(embed=embed)
                 return
 
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nFailed tracks (up to 5):\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("spotify_playlist_added", guild_id)
             embed.description = get_messages("spotify_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1539,7 +1254,7 @@ async def play(interaction: discord.Interaction, query: str):
         if not deezer_tracks:
             logger.warning(f"No tracks returned for Deezer URL: {query}")
             embed = Embed(
-                description="Aucune piste Deezer n'a pu être traitées. Vérifiez l'URL ou réessayez.",
+                description="No Deezer tracks could be processed. Check the URL or try again.",
                 color=0xFFB6C1 if is_kawaii else discord.Color.red()
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -1613,7 +1328,7 @@ async def play(interaction: discord.Interaction, query: str):
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
                         if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                            failed_tracks.append(f"{result[2]} by {result[3]}")
                     else:
                         _, video_url, _, _ = result
                         await music_player.queue.put({'url': video_url, 'is_single': False})
@@ -1640,7 +1355,7 @@ async def play(interaction: discord.Interaction, query: str):
                 await message.edit(embed=embed)
                 return
 
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nFailed tracks (up to 5):\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("deezer_playlist_added", guild_id)
             embed.description = get_messages("deezer_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1717,7 +1432,7 @@ async def play(interaction: discord.Interaction, query: str):
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
                         if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                            failed_tracks.append(f"{result[2]} by {result[3]}")
                     else:
                         _, video_url, _, _ = result
                         await music_player.queue.put({'url': video_url, 'is_single': False})
@@ -1734,12 +1449,12 @@ async def play(interaction: discord.Interaction, query: str):
                 await asyncio.sleep(0.1)
             if processed - failed == 0:
                 embed = Embed(
-                    description="Aucune piste n'a pu être ajoutée.",
+                    description="No tracks could be added.",
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
                 await message.edit(embed=embed)
                 return
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nFailed tracks (up to 5):\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("apple_music_playlist_added", guild_id)
             embed.description = get_messages("apple_music_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1816,7 +1531,7 @@ async def play(interaction: discord.Interaction, query: str):
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
                         if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                            failed_tracks.append(f"{result[2]} by {result[3]}")
                     else:
                         _, video_url, _, _ = result
                         await music_player.queue.put({'url': video_url, 'is_single': False})
@@ -1833,12 +1548,12 @@ async def play(interaction: discord.Interaction, query: str):
                 await asyncio.sleep(0.1)
             if processed - failed == 0:
                 embed = Embed(
-                    description="Aucune piste n'a pu être ajoutée.",
+                    description="No tracks could be added.",
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
                 await message.edit(embed=embed)
                 return
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nFailed tracks (up to 5):\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("tidal_playlist_added", guild_id)
             embed.description = get_messages("tidal_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1918,7 +1633,7 @@ async def play(interaction: discord.Interaction, query: str):
                     if isinstance(result, Exception) or result[1] is None:
                         failed += 1
                         if len(failed_tracks) < 5:
-                            failed_tracks.append(f"{result[2]} par {result[3]}")
+                            failed_tracks.append(f"{result[2]} by {result[3]}")
                     else:
                         _, video_url, _, _ = result
                         await music_player.queue.put({'url': video_url, 'is_single': False})
@@ -1935,12 +1650,12 @@ async def play(interaction: discord.Interaction, query: str):
                 await asyncio.sleep(0.1)
             if processed - failed == 0:
                 embed = Embed(
-                    description="Aucune piste n'a pu être ajoutée.",
+                    description="No tracks could be added.",
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
                 await message.edit(embed=embed)
                 return
-            failed_text = "\nPistes échouées (jusqu'à  5) :\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
+            failed_text = "\nFailed tracks (up to 5):\n" + "\n".join([f"- {track}" for track in failed_tracks]) if failed_tracks else ""
             embed.title = get_messages("amazon_music_playlist_added", guild_id)
             embed.description = get_messages("amazon_music_playlist_description", guild_id).format(
                 count=processed - failed,
@@ -1950,19 +1665,14 @@ async def play(interaction: discord.Interaction, query: str):
             embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
             await message.edit(embed=embed)
 
+
     elif soundcloud_regex.match(query) or youtube_regex.match(query) or ytmusic_regex.match(query) or bandcamp_regex.match(query):
         try:
             platform = ""
-            if soundcloud_regex.match(query):
-                platform = "SoundCloud"
-            elif ytmusic_regex.match(query):
-                platform = "YouTube Music"
-            elif youtube_regex.match(query):
-                platform = "YouTube"
-            elif bandcamp_regex.match(query):
-                platform = "Bandcamp"
-            elif amazon_music_regex.match(query):
-                platform = "Amazon Music"
+            if soundcloud_regex.match(query): platform = "SoundCloud"
+            elif ytmusic_regex.match(query): platform = "YouTube Music"
+            elif youtube_regex.match(query): platform = "YouTube"
+            elif bandcamp_regex.match(query): platform = "Bandcamp"
                 
             ydl_opts_playlist = {
                 "format": "bestaudio/best",
@@ -1976,40 +1686,63 @@ async def play(interaction: discord.Interaction, query: str):
             }
             info = await extract_info_async(ydl_opts_playlist, query)
             
+            # --- FIXED BLOCK TO HANDLE NESTED PLAYLISTS ---
             if "entries" in info:
-                total_tracks = len(info["entries"])
+                #1. We "flatten" the list to extract the tracks from the nested playlists
+                tracks_to_add = []
+                for entry in info["entries"]:
+                    if not entry:
+                        continue
+                    # If the entry is itself a playlist (it has a key of 'entries')
+                    if 'entries' in entry and entry.get('entries'):
+                        logger.info(f"Nested playlist found: {entry.get('title', 'Unknown Playlist')}. Adding its tracks.")
+                        for sub_entry in entry['entries']:
+                            if sub_entry and 'url' in sub_entry:
+                                tracks_to_add.append(sub_entry)
+                    # If it's a simple track
+                    elif 'url' in entry:
+                        tracks_to_add.append(entry)
+                    else:
+                        logger.warning(f"Skipping un-playable item: {entry.get('title', 'Unknown item')}")
+
+                if not tracks_to_add:
+                    raise ValueError("No playable tracks found after processing.")
+
+                #2. We process the flattened list
+                total_tracks = len(tracks_to_add)
                 processed = 0
                     
                 embed = Embed(
-                    title=f"{platform} playlist processing",
+                    title=f"{platform} resource processing",
                     description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks),
                     color=0xFFB6C1 if is_kawaii else discord.Color.blue()
                 )
                 message = await interaction.followup.send(embed=embed)
-                for entry in info["entries"]:
-                    if entry:
-                        await music_player.queue.put({'url': entry['url'], 'is_single': False})
-                        processed += 1
-                        
-                        if processed % 10 == 0 or processed == total_tracks:
-                            progress = processed / total_tracks
-                            bar = create_loading_bar(progress)
-                            new_description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
-                                processed=processed, 
-                                total=total_tracks
-                            )
-                            embed.description = new_description
-                            await message.edit(embed=embed)
+
+                for track_entry in tracks_to_add:
+                    await music_player.queue.put({'url': track_entry['url'], 'is_single': False})
+                    processed += 1
+                    
+                    if processed % 10 == 0 or processed == total_tracks:
+                        progress = processed / total_tracks
+                        bar = create_loading_bar(progress)
+                        new_description = f"{bar}\n" + get_messages("loading_playlist", guild_id).format(
+                            processed=processed, 
+                            total=total_tracks
+                        )
+                        embed.description = new_description
+                        await message.edit(embed=embed)
                 
-                if info["entries"] and info["entries"][0]:
-                    thumbnail = info["entries"][0].get("thumbnail")
-                    embed.title = get_messages("ytmusic_playlist_added", guild_id) if ytmusic_regex.match(query) else get_messages("playlist_added", guild_id)
-                    embed.description = get_messages("ytmusic_playlist_description", guild_id).format(count=total_tracks) if ytmusic_regex.match(query) else get_messages("playlist_description", guild_id).format(count=total_tracks)
-                    embed.color = 0xE2F0CB if is_kawaii else discord.Color.green()
-                    if thumbnail:
-                        embed.set_thumbnail(url=thumbnail)
-                    await message.edit(embed=embed)
+                # Updated final message
+                first_entry_thumbnail = tracks_to_add[0].get("thumbnail") if tracks_to_add else None
+                embed.title = get_messages("ytmusic_playlist_added", guild_id) if ytmusic_regex.match(query) else get_messages("playlist_added", guild_id)
+                embed.description = get_messages("ytmusic_playlist_description", guild_id).format(count=total_tracks) if ytmusic_regex.match(query) else get_messages("playlist_description", guild_id).format(count=total_tracks)
+                embed.color = 0xE2F0CB if is_kawaii else discord.Color.green()
+                if first_entry_thumbnail:
+                    embed.set_thumbnail(url=first_entry_thumbnail)
+                await message.edit(embed=embed)
             else:
+                # Handles the case of a single track (unchanged behavior)
                 await music_player.queue.put({'url': info["webpage_url"], 'is_single': True, 'skip_now_playing': True})
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
@@ -2025,7 +1758,7 @@ async def play(interaction: discord.Interaction, query: str):
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
-            logger.error(f"Error: {e}")
+            logger.error(f"Error processing generic URL/Playlist: {e}", exc_info=True)
     else:
         try:
             ydl_opts_full = {
@@ -2103,8 +1836,8 @@ async def queue(interaction: discord.Interaction):
             url = info.get("webpage_url", item['url'])
             next_songs.append(get_messages("queue_song", guild_id).format(title=title, url=url))
         except Exception as e:
-            logger.error(f"Erreur lors de l'extraction des infos : {e}")
-            next_songs.append("- Chanson inconnue")
+            logger.error(f"Error extracting info: {e}")
+            next_songs.append("- Unknown song")
     
     embed = Embed(
         title=get_messages("queue_title", guild_id),
@@ -2270,14 +2003,13 @@ async def now_playing(interaction: discord.Interaction):
 
 async def play_audio(guild_id, seek_time=0):
     """
-    Gère la lecture audio pour une guilde.
-    Joue un morceau, applique les filtres, et se charge de lancer le suivant.
+    Handles audio playback for a guild.
+    Plays a track, applies filters, and handles queuing the next one.
     """
     music_player = get_player(guild_id)
     
     skip_now_playing = False
     
-    # --- GESTION DE LA FILE D'ATTENTE ET AUTOPLAY ---
     if seek_time > 0:
         skip_now_playing = True
     else:
@@ -2300,7 +2032,7 @@ async def play_audio(guild_id, seek_time=0):
                                     if entry and get_video_id(entry.get("url", "")) != current_video_id:
                                         await music_player.queue.put({'url': entry["url"], 'is_single': True})
                         except Exception as e:
-                            logger.error(f"Erreur YouTube Mix : {e}")
+                            logger.error(f"YouTube Mix Error: {e}")
                 
                 elif "soundcloud.com" in music_player.current_url:
                     track_id = await bot.loop.run_in_executor(None, get_soundcloud_track_id, music_player.current_url)
@@ -2315,7 +2047,7 @@ async def play_audio(guild_id, seek_time=0):
                                         if entry and await bot.loop.run_in_executor(None, get_soundcloud_track_id, entry.get("url", "")) != track_id:
                                             await music_player.queue.put({'url': entry["url"], 'is_single': True})
                             except Exception as e:
-                                logger.error(f"Erreur SoundCloud Station : {e}")
+                                logger.error(f"SoundCloud Station Error: {e}")
 
             if music_player.queue.empty():
                 music_player.current_task = None
@@ -2329,7 +2061,7 @@ async def play_audio(guild_id, seek_time=0):
     
     try:
         if not music_player.voice_client or not music_player.voice_client.is_connected():
-            logger.warning(f"Client vocal non disponible pour la guilde {guild_id}. Arrêt de la lecture.")
+            logger.warning(f"Voice client not available for guild {guild_id}. Stopping playback.")
             return
 
         active_filters = server_filters.get(guild_id, set())
@@ -2362,22 +2094,18 @@ async def play_audio(guild_id, seek_time=0):
         
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
         
-        # --- LOGIQUE DE CALLBACK CORRIGÉE ---
         def after_playing(error):
             if error:
-                logger.error(f'Erreur après la lecture sur la guilde {guild_id}: {error}')
+                logger.error(f'Error after playing in guild {guild_id}: {error}')
 
             async def schedule_next():
                 """Fonction async pour gérer la logique post-lecture."""
-                # Gère le seek pour un changement de filtre
                 if music_player.seek_info is not None:
                     new_seek_time = music_player.seek_info
                     music_player.seek_info = None
                     await play_audio(guild_id, seek_time=new_seek_time)
                 
-                # Gère la boucle
                 elif music_player.loop_current:
-                    # Remet le morceau actuel au début de la file d'attente
                     current_track_data = {'url': music_player.current_url, 'is_single': music_player.last_was_single}
                     items = [current_track_data]
                     while not music_player.queue.empty():
@@ -2388,13 +2116,10 @@ async def play_audio(guild_id, seek_time=0):
                     
                     await play_audio(guild_id)
 
-                # Passe au morceau suivant
                 else:
                     await play_audio(guild_id)
             
-            # Crée une tâche pour exécuter la fonction async sur la boucle d'événements du bot
             music_player.current_task = bot.loop.create_task(schedule_next())
-        # --- FIN DE LA LOGIQUE CORRIGÉE ---
 
         music_player.voice_client.play(source, after=after_playing)
         
@@ -2416,7 +2141,6 @@ async def play_audio(guild_id, seek_time=0):
         if music_player.text_channel:
             await music_player.text_channel.send(f"Oops, an error occurred with this track. I'm skipping to the next one.")
         
-        # Tente de passer au morceau suivant même en cas d'erreur grave
         after_playing(e)
 
 # Dictionnaire pour mapper les valeurs des filtres à leur nom d'affichage
@@ -2432,17 +2156,17 @@ FILTER_DISPLAY_NAMES = {
     "earrape": "Earrape"
 }
 
-# --- Vue pour les boutons de filtre ---
+# View for the filter buttons
 class FilterView(View):
     def __init__(self, interaction: discord.Interaction):
         super().__init__(timeout=None)
         self.guild_id = interaction.guild.id
         self.interaction = interaction
         
-        # Initialise le set de filtres pour le serveur s'il n'existe pas
+        # Initialize the filter set for the server if it doesn't exist
         server_filters.setdefault(self.guild_id, set())
         
-        # Création des boutons pour chaque filtre
+        # Create buttons for each filter
         for effect, display_name in FILTER_DISPLAY_NAMES.items():
             is_active = effect in server_filters[self.guild_id]
             style = ButtonStyle.success if is_active else ButtonStyle.secondary
@@ -2451,18 +2175,18 @@ class FilterView(View):
             self.add_item(button)
 
     async def button_callback(self, interaction: discord.Interaction):
-        # Extrait le nom de l'effet depuis le custom_id du bouton
+        # Extract the effect name from the button's custom_id
         effect = interaction.data['custom_id'].split('_')[1]
         
         active_guild_filters = server_filters[self.guild_id]
 
-        # Ajoute ou retire le filtre
+        # Add or remove the filter
         if effect in active_guild_filters:
             active_guild_filters.remove(effect)
         else:
             active_guild_filters.add(effect)
 
-        # Met à jour l'apparence des boutons
+        # Update the button appearance
         for child in self.children:
             if isinstance(child, Button):
                 child_effect = child.custom_id.split('_')[1]
@@ -2471,10 +2195,10 @@ class FilterView(View):
                 else:
                     child.style = ButtonStyle.secondary
         
-        # Met à jour la vue avec les nouveaux styles de boutons
+        # Update the view with the new button styles
         await interaction.response.edit_message(view=self)
 
-        # Relance la lecture avec les nouveaux filtres
+        # Restart playback with the new filters
         music_player = get_player(self.guild_id)
         if music_player.voice_client and (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
             elapsed_time = 0
@@ -2492,7 +2216,7 @@ async def filter_command(interaction: discord.Interaction):
 
     if not music_player.voice_client or not (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
         embed = Embed(
-            description="Rien n'est en cours de lecture... (´・ω・`)",
+            description=get_messages("no_filter_playback", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -2506,7 +2230,7 @@ async def filter_command(interaction: discord.Interaction):
         color=0xB5EAD7 if is_kawaii else discord.Color.blue()
     )
     
-    # MODIFICATION CLÉ : On retire "ephemeral=True" pour rendre le message public
+    # KEY CHANGE: "ephemeral=True" is removed to make the message public
     await interaction.response.send_message(embed=embed, view=view)
 
 # /pause command
@@ -2559,10 +2283,10 @@ async def skip(interaction: discord.Interaction):
     music_player = get_player(guild_id)
     
     if music_player.voice_client and music_player.voice_client.is_playing():
-        # Réinitialise les temps avant de stopper
+        # Reset timers before stopping
         music_player.start_time = 0
         music_player.playback_started_at = None
-        music_player.voice_client.stop() # Ceci va déclencher la lecture suivante via le `after` ou la boucle
+        music_player.voice_client.stop() # This will trigger the next playback via the 'after' callback or the loop
         
         embed = Embed(
             description=get_messages("skip", guild_id),
@@ -2600,7 +2324,7 @@ async def stop(interaction: discord.Interaction):
     music_player = get_player(guild_id)
     
     if music_player.voice_client:
-        # Annule la tâche de lecture en cours pour éviter qu'elle ne continue
+        # Cancel the current playback task to prevent it from continuing
         if music_player.current_task and not music_player.current_task.done():
             music_player.current_task.cancel()
 
@@ -2612,7 +2336,7 @@ async def stop(interaction: discord.Interaction):
 
         await music_player.voice_client.disconnect()
         
-        # Réinitialisation complète de l'état du lecteur
+        # Complete reset of the player state
         music_players[guild_id] = MusicPlayer()
 
         embed = Embed(
@@ -2674,11 +2398,45 @@ async def toggle_autoplay(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 @bot.event
+async def on_voice_state_update(member, before, after):
+    """
+    This event is the primary fix for memory leaks.
+    It fires when a member changes voice status (joins/leaves/changes rooms).
+    """
+    # We are only interested in events concerning the bot itself
+    if member.id != bot.user.id:
+        return
+
+    # If the bot was disconnected from a channel (it was in a channel BEFORE, but not AFTER)
+    if before.channel is not None and after.channel is None:
+        # FIX HERE: We use "member.guild.id" instead of "before.guild.id"
+        guild_id = member.guild.id
+        
+        # We check if there is a reader for this guild
+        if guild_id in music_players:
+            music_player = get_player(guild_id)
+            logger.info(f"Detected voice channel disconnect in guild {guild_id}. Starting cleanup.")
+
+            # Cancel the current read task if it exists
+            if music_player.current_task and not music_player.current_task.done():
+                music_player.current_task.cancel()
+                logger.info(f"Playback task cancelled for guild {guild_id}.")
+            
+            # We make sure that the voice client is stopped just in case
+            if music_player.voice_client and music_player.voice_client.is_playing():
+                music_player.voice_client.stop()
+
+            #Complete reset of the player state for this guild
+            # This is the line that frees memory by replacing the old heavy object with a new, empty one.
+            music_players[guild_id] = MusicPlayer()
+            logger.info(f"Music player for guild {guild_id} reset. Memory leak prevented.")
+            
+@bot.event
 async def on_ready():
-    logger.info(f"{bot.user.name} est en ligne.")
+    logger.info(f"{bot.user.name} is online.")
     try:
         synced = await bot.tree.sync()
-        logger.info(f"Commandes slash synchronisées : {len(synced)}")
+        logger.info(f"Synced {len(synced)} slash commands.")
 
         async def rotate_presence():
             while True:
@@ -2701,13 +2459,13 @@ async def on_ready():
                         )
                         await asyncio.sleep(10)
                     except Exception as e:
-                        logger.error(f"Erreur de changement de statut : {e}")
+                        logger.error(f"Error changing presence: {e}")
                         await asyncio.sleep(5)
 
         bot.loop.create_task(rotate_presence())
         
     except Exception as e:
-        logger.error(f"Erreur lors de la synchronisation des commandes : {e}")
+        logger.error(f"Error during command synchronization: {e}")
 
 # Run the bot (replace with your own token)
 bot.run("TOKEN")
