@@ -1057,6 +1057,7 @@ async def play(interaction: discord.Interaction, query: str):
         "no_color": True,
         "socket_timeout": 10,
         "force_generic_extractor": True,
+        'cookiefile': 'cookies.txt'
     }
 
     async def search_track(track):
@@ -1079,6 +1080,7 @@ async def play(interaction: discord.Interaction, query: str):
                 "noplaylist": True,
                 "no_color": True,
                 "socket_timeout": 10,
+                'cookiefile': 'cookies.txt'
             }
             
             search_query = f"ytsearch:{sanitized_query}"
@@ -1158,6 +1160,7 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_color": True,
                     "socket_timeout": 10,
                     "force_generic_extractor": True,
+                    'cookiefile': 'cookies.txt'
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
@@ -1274,6 +1277,7 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_color": True,
                     "socket_timeout": 10,
                     "force_generic_extractor": True,
+                    'cookiefile': 'cookies.txt'
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
@@ -1382,6 +1386,7 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_color": True,
                     "socket_timeout": 10,
                     "force_generic_extractor": True,
+                    'cookiefile': 'cookies.txt'
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
@@ -1481,6 +1486,7 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_color": True,
                     "socket_timeout": 10,
                     "force_generic_extractor": True,
+                    'cookiefile': 'cookies.txt'
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
@@ -1583,6 +1589,7 @@ async def play(interaction: discord.Interaction, query: str):
                     "no_color": True,
                     "socket_timeout": 10,
                     "force_generic_extractor": True,
+                    'cookiefile': 'cookies.txt'
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
@@ -1683,6 +1690,7 @@ async def play(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
                 "force_generic_extractor": True,
+                'cookiefile': 'cookies.txt'
             }
             info = await extract_info_async(ydl_opts_playlist, query)
             
@@ -1769,6 +1777,7 @@ async def play(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
                 "force_generic_extractor": True,
+                'cookiefile': 'cookies.txt'
             }
             sanitized_query = sanitize_query(query)
             search_query = f"ytsearch:{sanitized_query}"
@@ -1830,6 +1839,7 @@ async def queue(interaction: discord.Interaction):
                 "no_warnings": True,
                 "extract_flat": True,
                 "force_generic_extractor": True,
+                'cookiefile': 'cookies.txt'
             }
             info = await extract_info_async(ydl_opts, item['url'])
             title = info.get("title", "Unknown Title")
@@ -1917,6 +1927,7 @@ async def play_next(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
                 "force_generic_extractor": True,
+                'cookiefile': 'cookies.txt'
             }
             info = await extract_info_async(ydl_opts, search_query)
             video = info["entries"][0] if "entries" in info and info["entries"] else None
@@ -1937,6 +1948,7 @@ async def play_next(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
                 "force_generic_extractor": True,
+                'cookiefile': 'cookies.txt'
             }
             search_query = f"ytsearch:{sanitize_query(query)}" if not query.startswith(('http://', 'https://')) else query
             info = await extract_info_async(ydl_opts, search_query)
@@ -2078,6 +2090,7 @@ async def play_audio(guild_id, seek_time=0):
             "format": "bestaudio[acodec=opus]/bestaudio/best",
             "quiet": True, "no_warnings": True, "no_color": True, 
             "socket_timeout": 10, "force_generic_extractor": True,
+            'cookiefile': 'cookies.txt'
         }
         info = await extract_info_async(ydl_opts_play, music_player.current_url)
         music_player.current_info = info
