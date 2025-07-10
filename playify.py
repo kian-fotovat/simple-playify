@@ -640,7 +640,7 @@ async def karaoke(interaction: discord.Interaction):
         
 # Official API Client (fast and prioritized)
 SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
-SPOTIFY_CLIENT_SECRET = 'CLIENTSECRET' 
+SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE' 
 try:
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
         client_id=SPOTIFY_CLIENT_ID,
@@ -2458,52 +2458,58 @@ async def play_next(interaction: discord.Interaction, query: str):
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
 
+    # Re-using regexes from the play command
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+    deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
+    apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
+    tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
+    amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
 
     try:
+        tracks = None
+        # Check for platform links first
         if spotify_regex.match(query):
-            spotify_tracks = await process_spotify_url(query, interaction)
-            if not spotify_tracks or len(spotify_tracks) != 1:
-                raise Exception("Only single Spotify tracks are supported for /playnext")
-            
-            track_name, artist_name = spotify_tracks[0]
-            search_query = f"ytsearch:{sanitize_query(f'{track_name} {artist_name}')}"
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "noplaylist": True,
-                "no_color": True,
-                "socket_timeout": 10,
-            }
-            info = await extract_info_async(ydl_opts, search_query)
-            video = info["entries"][0] if "entries" in info and info["entries"] else None
-            if not video:
-                raise Exception("No results found")
-            video_url = video.get("webpage_url", video.get("url"))
-            if not video_url:
-                raise KeyError("No valid URL found in video metadata")
-            
-            logger.debug(f"Metadata for Spotify track: {video}")
-        else:
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
-                "extract_flat": True,
-                "noplaylist": True,
-                "no_color": True,
-                "socket_timeout": 10,
-            }
-            search_query = f"ytsearch:{sanitize_query(query)}" if not query.startswith(('http://', 'https://')) else query
-            info = await extract_info_async(ydl_opts, search_query)
-            video = info["entries"][0] if "entries" in info and info["entries"] else info
-            video_url = video.get("webpage_url", video.get("url"))
-            if not video_url:
-                raise KeyError("No valid URL found in video metadata")
-            
-            logger.debug(f"Metadata for non-Spotify query: {video}")
+            tracks = await process_spotify_url(query, interaction)
+        elif deezer_regex.match(query):
+            tracks = await process_deezer_url(query, interaction)
+        elif apple_music_regex.match(query):
+            tracks = await process_apple_music_url(query, interaction)
+        elif tidal_regex.match(query):
+            tracks = await process_tidal_url(query, interaction)
+        elif amazon_music_regex.match(query):
+            tracks = await process_amazon_music_url(query, interaction)
 
+        search_query_for_yt = query # Default to original query
+
+        if tracks:
+            if len(tracks) != 1:
+                raise Exception("Only single tracks are supported for /playnext, not playlists or albums.")
+            track_name, artist_name = tracks[0]
+            search_query_for_yt = f"{track_name} {artist_name}"
+
+        # Now, search on YouTube with the determined query
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "no_color": True,
+            "socket_timeout": 10,
+        }
+        
+        # If it wasn't a platform link, it might be a direct URL or search term
+        yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
+        
+        info = await extract_info_async(ydl_opts, yt_search_term)
+        video = info["entries"][0] if "entries" in info and info["entries"] else info
+        video_url = video.get("webpage_url", video.get("url"))
+
+        if not video_url:
+            raise KeyError("No valid URL found in video metadata")
+        
+        logger.debug(f"Metadata for playnext: {video}")
+
+        # Add the song to the front of the queue
         new_queue = asyncio.Queue()
         await new_queue.put({'url': video_url, 'is_single': True})
         
@@ -2523,14 +2529,19 @@ async def play_next(interaction: discord.Interaction, query: str):
         if is_kawaii:
             embed.set_footer(text="☆⌒(≧▽° )")
         await interaction.followup.send(embed=embed)
+        
+        # Start playback if nothing is playing
+        if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
+            music_player.current_task = asyncio.create_task(play_audio(guild_id))
+
     except Exception as e:
         embed = Embed(
             description=get_messages("search_error", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
-        logger.error(f"Error processing /playnext for {query}: {e}")
-
+        logger.error(f"Error processing /playnext for '{query}': {e}")
+        
 # /nowplaying command
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
