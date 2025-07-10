@@ -41,7 +41,6 @@
       scroll-behavior: smooth;
     }
 
-    /* Particle Background */
     #particles-js {
       position: fixed;
       width: 100%;
@@ -52,7 +51,6 @@
       background: radial-gradient(circle at center, var(--dark) 0%, var(--darker) 100%);
     }
 
-    /* Navigation */
     nav {
       position: fixed;
       top: 0;
@@ -112,7 +110,6 @@
       width: 100%;
     }
 
-    /* Commands Section */
     .commands {
       padding: 100px 5%;
       background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), rgba(0, 0, 0, 0.9));
@@ -157,9 +154,8 @@
       padding: 25px 30px;
       align-items: center;
       border-bottom: 1px solid rgba(138, 43, 226, 0.1);
-      transition: all 0.3s ease;
     }
-
+    
     .command-row:last-child {
       border-bottom: none;
     }
@@ -275,7 +271,6 @@
       text-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
     }
 
-    /* Footer */
     footer {
       background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), var(--darker));
       padding: 60px 5% 30px;
@@ -394,7 +389,6 @@
       font-size: 0.9rem;
     }
 
-    /* Responsive Design */
     @media (max-width: 768px) {
       .commands-table {
         margin: 0 20px;
@@ -440,7 +434,6 @@
       }
     }
 
-    /* Animations */
     .fade-in {
       opacity: 0;
       transform: translateY(30px);
@@ -460,7 +453,6 @@
       transition-delay: 0.4s;
     }
 
-    /* Particle JS Container */
     .particles-js-canvas-el {
       position: absolute;
       top: 0;
@@ -469,23 +461,21 @@
   </style>
 </head>
 <body>
-  <!-- Particle Background -->
   <div id="particles-js"></div>
 
-  <!-- Navigation -->
   <nav>
     <div class="logo">PLAYIFY</div>
     <div class="nav-links">
       <a href="index.html">Home</a>
       <a href="index.html#features">Features</a>
       <a href="index.html#platforms">Platforms</a>
+      STAND
       <a href="index.html#how-it-works">How It Works</a>
       <a href="commands.html">Commands</a>
       <a href="https://github.com/alan7383/playify" target="_blank">GitHub</a>
     </div>
   </nav>
 
-  <!-- Commands Section -->
   <section class="commands">
     <div class="category-section fade-in">
       <h3 class="category-title">
@@ -625,6 +615,38 @@
 
     <div class="category-section fade-in">
       <h3 class="category-title">
+        <i class="fas fa-microphone"></i>
+        Lyrics & Karaoke
+      </h3>
+      <div class="commands-table">
+        <div class="table-header">
+          <h3></h3>
+          <h3>Command</h3>
+          <h3>Description</h3>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/lyrics</h3>
+          </div>
+          <p class="command-desc">Displays the lyrics of the current song.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-microphone"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/karaoke</h3>
+          </div>
+          <p class="command-desc">Starts a karaoke session with synced lyrics. <strong>Pro Tip:</strong> For best results, add `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="category-section fade-in">
+      <h3 class="category-title">
         <i class="fas fa-cog"></i>
         Settings & Preferences
       </h3>
@@ -657,7 +679,6 @@
     </div>
   </section>
 
-  <!-- Footer -->
   <footer>
     <div class="footer-content">
       <div class="footer-column">
@@ -691,10 +712,8 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
   <script>
-    // Initialize particles.js
     particlesJS("particles-js", {
       "particles": {
         "number": {
@@ -801,7 +820,6 @@
       "retina_detect": true
     });
 
-    // Scroll reveal animation
     const fadeElements = document.querySelectorAll('.fade-in');
     
     const appearOptions = {
@@ -820,7 +838,6 @@
       });
     }, appearOptions);
 
-    // Check elements visibility on page load
     fadeElements.forEach(fadeElement => {
       const rect = fadeElement.getBoundingClientRect();
       if (rect.top < window.innerHeight && rect.bottom > 0) {
