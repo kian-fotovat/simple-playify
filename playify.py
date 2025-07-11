@@ -101,47 +101,56 @@ def get_mode(guild_id):
 
 
 # --- NEW HELPER FUNCTIONS FOR LYRICS ---
-
+# REMPLACEZ CETTE CLASSE
 class LyricsView(View):
-    def __init__(self, pages: list, original_embed: Embed, interaction: discord.Interaction):
-        super().__init__(timeout=180.0)  # The message will expire after 3 minutes of inactivity
+    def __init__(self, pages: list, original_embed: Embed):
+        super().__init__(timeout=300.0)
         self.pages = pages
         self.original_embed = original_embed
-        self.interaction = interaction
         self.current_page = 0
+        # L'attribut self.message est maintenant inutile
 
     def update_embed(self):
-        # Updates the embed with the current page
         self.original_embed.description = self.pages[self.current_page]
         self.original_embed.set_footer(text=f"Page {self.current_page + 1}/{len(self.pages)}")
         return self.original_embed
 
-    @discord.ui.button(label="⬅️ Previous", style=discord.ButtonStyle.grey)
+    @discord.ui.button(label="⬅️ Previous", style=discord.ButtonStyle.grey, row=0)
     async def previous_button(self, interaction: discord.Interaction, button: Button):
         if self.current_page > 0:
             self.current_page -= 1
         
-        button.disabled = self.current_page == 0
-        self.children[1].disabled = False # Enable the "Next" button
+        self.previous_button.disabled = self.current_page == 0
+        self.next_button.disabled = False
         
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="Next ➡️", style=discord.ButtonStyle.grey)
+    @discord.ui.button(label="Next ➡️", style=discord.ButtonStyle.grey, row=0)
     async def next_button(self, interaction: discord.Interaction, button: Button):
         if self.current_page < len(self.pages) - 1:
             self.current_page += 1
             
-        button.disabled = self.current_page == len(self.pages) - 1
-        self.children[0].disabled = False # Enable the "Previous" button
+        self.next_button.disabled = self.current_page == len(self.pages) - 1
+        self.previous_button.disabled = False
 
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
+        
+    @discord.ui.button(label="Refine", emoji="✏️", style=discord.ButtonStyle.secondary, row=0)
+    async def refine_button(self, interaction: discord.Interaction, button: Button):
+        # LA CORRECTION EST ICI : on utilise interaction.message
+        # C'est la manière la plus fiable d'obtenir le message actuel.
+        modal = RefineLyricsModal(message_to_edit=interaction.message)
+        await interaction.response.send_modal(modal)
+
+# REMPLACEZ L'INTÉGRALITÉ DE CETTE CLASSE DANS VOTRE FICHIER
 
 class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
     def __init__(self, original_interaction: discord.Interaction, suggested_query: str):
         super().__init__()
         self.original_interaction = original_interaction
         self.suggested_query = suggested_query
-
+        self.guild_id = original_interaction.guild_id # Ajout pour get_messages
+        
         self.corrected_query = discord.ui.TextInput(
             label="Song Title & Artist",
             placeholder="e.g., Believer Imagine Dragons",
@@ -151,16 +160,12 @@ class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
         self.add_item(self.corrected_query)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # We confirm the submission and allow time for searching
+        # On accuse réception du modal
         await interaction.response.defer(thinking=True, ephemeral=True)
         
         new_query = self.corrected_query.value
         logger.info(f"Retrying lyrics search with new query: '{new_query}'")
 
-        # We simulate a new search
-        # NOTE: This approach is simplified. We cannot directly call
-        # fetch_and_display_genius_lyrics because it depends on the player's state.
-        # Instead, we will launch a new Genius search.
         try:
             loop = asyncio.get_running_loop()
             if not genius:
@@ -170,11 +175,11 @@ class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
             song = await loop.run_in_executor(None, lambda: genius.search_song(new_query))
 
             if not song:
-                await interaction.followup.send(f"Sorry, I still couldn't find lyrics for **{new_query}**.", ephemeral=True)
+                fail_message = get_messages("lyrics_not_found_description", self.guild_id).format(query=new_query)
+                await interaction.followup.send(fail_message.split('\n')[0], ephemeral=True)
                 return
             
-            # If found, display the lyrics as usual
-            # (Reusing the logic from fetch_and_display_genius_lyrics)
+            # Recréation de l'affichage des paroles
             raw_lyrics = song.lyrics
             lines = raw_lyrics.split('\n')
             cleaned_lines = [line for line in lines if "contributor" not in line.lower() and "lyrics" not in line.lower() and "embed" not in line.lower()]
@@ -191,20 +196,30 @@ class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
                 pages.append(f"```{current_page_content.strip()}```")
 
             base_embed = Embed(title=f"📜 Lyrics for {song.title}", url=song.url, color=discord.Color.green())
-            view = LyricsView(pages=pages, original_embed=base_embed, interaction=self.original_interaction)
+            
+            # --- BLOC DE CORRECTION CRUCIAL ---
+            # 1. On crée la vue sans l'objet interaction
+            view = LyricsView(pages=pages, original_embed=base_embed)
             initial_embed = view.update_embed()
+            
+            # 2. On désactive les boutons
             view.children[0].disabled = True
-            if len(pages) <= 1: view.children[1].disabled = True
+            if len(pages) <= 1: 
+                view.children[1].disabled = True
 
-            # We use the original interaction's followup to respond in the correct channel
-            await self.original_interaction.followup.send(embed=initial_embed, view=view)
-            # We notify the user who clicked that it's done
+            # 3. On envoie le message via le "followup" de l'interaction originale et on le stocke
+            message = await self.original_interaction.followup.send(embed=initial_embed, view=view, wait=True)
+            
+            # 4. On lie la vue à son message
+            view.message = message
+            # --- FIN DE LA CORRECTION ---
+
+            # On notifie l'utilisateur que la recherche a abouti
             await interaction.followup.send("Lyrics found!", ephemeral=True)
 
         except Exception as e:
             logger.error(f"Error during lyrics retry: {e}")
             await interaction.followup.send("An error occurred during the new search.", ephemeral=True)
-
 
 class LyricsRetryView(discord.ui.View):
     # We add guild_id to the initialization
@@ -227,6 +242,178 @@ class LyricsRetryView(discord.ui.View):
             suggested_query=self.suggested_query
         )
         await interaction.response.send_modal(modal)
+
+# Corrected KaraokeRetryModal
+class KaraokeRetryModal(discord.ui.Modal, title="Refine Karaoke Search"):
+    def __init__(self, original_interaction: discord.Interaction, suggested_query: str):
+        super().__init__()
+        self.original_interaction = original_interaction
+        self.suggested_query = suggested_query
+        self.guild_id = original_interaction.guild_id
+        self.music_player = get_player(self.guild_id)
+        self.is_kawaii = get_mode(self.guild_id)
+
+        self.corrected_query = discord.ui.TextInput(
+            label="Song Title & Artist",
+            placeholder="e.g., Believer Imagine Dragons",
+            default=self.suggested_query,
+            style=discord.TextStyle.short
+        )
+        self.add_item(self.corrected_query)
+
+    # THIS IS THE METHOD THAT WAS MISSING
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        new_query = self.corrected_query.value
+        logger.info(f"Retrying synced lyrics search with new query: '{new_query}'")
+        
+        loop = asyncio.get_running_loop()
+        lrc = None
+        try:
+            lrc = await asyncio.wait_for(
+                loop.run_in_executor(None, syncedlyrics.search, new_query),
+                timeout=10.0
+            )
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.error(f"Error during karaoke retry search: {e}")
+
+        if not lrc:
+            fail_message = get_messages("karaoke_retry_fail", self.guild_id).format(query=new_query)
+            await interaction.followup.send(fail_message, ephemeral=True)
+            return
+
+        lyrics_lines = [{'time': int(m.group(1))*60000 + int(m.group(2))*1000 + int(m.group(3)), 'text': m.group(4).strip()} for line in lrc.splitlines() if (m := re.match(r'\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)', line))]
+
+        if not lyrics_lines:
+            fail_message = get_messages("karaoke_retry_fail", self.guild_id).format(query=new_query)
+            await interaction.followup.send(fail_message, ephemeral=True)
+            return
+
+        # Success! Start the karaoke.
+        self.music_player.synced_lyrics = lyrics_lines
+        
+        clean_title, _ = get_cleaned_song_info(self.music_player.current_info)
+        embed = Embed(
+            title=f"🎤 Karaoke for {clean_title}", 
+            description="Starting karaoke...", 
+            color=0xC7CEEA if self.is_kawaii else discord.Color.blue()
+        )
+        
+        # We use the original interaction's followup to send the main message
+        lyrics_message = await self.original_interaction.followup.send(embed=embed, wait=True)
+        self.music_player.lyrics_message = lyrics_message
+        self.music_player.lyrics_task = asyncio.create_task(update_karaoke_task(self.guild_id))
+        
+        # Notify the user who clicked the button that it worked
+        success_message = get_messages("karaoke_retry_success", self.guild_id)
+        await interaction.followup.send(success_message, ephemeral=True)
+
+
+# Corrected RefineLyricsModal
+class RefineLyricsModal(discord.ui.Modal, title="Refine Lyrics Search"):
+    def __init__(self, message_to_edit: discord.Message):
+        super().__init__()
+        self.message_to_edit = message_to_edit
+        self.guild_id = message_to_edit.guild.id
+        self.is_kawaii = get_mode(self.guild_id)
+
+        self.corrected_query = discord.ui.TextInput(
+            label="New Song Title & Artist",
+            placeholder="e.g., Blinding Lights The Weeknd",
+            style=discord.TextStyle.short
+        )
+        self.add_item(self.corrected_query)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        
+        new_query = self.corrected_query.value
+        logger.info(f"Refining lyrics search with new query: '{new_query}'")
+
+        if not genius:
+            await interaction.followup.send("Genius API is not configured.", ephemeral=True)
+            return
+
+        try:
+            # ... Toute la logique de recherche et de création de pages reste identique ...
+            loop = asyncio.get_running_loop()
+            song = await loop.run_in_executor(None, lambda: genius.search_song(new_query))
+
+            if not song:
+                await interaction.followup.send(f"Sorry, I still couldn't find lyrics for **{new_query}**.", ephemeral=True)
+                return
+            
+            raw_lyrics = song.lyrics
+            lines = raw_lyrics.split('\n')
+            cleaned_lines = [line for line in lines if "contributor" not in line.lower() and "lyrics" not in line.lower() and "embed" not in line.lower()]
+            lyrics = "\n".join(cleaned_lines).strip()
+            
+            pages = []
+            current_page_content = ""
+            for line in lyrics.split('\n'):
+                if len(current_page_content) + len(line) + 1 > 1500:
+                    pages.append(f"```{current_page_content.strip()}```")
+                    current_page_content = ""
+                current_page_content += line + "\n"
+            if current_page_content.strip():
+                pages.append(f"```{current_page_content.strip()}```")
+
+            new_embed = Embed(
+                title=f"📜 Lyrics for {song.title}", 
+                url=song.url, 
+                color=0xB5EAD7 if self.is_kawaii else discord.Color.green()
+            )
+            
+            new_view = LyricsView(pages=pages, original_embed=new_embed)
+            
+            final_embed = new_view.update_embed()
+            new_view.children[0].disabled = True
+            if len(pages) <= 1:
+                new_view.children[1].disabled = True
+
+            # On édite le message avec la nouvelle vue
+            await self.message_to_edit.edit(embed=final_embed, view=new_view)
+            
+            # La ligne 'new_view.message = updated_message' a été retirée car inutile.
+
+            await interaction.followup.send("Lyrics updated successfully!", ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Error during lyrics refinement: {e}", exc_info=True)
+            await interaction.followup.send("An error occurred during the new search.", ephemeral=True)
+
+class KaraokeRetryView(discord.ui.View):
+    def __init__(self, original_interaction: discord.Interaction, suggested_query: str, guild_id: int):
+        super().__init__(timeout=180.0)
+        self.original_interaction = original_interaction
+        self.suggested_query = suggested_query
+        self.guild_id = guild_id
+
+        # Set button labels from messages
+        self.retry_button.label = get_messages("karaoke_retry_button", self.guild_id)
+        self.genius_fallback_button.label = get_messages("karaoke_genius_fallback_button", self.guild_id)
+
+    @discord.ui.button(style=discord.ButtonStyle.primary)
+    async def retry_button(self, interaction: discord.Interaction, button: Button):
+        modal = KaraokeRetryModal(
+            original_interaction=self.original_interaction,
+            suggested_query=self.suggested_query
+        )
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(style=discord.ButtonStyle.secondary)
+    async def genius_fallback_button(self, interaction: discord.Interaction, button: Button):
+        # Disable buttons to show action is taken
+        for child in self.children:
+            child.disabled = True
+        await self.original_interaction.edit_original_response(view=self)
+
+        # Acknowledge the button click before starting the search
+        await interaction.response.defer()
+
+        # Fetch standard lyrics
+        fallback_msg = get_messages("lyrics_fallback_warning", self.guild_id)
+        await fetch_and_display_genius_lyrics(self.original_interaction, fallback_message=fallback_msg)
 
 # ADD THIS ENTIRE NEW CLASS
 class KaraokeWarningView(View):
@@ -354,7 +541,6 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
                 timeout=10.0
             )
             
-        # --> THE FOLLOWING BLOCK IS NOW CORRECTLY INDENTED WITHIN THE 'TRY' <--
         if not song:
             # We retrieve the texts from the `messages` dictionary
             error_title = get_messages("lyrics_not_found_title", guild_id)
@@ -411,23 +597,30 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
         if fallback_message:
             base_embed.set_author(name=fallback_message)
         
-        view = LyricsView(pages=pages, original_embed=base_embed, interaction=interaction)
+        # --- BLOC CORRIGÉ ---
+        # 1. On crée la vue sans l'objet interaction
+        view = LyricsView(pages=pages, original_embed=base_embed)
         initial_embed = view.update_embed()
         
+        # 2. On désactive les boutons si nécessaire
         view.children[0].disabled = True
         if len(pages) <= 1:
             view.children[1].disabled = True
 
-        await interaction.followup.send(embed=initial_embed, view=view)
+        # 3. On envoie le message et on attend pour récupérer l'objet Message
+        message = await interaction.followup.send(embed=initial_embed, view=view, wait=True)
 
-    # --> THE 'EXCEPT' BLOCKS ARE NOW CORRECTLY PLACED <--
+        # 4. On lie la vue au message sur lequel elle se trouve
+        view.message = message
+        # --- FIN DU BLOC CORRIGÉ ---
+
     except asyncio.TimeoutError:
         logger.error(f"Genius search timed out for '{clean_title}'.")
         await interaction.followup.send("Sorry, the lyrics search took too long to respond. Please try again later.", ephemeral=True)
     except Exception as e:
         logger.error(f"Error fetching/displaying Genius lyrics for '{clean_title}': {e}")
         await interaction.followup.send("An error occurred while displaying the lyrics.", ephemeral=True)
-        
+
 def format_lyrics_display(lyrics_lines, current_line_index):
     """
     Formats the lyrics for Discord display, correctly handling
@@ -564,10 +757,7 @@ async def karaoke(interaction: discord.Interaction):
     if music_player.lyrics_task and not music_player.lyrics_task.done():
         return await interaction.response.send_message("Lyrics are already being displayed!", ephemeral=True)
 
-    # --- This is where the magic happens ---
-    # We define all the karaoke logic in a nested function
     async def proceed_with_karaoke():
-        # We make sure the interaction is "deferred" if it's not already
         if not interaction.response.is_done():
             await interaction.response.defer()
 
@@ -575,7 +765,7 @@ async def karaoke(interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         lrc = None
         
-        # Attempt 1
+        # Attempt 1: Precise search
         try:
             precise_query = f"{clean_title} {artist_name}"
             logger.info(f"Attempting precise synced lyrics search: '{precise_query}'")
@@ -586,7 +776,7 @@ async def karaoke(interaction: discord.Interaction):
         except (asyncio.TimeoutError, Exception):
             logger.warning("Precise synced search failed or timed out.")
 
-        # Attempt 2
+        # Attempt 2: Broad search
         if not lrc:
             try:
                 logger.info(f"Trying broad search: '{clean_title}'")
@@ -597,47 +787,57 @@ async def karaoke(interaction: discord.Interaction):
             except (asyncio.TimeoutError, Exception):
                 logger.warning("Broad synced search also failed or timed out.")
 
-        # Fallback to Genius
-        if not lrc:
-            fallback_msg = get_messages("lyrics_fallback_warning", guild_id)
-            await fetch_and_display_genius_lyrics(interaction, fallback_message=fallback_msg)
-            return
+        # --- CORRECTED LOGIC ---
+        # First, try to parse the lyrics if a result was found
+        lyrics_lines = []
+        if lrc:
+            lyrics_lines = [{'time': int(m.group(1))*60000 + int(m.group(2))*1000 + int(m.group(3)), 'text': m.group(4).strip()} for line in lrc.splitlines() if (m := re.match(r'\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)', line))]
 
-        lyrics_lines = [{'time': int(m.group(1))*60000 + int(m.group(2))*1000 + int(m.group(3)), 'text': m.group(4).strip()} for line in lrc.splitlines() if (m := re.match(r'\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)', line))]
-
+        # Now, a SINGLE check handles all failures (not found OR bad format)
         if not lyrics_lines:
-            fallback_msg = get_messages("lyrics_fallback_warning", guild_id)
-            await fetch_and_display_genius_lyrics(interaction, fallback_message=fallback_msg)
+            error_title = get_messages("karaoke_not_found_title", guild_id)
+            error_desc = get_messages("karaoke_not_found_description", guild_id).format(query=f"{clean_title} {artist_name}")
+            
+            error_embed = Embed(
+                title=error_title,
+                description=error_desc,
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            
+            view = KaraokeRetryView(
+                original_interaction=interaction,
+                suggested_query=clean_title,
+                guild_id=guild_id
+            )
+            # Use followup.send because the interaction is already deferred
+            await interaction.followup.send(embed=error_embed, view=view)
             return
+        # --- END OF CORRECTION ---
 
+        # If we get here, lyrics_lines is valid. Proceed with karaoke.
         music_player.synced_lyrics = lyrics_lines
         embed = Embed(title=f"🎤 Karaoke for {clean_title}", description="Starting karaoke...", color=0xC7CEEA if is_kawaii else discord.Color.blue())
         
-        # We use the followup to send the final message
         lyrics_message = await interaction.followup.send(embed=embed, wait=True)
         music_player.lyrics_message = lyrics_message
         music_player.lyrics_task = asyncio.create_task(update_karaoke_task(guild_id))
 
-    # --- Warning logic ---
+    # --- Warning logic (unchanged) ---
     if guild_id in karaoke_disclaimer_shown:
-        # If already shown, start the karaoke directly
         await proceed_with_karaoke()
     else:
-        # Otherwise, display the warning
         warning_embed = Embed(
             title=get_messages("karaoke_warning_title", guild_id),
             description=get_messages("karaoke_warning_description", guild_id),
             color=0xFFB6C1 if is_kawaii else discord.Color.orange()
         )
-        # We create the view and pass it the coroutine to execute
         view = KaraokeWarningView(interaction, karaoke_coro=proceed_with_karaoke)
         
-        # We customize the button label
         button_label = get_messages("karaoke_warning_button", guild_id)
         view.children[0].label = button_label
         
         await interaction.response.send_message(embed=warning_embed, view=view)
-        
+
 # Official API Client (fast and prioritized)
 SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
 SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE' 
@@ -939,7 +1139,7 @@ messages = {
         "normal": "Continue",
         "kawaii": "Continue (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
     },
-        "lyrics_not_found_title": {
+    "lyrics_not_found_title": {
         "normal": "😢 Lyrics Not Found",
         "kawaii": "૮( ´• ˕ •` )ა Lyrics not found..."
     },
@@ -950,6 +1150,30 @@ messages = {
     "lyrics_refine_button": {
         "normal": "Refine Search",
         "kawaii": "Try again! (o･ω･)ﾉ"
+    },
+    "karaoke_not_found_title": {
+    "normal": "😢 Synced Lyrics Not Found",
+    "kawaii": "૮( ´• ˕ •` )ა Synced Lyrics Not Found..."
+    },
+    "karaoke_not_found_description": {
+        "normal": "I couldn't find synced lyrics for **{query}**.\n\nYou can refine the search or search for standard (non-synced) lyrics on Genius.",
+        "kawaii": "I looked everywhere but couldn't find the synced lyrics for **{query}** (｡•́︿•̀｡)\n\nYou can try again, or we can look for the normal lyrics on Genius together!~"
+    },
+    "karaoke_retry_button": {
+        "normal": "Refine Search",
+        "kawaii": "Try Again! (o･ω･)ﾉ"
+    },
+    "karaoke_genius_fallback_button": {
+        "normal": "Search on Genius",
+        "kawaii": "Find on Genius 📜"
+    },
+    "karaoke_retry_success": {
+        "normal": "Lyrics found! Starting karaoke...",
+        "kawaii": "Yay, I found them! Starting karaoke~ 🎤"
+    },
+    "karaoke_retry_fail": {
+        "normal": "Sorry, I still couldn't find synced lyrics for **{query}**.",
+        "kawaii": "Aww, still no luck finding the synced lyrics for **{query}**... (´-ω-`)"
     },
 }
 
@@ -2541,7 +2765,7 @@ async def play_next(interaction: discord.Interaction, query: str):
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
         logger.error(f"Error processing /playnext for '{query}': {e}")
-        
+
 # /nowplaying command
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
