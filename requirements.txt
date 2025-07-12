@@ -1,10 +1,11 @@
 # requirements.txt
 
-# Core Discord library
+# Core Discord library and voice dependency
 discord.py
+PyNacl
 
 # Audio/Video downloading
-yt-dlp
+yt_dlp
 
 # Music platform APIs and scrapers
 spotipy
@@ -16,3 +17,4 @@ playwright
 
 # Utilities
 cachetools
+psutil
