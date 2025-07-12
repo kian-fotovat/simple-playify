@@ -26,6 +26,12 @@ import json
 import time
 import syncedlyrics
 import lyricsgenius
+import psutil
+import time
+import datetime
+import platform
+import sys
+import math # Needed for the format_bytes helper
 
 # --- Logging ---
 
@@ -36,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 GENIUS_TOKEN = "YOUR_GENIUS_TOKEN_HERE" 
 
-if GENIUS_TOKEN and GENIUS_TOKEN != "":
+if GENIUS_TOKEN and GENIUS_TOKEN != "YOUR_GENIUS_TOKEN_HERE":
     genius = lyricsgenius.Genius(GENIUS_TOKEN, verbose=False, remove_section_headers=True)
     logger.info("LyricsGenius client initialized.")
 else:
@@ -3217,6 +3223,120 @@ async def toggle_autoplay(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
+# /status command (hyper-complete version)
+@bot.tree.command(name="status", description="Displays the bot's full performance and diagnostic stats.")
+async def status(interaction: discord.Interaction):
+    
+    # --- Helper function to format bytes ---
+    def format_bytes(size):
+        if size == 0:
+            return "0B"
+        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+        i = int(math.floor(math.log(size, 1024)))
+        p = math.pow(1024, i)
+        s = round(size / p, 2)
+        return f"{s} {size_name[i]}"
+
+    await interaction.response.defer(ephemeral=True) # Defer for a potentially long operation
+
+    # === BOT & DISCORD METRICS ===
+    bot_process = psutil.Process()
+    latency = round(bot.latency * 1000)
+    server_count = len(bot.guilds)
+    user_count = sum(guild.member_count for guild in bot.guilds)
+    current_time = time.time()
+    uptime_seconds = int(round(current_time - bot.start_time))
+    uptime_string = str(datetime.timedelta(seconds=uptime_seconds))
+
+    # === MUSIC & PLAYER METRICS ===
+    active_players = len(music_players)
+    total_queued_songs = sum(p.queue.qsize() for p in music_players.values())
+    
+    # Count active FFmpeg child processes
+    ffmpeg_processes = 0
+    try:
+        children = bot_process.children(recursive=True)
+        for child in children:
+            if child.name().lower() == 'ffmpeg':
+                ffmpeg_processes += 1
+    except psutil.Error:
+        ffmpeg_processes = "N/A" # In case of permission errors
+
+    # === HOST SYSTEM METRICS ===
+    # CPU
+    cpu_freq = psutil.cpu_freq()
+    cpu_load = psutil.cpu_percent(interval=0.1) # 0.1s interval for a quick check
+    
+    # Memory
+    ram_info = psutil.virtual_memory()
+    ram_total = format_bytes(ram_info.total)
+    ram_used = format_bytes(ram_info.used)
+    ram_percent = ram_info.percent
+    bot_ram_usage = format_bytes(bot_process.memory_info().rss)
+    
+    # Disk
+    disk_info = psutil.disk_usage('/')
+    disk_total = format_bytes(disk_info.total)
+    disk_used = format_bytes(disk_info.used)
+    disk_percent = disk_info.percent
+
+    # === ENVIRONMENT & LIBRARIES ===
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    discord_py_version = discord.__version__
+    yt_dlp_version = yt_dlp.version.__version__
+    os_info = f"{platform.system()} {platform.release()}"
+
+    # === ASSEMBLE THE EMBED ===
+    embed = discord.Embed(
+        title=f"Playify's Dashboard",
+        description=f"Full operational status of the bot and its environment.",
+        color=0x2ECC71 if latency < 200 else (0xE67E22 if latency < 500 else 0xE74C3C) # Color changes with latency
+    )
+    embed.set_thumbnail(url=bot.user.avatar.url)
+
+    embed.add_field(
+        name="📊 Bot",
+        value=f"**Discord Latency:** {latency} ms\n"
+              f"**Servers:** {server_count}\n"
+              f"**Users:** {user_count}\n"
+              f"**Uptime:** {uptime_string}",
+        inline=True
+    )
+
+    embed.add_field(
+        name="🎧 Music Player",
+        value=f"**Active Players:** {active_players}\n"
+              f"**Queued Songs:** {total_queued_songs}\n"
+              f"**FFmpeg Processes:** `{ffmpeg_processes}`\n"
+              f"**URL Cache:** {url_cache.currsize}/{url_cache.maxsize}",
+        inline=True
+    )
+    
+    embed.add_field(name="\u200b", value="\u200b", inline=False) # Spacer
+
+    embed.add_field(
+        name="💻 Host System",
+        value=f"**OS:** {os_info}\n"
+              f"**CPU:** {cpu_load}% @ {cpu_freq.current:.0f}MHz\n"
+              f"**RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
+              f"**Disk:** {disk_used} / {disk_total} ({disk_percent}%)",
+        inline=True
+    )
+
+    embed.add_field(
+        name="⚙️ Environment",
+        value=f"**Python:** v{python_version}\n"
+              f"**Discord.py:** v{discord_py_version}\n"
+              f"**yt-dlp:** v{yt_dlp_version}\n"
+              f"**Bot RAM Usage:** {bot_ram_usage}",
+        inline=True
+    )
+
+    embed.set_footer(text=f"Data requested by {interaction.user.display_name}")
+    embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+
+    await interaction.followup.send(embed=embed)    
+
 # ==============================================================================
 # 6. DISCORD EVENTS
 # ==============================================================================    
@@ -3295,5 +3415,6 @@ async def on_ready():
 # 7. BOT INITIALIZATION & RUN
 # ==============================================================================        
 
+bot.start_time = time.time()
 # Run the bot (replace with your own token)
 bot.run("TOKEN")
