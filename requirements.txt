@@ -9,7 +9,7 @@ yt_dlp
 
 # Music platform APIs and scrapers
 spotipy
-spotify-scraper
+spotifyscraper[all]
 requests
 syncedlyrics
 lyricsgenius
