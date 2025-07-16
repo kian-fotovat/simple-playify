@@ -16,7 +16,6 @@
       font-weight: normal;
       font-style: normal;
     }
-
     :root {
       --primary: #8A2BE2;
       --secondary: #9932CC;
@@ -26,13 +25,11 @@
       --text: #ffffff;
       --text-secondary: #cccccc;
     }
-
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-
     html, body {
       background: var(--darker);
       color: var(--text);
@@ -40,7 +37,6 @@
       overflow-x: hidden;
       scroll-behavior: smooth;
     }
-
     #particles-js {
       position: fixed;
       width: 100%;
@@ -50,7 +46,6 @@
       z-index: -1;
       background: radial-gradient(circle at center, var(--dark) 0%, var(--darker) 100%);
     }
-
     nav {
       position: fixed;
       top: 0;
@@ -65,7 +60,6 @@
       background: rgba(0, 0, 0, 0.3);
       border-bottom: 1px solid rgba(138, 43, 226, 0.2);
     }
-
     .logo {
       font-family: 'SequelGeoWide', sans-serif;
       font-weight: normal;
@@ -76,12 +70,10 @@
       -webkit-text-fill-color: transparent;
       text-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
     }
-
     .nav-links {
       display: flex;
       gap: 30px;
     }
-
     .nav-links a {
       color: var(--text-secondary);
       text-decoration: none;
@@ -90,11 +82,9 @@
       transition: all 0.3s ease;
       position: relative;
     }
-
     .nav-links a:hover {
       color: var(--text);
     }
-
     .nav-links a::after {
       content: '';
       position: absolute;
@@ -105,18 +95,15 @@
       background: linear-gradient(90deg, var(--primary), var(--secondary));
       transition: width 0.3s ease;
     }
-
     .nav-links a:hover::after {
       width: 100%;
     }
-
     .commands {
       padding: 100px 5%;
       background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), rgba(0, 0, 0, 0.9));
       min-height: 100vh;
       position: relative;
     }
-
     .commands-table {
       max-width: 1200px;
       margin: 0 auto;
@@ -127,7 +114,6 @@
       overflow: hidden;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
-
     .table-header {
       background: rgba(138, 43, 226, 0.15);
       padding: 25px 30px;
@@ -137,7 +123,6 @@
       align-items: center;
       border-bottom: 2px solid rgba(138, 43, 226, 0.2);
     }
-
     .table-header h3 {
       font-family: 'SequelGeoWide', sans-serif;
       color: var(--primary);
@@ -146,7 +131,6 @@
       text-transform: uppercase;
       letter-spacing: 1px;
     }
-
     .command-row {
       display: grid;
       grid-template-columns: 80px 1fr 2fr;
@@ -155,15 +139,12 @@
       align-items: center;
       border-bottom: 1px solid rgba(138, 43, 226, 0.1);
     }
-
     .command-row:last-child {
       border-bottom: none;
     }
-
     .command-row:hover {
       background: rgba(138, 43, 226, 0.08);
     }
-
     .command-icon {
       width: 55px;
       height: 55px;
@@ -177,23 +158,19 @@
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(138, 43, 226, 0.1);
     }
-
     .command-row:hover .command-icon {
       background: rgba(138, 43, 226, 0.2);
       transform: scale(1.05);
       box-shadow: 0 6px 20px rgba(138, 43, 226, 0.2);
     }
-
     .command-row:hover .command-icon i {
       color: var(--text);
     }
-
     .command-name {
       display: flex;
       align-items: center;
       gap: 15px;
     }
-
     .command-title {
       font-family: 'SequelGeoWide', sans-serif;
       color: var(--text);
@@ -201,7 +178,6 @@
       margin: 0;
       letter-spacing: 0.5px;
     }
-
     .admin-badge {
       background: rgba(138, 43, 226, 0.2);
       color: var(--primary);
@@ -212,25 +188,21 @@
       letter-spacing: 0.5px;
       box-shadow: 0 2px 8px rgba(138, 43, 226, 0.1);
     }
-
     .command-desc {
       color: var(--text-secondary);
       margin: 0;
       line-height: 1.7;
       font-size: 1.1rem;
     }
-
     .command-desc a {
       color: var(--primary);
       text-decoration: none;
       transition: all 0.3s ease;
       position: relative;
     }
-
     .command-desc a:hover {
       color: var(--text);
     }
-
     .command-desc a::after {
       content: '';
       position: absolute;
@@ -241,18 +213,15 @@
       background: linear-gradient(90deg, var(--primary), var(--secondary));
       transition: width 0.3s ease;
     }
-
     .command-desc a:hover::after {
       width: 100%;
     }
-
     .category-section {
       margin-bottom: 50px;
       max-width: 1200px;
       margin-left: auto;
       margin-right: auto;
     }
-
     .category-title {
       font-size: 2.2rem;
       margin-bottom: 25px;
@@ -264,20 +233,17 @@
       text-shadow: 0 2px 10px rgba(138, 43, 226, 0.2);
       padding: 0 30px;
     }
-
     .category-title i {
       color: var(--primary);
       font-size: 2rem;
       text-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
     }
-
     footer {
       background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), var(--darker));
       padding: 60px 5% 30px;
       text-align: center;
       position: relative;
     }
-
     .footer-content {
       max-width: 1200px;
       margin: 0 auto;
@@ -286,39 +252,32 @@
       gap: 40px;
       text-align: left;
     }
-
     .footer-column h3 {
       font-size: 1.3rem;
       margin-bottom: 20px;
       font-family: 'SequelGeoWide', sans-serif;
       color: var(--text);
     }
-
     .footer-column ul {
       list-style: none;
     }
-
     .footer-column ul li {
       margin-bottom: 10px;
     }
-
     .footer-column ul li a {
       color: var(--text-secondary);
       text-decoration: none;
       transition: all 0.3s ease;
     }
-
     .footer-column ul li a:hover {
       color: var(--text);
       padding-left: 5px;
     }
-
     .social-links {
       display: flex;
       gap: 15px;
       margin-top: 20px;
     }
-
     .social-links a {
       display: flex;
       align-items: center;
@@ -331,14 +290,12 @@
       transition: all 0.3s ease;
       border: 1px solid rgba(138, 43, 226, 0.2);
     }
-
     .social-links a:hover {
       background: linear-gradient(135deg, var(--primary), var(--secondary));
       transform: translateY(-3px);
       border-color: transparent;
       box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
     }
-
     .button {
       padding: 18px 45px;
       border-radius: 50px;
@@ -353,22 +310,18 @@
       cursor: pointer;
       font-family: 'Rajdhani', sans-serif;
     }
-
     .primary-button {
       background: linear-gradient(90deg, var(--primary), var(--secondary));
       color: white;
       box-shadow: 0 0 25px rgba(138, 43, 226, 0.5);
     }
-
     .button:hover {
       transform: translateY(-5px);
       box-shadow: 0 15px 30px rgba(138, 43, 226, 0.4);
     }
-
     .primary-button:hover {
       animation: pulse 1.5s infinite;
     }
-
     @keyframes pulse {
       0% {
         box-shadow: 0 0 0 0 rgba(138, 43, 226, 0.7);
@@ -380,7 +333,6 @@
         box-shadow: 0 0 0 0 rgba(138, 43, 226, 0);
       }
     }
-
     .copyright {
       margin-top: 60px;
       padding-top: 30px;
@@ -388,71 +340,57 @@
       color: var(--text-secondary);
       font-size: 0.9rem;
     }
-
     @media (max-width: 768px) {
       .commands-table {
         margin: 0 20px;
       }
-
       .table-header, .command-row {
         grid-template-columns: 60px 1fr;
         padding: 20px;
         gap: 20px;
       }
-
       .table-header h3:last-child,
       .command-desc {
         display: none;
       }
-
       .command-icon {
         width: 45px;
         height: 45px;
         font-size: 1.3rem;
       }
-
       .command-title {
         font-size: 1.1rem;
       }
     }
-
     @media (max-width: 480px) {
       .section-title {
         font-size: 2rem;
       }
-
       .nav-links {
         display: none;
       }
-
       .command-title {
         font-size: 1.3rem;
       }
-
       .command-desc {
         font-size: 1rem;
       }
     }
-
     .fade-in {
       opacity: 0;
       transform: translateY(30px);
       transition: opacity 0.6s ease, transform 0.6s ease;
     }
-
     .fade-in.visible {
       opacity: 1;
       transform: translateY(0);
     }
-
     .delay-1 {
       transition-delay: 0.2s;
     }
-
     .delay-2 {
       transition-delay: 0.4s;
     }
-
     .particles-js-canvas-el {
       position: absolute;
       top: 0;
@@ -462,7 +400,6 @@
 </head>
 <body>
   <div id="particles-js"></div>
-
   <nav>
     <div class="logo">PLAYIFY</div>
     <div class="nav-links">
@@ -474,7 +411,6 @@
       <a href="https://github.com/alan7383/playify" target="_blank">GitHub</a>
     </div>
   </nav>
-
   <section class="commands">
     <div class="category-section fade-in">
       <h3 class="category-title">
@@ -534,7 +470,6 @@
         </div>
       </div>
     </div>
-
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-list"></i>
@@ -611,7 +546,6 @@
         </div>
       </div>
     </div>
-
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-microphone"></i>
@@ -643,7 +577,6 @@
         </div>
       </div>
     </div>
-
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-cog"></i>
@@ -674,10 +607,18 @@
           </div>
           <p class="command-desc">Applies or removes audio filters (e.g., slowed, nightcore, bassboost) in real time.</p>
         </div>
-      </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/status</h3>
+          </div>
+          <p class="command-desc">Displays the bot's full performance and diagnostic stats.</p>
+        </div>
+        </div>
     </div>
   </section>
-
   <footer>
     <div class="footer-content">
       <div class="footer-column">
@@ -710,7 +651,6 @@
       © 2025 Playify by @alananasssss. All rights reserved.
     </div>
   </footer>
-
   <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
   <script>
     particlesJS("particles-js", {
@@ -818,14 +758,11 @@
       },
       "retina_detect": true
     });
-
     const fadeElements = document.querySelectorAll('.fade-in');
-    
     const appearOptions = {
       threshold: 0.1,
       rootMargin: "0px 0px -50px 0px"
     };
-
     const appearOnScroll = new IntersectionObserver(function(entries, appearOnScroll) {
       entries.forEach(entry => {
         if (!entry.isIntersecting) {
@@ -836,7 +773,6 @@
         }
       });
     }, appearOptions);
-
     fadeElements.forEach(fadeElement => {
       const rect = fadeElement.getBoundingClientRect();
       if (rect.top < window.innerHeight && rect.bottom > 0) {
