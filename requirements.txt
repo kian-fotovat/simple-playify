@@ -1,5 +1,3 @@
-# requirements.txt
-
 # Core Discord library and voice dependency
 discord.py
 PyNacl
@@ -14,6 +12,7 @@ requests
 syncedlyrics
 lyricsgenius
 playwright
+python-dotenv  # <-- NEW
 
 # Utilities
 cachetools
