@@ -33,6 +33,7 @@ import platform
 import sys
 import math # Needed for the format_bytes helper
 import traceback # --- NEW --- To format exceptions
+import os
 
 # --- Logging ---
 
@@ -41,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # --- API Tokens & Clients ---
 
-GENIUS_TOKEN = "YOUR_GENIUS_TOKEN_HERE"
+GENIUS_TOKEN = os.getenv("GENIUS_TOKEN")
 
 if GENIUS_TOKEN and GENIUS_TOKEN != "YOUR_GENIUS_TOKEN_HERE":
     genius = lyricsgenius.Genius(GENIUS_TOKEN, verbose=False, remove_section_headers=True)
@@ -52,8 +53,8 @@ else:
 
 # Official API Client (fast and prioritized)
 
-SPOTIFY_CLIENT_ID = 'CLIENTIDHERE'
-SPOTIFY_CLIENT_SECRET = 'CLIENTSECRETHERE'
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 try:
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
         client_id=SPOTIFY_CLIENT_ID,
@@ -2197,10 +2198,8 @@ async def play(interaction: discord.Interaction, query: str):
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
 
-    # On acquitte l'interaction IMMÉDIATEMENT pour éviter le timeout de 3 secondes.
     await interaction.response.defer()
 
-    # Maintenant, on peut faire les opérations longues comme la connexion.
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         try:
             # If there's an old, invalid client, clean it up first
@@ -2224,14 +2223,12 @@ async def play(interaction: discord.Interaction, query: str):
                 description=get_messages("connection_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            # MODIFIÉ: On utilise followup.send() ici aussi.
             await interaction.followup.send(embed=embed, ephemeral=True)
             logger.error(f"Error connecting: {e}")
             return
 
     music_player.text_channel = interaction.channel
     
-    # Le reste de votre code (la logique de recherche de musique) commence ici et reste identique...
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
     soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
@@ -3651,5 +3648,4 @@ async def on_ready():
 # ==============================================================================
 
 bot.start_time = time.time()
-# Run the bot (replace with your own token)
-bot.run("TOKEN")
+bot.run(os.getenv("DISCORD_TOKEN"))
