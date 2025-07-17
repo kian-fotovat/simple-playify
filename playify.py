@@ -2197,7 +2197,10 @@ async def play(interaction: discord.Interaction, query: str):
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
 
-    # --- MODIFIED --- Connect if not connected OR if the client object is invalid
+    # On acquitte l'interaction IMMÉDIATEMENT pour éviter le timeout de 3 secondes.
+    await interaction.response.defer()
+
+    # Maintenant, on peut faire les opérations longues comme la connexion.
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         try:
             # If there's an old, invalid client, clean it up first
@@ -2213,20 +2216,22 @@ async def play(interaction: discord.Interaction, query: str):
                  music_player.voice_client = interaction.guild.voice_client
             else: # If something else is wrong, send an error
                  embed = Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-                 await interaction.response.send_message(embed=embed, ephemeral=True)
+                 # MODIFIÉ: On utilise followup.send() car on a déjà "defer".
+                 await interaction.followup.send(embed=embed, ephemeral=True)
                  return
         except Exception as e:
             embed = Embed(
                 description=get_messages("connection_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # MODIFIÉ: On utilise followup.send() ici aussi.
+            await interaction.followup.send(embed=embed, ephemeral=True)
             logger.error(f"Error connecting: {e}")
             return
 
     music_player.text_channel = interaction.channel
-    await interaction.response.defer()
-
+    
+    # Le reste de votre code (la logique de recherche de musique) commence ici et reste identique...
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
     soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
@@ -2936,17 +2941,14 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=info["thumbnail"])
                 await interaction.followup.send(embed=embed)
         except yt_dlp.utils.DownloadError as e:
-            # Analyse l'erreur pour obtenir une raison claire et un emoji adapté
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
             
-            # Crée un embed plus joli et informatif
             embed = Embed(
                 title=f'{emoji} {get_messages(title_key, guild_id)}',
                 description=get_messages(desc_key, guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.orange()
             )
             
-            # Ajoute un champ avec des instructions et le lien Markdown vers GitHub
             github_url = "https://github.com/alan7383/playify/issues"
             embed.add_field(
                 name=f'🤔 {get_messages("error_field_what_to_do", guild_id)}',
@@ -2954,7 +2956,6 @@ async def play(interaction: discord.Interaction, query: str):
                 inline=False
             )
 
-            # Ajoute l'erreur technique complète dans un bloc de code pour le copier-coller
             embed.add_field(
                 name=f'📋 {get_messages("error_field_full_error", guild_id)}',
                 value=f"```\n{str(e)}\n```",
@@ -2964,7 +2965,6 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.followup.send(embed=embed, ephemeral=True)
             logger.warning(f"A user-facing download error occurred: {str(e).splitlines()[0]}")
         except Exception as e:
-            # Garde le fallback générique pour les autres erreurs inattendues
             embed = Embed(
                 description=get_messages("video_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
