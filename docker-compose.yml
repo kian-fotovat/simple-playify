@@ -1,9 +1,0 @@
-version: '3.8'
-
-services:
-  playify:
-    build: .
-    env_file: .env
-    volumes:
-      - ./logs:/app/logs  # Optional: for persistent logs
-    restart: unless-stopped
