@@ -37,7 +37,7 @@ Playify handles Spotify like a pro:
 - **Autoplay** for similar tracks (YouTube Mix, SoundCloud Stations).
 - **Looping** and **shuffling** for ultimate playlist control.
 - **Kawaii mode** for extra cute responses (toggle with `/kaomoji`).
-- Apply audio effects with /filter: slowed, reverb, bass boost, nightcore, and more.
+- Apply audio effects with `/filter`: slowed, reverb, bass boost, nightcore, and more.
 - Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a sprinkle of chaos.
 
 ---
@@ -57,6 +57,7 @@ Want to run Playify yourself? It’s straightforward.
 * **Git**: To clone the repo.
 * **Discord Bot Token**: Get it from the [Discord Developer Portal](https://discord.com/developers/applications).
 * **Spotify API Credentials** (optional, for Spotify support): Create an app on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
+* **Genius API Token** (optional, for lyrics): Create a client at [Genius API](https://genius.com/api-clients).
 
 ### Setup Steps
 
@@ -73,19 +74,34 @@ Want to run Playify yourself? It’s straightforward.
    pip install -r requirements.txt
    ```
 
-3. **Install Playwright browsers** (after installing requirements):
+3. **Install Playwright browsers**:
 
    ```bash
    playwright install
    ```
 
-4. **Run the bot**:
+4. **Copy the example environment file**:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+5. **Edit `.env`** and fill in your tokens:
+
+   ```env
+   DISCORD_TOKEN=your_discord_bot_token_here
+   SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+   GENIUS_TOKEN=your_genius_api_token_here
+   ```
+
+6. **Run the bot**:
 
    ```bash
    python playify.py
    ```
 
-5. **Invite the bot** to your server:
+7. **Invite the bot** to your server:
 
    * Go to the [Discord Developer Portal](https://discord.com/developers/applications).
    * Create an application, add a bot, and enable **Guilds** and **Voice States** intents.
@@ -145,3 +161,4 @@ MIT License. Do whatever you want with it, just don’t break anything (too badl
 ---
 
 <p align="center">Built with 💢 and ☕ by alan7383</p>
+```
