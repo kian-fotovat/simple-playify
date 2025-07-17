@@ -8,45 +8,40 @@
 
 ## ＼(ノºДº)ノ What is Playify?
 
-Playify is a **minimalist**, **open-source** Discord music bot that **just works**.  
-No premium tier, no web dashboard, no tracking — just **pure music and vibes**.
+A **minimalist**, **open-source** Discord music bot that **just works** — no ads, no tracking, no premium tier.  
+Just pure music and good vibes (◕‿◕)ノ
 
 ✅ Supports:  
 YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music
 
 ---
 
-## 🐳 Docker Quick Start (Recommended)
+## 🧰 Manual Setup (Recommended)
 
-### ✅ One-liner install
+### 1. Clone the repo
 ```bash
 git clone https://github.com/alan7383/playify.git
 cd playify
-cp .env.example .env
-# Edit .env with your tokens
-docker compose up --build
 ```
 
----
-
-## 🧰 Manual Setup (without Docker)
-
-### 🔧 Requirements
-- Python 3.9+
-- FFmpeg
-- Discord Bot Token
-- (Optional) Spotify API & Genius API
-
-### 📦 Install
+### 2. Install dependencies
 ```bash
-git clone https://github.com/alan7383/playify.git
-cd playify
 pip install -r requirements.txt
 playwright install
+```
+
+### 3. Set up your `.env`
+```bash
 cp .env.example .env
 # Edit .env with your tokens
+```
+
+### 4. Run the bot
+```bash
 python playify.py
 ```
+
+> 💡 Make sure **FFmpeg** is installed and in your PATH.
 
 ---
 
@@ -65,53 +60,54 @@ GENIUS_TOKEN=your_genius_api_token_here
 
 ---
 
-## 🎶 Features
+## 🎶 Features (◕‿◕)ノ
 
-- ✅ Play from 9+ platforms
-- ✅ Real-time audio filters (slowed, bass boost, nightcore...)
-- ✅ Karaoke mode with synced lyrics
-- ✅ Autoplay, shuffle, queue, loop
-- ✅ Kawaii mode toggle
-- ✅ Slash commands only
-- ✅ Zero tracking, zero logs stored
+- 🎵 Play from **9+ platforms**  
+- 🎧 Real-time audio filters (slowed, nightcore, bass boost...)  
+- 🎤 Karaoke mode with **synced lyrics**  
+- 🔁 Loop, shuffle, autoplay  
+- 💖 Kawaii mode toggle (`/kaomoji`)  
+- 🧪 Slash commands only  
+- 🔒 Zero tracking, zero logs stored
 
 ---
 
-## 🧪 Commands
+## 🧪 Command List (with kaomoji style)
 
 | Command | Description |
-|--------|-------------|
-| `/play <url or query>` | Play a song or playlist |
-| `/queue` | Show current queue |
-| `/clearqueue` | Clear the current queue |
-| `/playnext <url or query>` | Add a song to play next |
-| `/nowplaying` | Show the current song playing |
-| `/pause` | Pause the current playback |
-| `/resume` | Resume the playback |
-| `/skip` | Skip to the next song |
-| `/loop` | Enable/disable looping for the current song |
-| `/stop` | Stop playback and disconnect the bot |
-| `/shuffle` | Shuffle the current queue |
-| `/autoplay` | Enable/disable autoplay of similar songs |
-| `/filter` | Apply or remove audio filters in real time |
-| `/lyrics` | Get song lyrics from Genius |
-| `/karaoke` | Start a synced karaoke-style lyrics display |
-| `/status` | Displays the bot's full performance and diagnostic stats |
-| `/kaomoji` | Enable/disable kawaii mode |
+|---------|-------------|
+| `/play <url or query>` | Add a song or playlist to the queue ♪(´▽｀) |
+| `/queue` | Show current queue (◕‿◕)ノ |
+| `/clearqueue` | Empty the queue (≧▽≦) |
+| `/playnext <url>` | Add as next song (っ◕‿◕)っ |
+| `/nowplaying` | Show what's playing now ♫♬ |
+| `/pause` | Pause music (´･_･`) |
+| `/resume` | Resume music ☆*:.｡.o(≧▽≦)o.｡.:*☆ |
+| `/skip` | Skip to next track (ノ°ο°)ノ |
+| `/loop` | Toggle loop mode 🔁 |
+| `/stop` | Stop & disconnect (ﾉ´･ω･)ﾉ ﾐ ┸━┸ |
+| `/shuffle` | Shuffle queue (✿◕‿◕) |
+| `/autoplay` | Toggle autoplay ♫ |
+| `/filter` | Change audio filters 🎧 |
+| `/lyrics` | Show lyrics 📜 |
+| `/karaoke` | Start synced karaoke 🎤 |
+| `/status` | Bot dashboard & stats 📊 |
+| `/kaomoji` | Toggle kawaii mode (◕‿◕✿) |
 
 ---
 
 ## 📄 License
 
-MIT License — do whatever you want, just don’t break it (too badly).
+MIT License — do whatever you want, just don’t break it (too badly) (⊙‿‿⊙)
 
 ---
 
 ## ❤️ Support
 
-If you want to help keep Playify ad-free and running:
+Keep Playify ad-free and running:
 
-👉 [PayPal](https://paypal.me/alanmussot1)
+👉 [PayPal](https://paypal.me/alanmussot1)  
+Your support might fix bugs *slightly* faster... no promises (´• ω •`)
 
 ---
 
