@@ -104,10 +104,13 @@ MIT License — do whatever you want, just don’t break it (too badly) (⊙‿�
 
 ## ❤️ Support
 
-Keep Playify ad-free and running:
+Need help or want to suggest something?
 
-👉 [PayPal](https://paypal.me/alanmussot1)  
+👉 [Join the Discord Server](https://discord.gg/JeH8g6g3cG) – get support, report bugs, or just hang out 🎧  
+👉 [PayPal](https://paypal.me/alanmussot1) – help keep Playify ad-free and alive  
+
 Your support might fix bugs *slightly* faster... no promises (´• ω •`)
+
 
 ---
 
