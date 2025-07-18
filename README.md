@@ -102,15 +102,17 @@ MIT License — do whatever you want, just don’t break it (too badly) (⊙‿�
 
 ---
 
+---
+
 ## ❤️ Support
 
 Need help or want to suggest something?
 
 👉 [Join the Discord Server](https://discord.gg/JeH8g6g3cG) – get support, report bugs, or just hang out 🎧  
+👉 [Patreon](patreon.com/Playify) – support Playify and get a special Discord role + recognition 💛  
 👉 [PayPal](https://paypal.me/alanmussot1) – help keep Playify ad-free and alive  
 
 Your support might fix bugs *slightly* faster... no promises (´• ω •`)
-
 
 ---
 
