@@ -34,6 +34,8 @@ import sys
 import math # Needed for the format_bytes helper
 import traceback # --- NEW --- To format exceptions
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # --- Logging ---
 
@@ -467,6 +469,18 @@ messages = {
     "error_what_to_do_content": {
         "normal": "Some videos have restrictions that prevent bots from playing them.\n\nIf you believe this is a different bug, please [open an issue on GitHub]({github_link}).",
         "kawaii": "Some videos have super strong shields that stop me! ( >д<)\n\nIf you think something is really, really broken, you can [tell the super smart developers here]({github_link})!~"
+    },
+    "discord_command_title": {
+        "normal": "🔗 Join Our Discord!",
+        "kawaii": "Come hang out with us!"
+    },
+    "discord_command_description": {
+        "normal": "Click the button below to join the official Playify support and community server.",
+        "kawaii": "Join our super cute community! Just click the button below~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+    },
+    "discord_command_button": {
+        "normal": "Join Server",
+        "kawaii": "Join Us! ♡"
     },
 }
 
@@ -3349,6 +3363,9 @@ async def skip(interaction: discord.Interaction):
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
 async def loop(interaction: discord.Interaction):
+    # 1. Defer the interaction immediately
+    await interaction.response.defer()
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -3360,7 +3377,9 @@ async def loop(interaction: discord.Interaction):
         description=get_messages("loop", guild_id).format(state=state),
         color=0xC7CEEA if is_kawaii else discord.Color.blue()
     )
-    await interaction.response.send_message(embed=embed)
+    
+    # 2. Send the actual response as a follow-up
+    await interaction.followup.send(embed=embed)
 
 # /stop command
 @bot.tree.command(name="stop", description="Stop playback and disconnect the bot")
@@ -3560,6 +3579,35 @@ async def status(interaction: discord.Interaction):
     embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
 
     await interaction.followup.send(embed=embed)
+
+# /discord command
+@bot.tree.command(name="discord", description="Get an invite to the official community and support server.")
+async def discord_command(interaction: discord.Interaction):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    
+    # Create the embed using messages from the dictionary
+    embed = Embed(
+        title=get_messages("discord_command_title", guild_id),
+        description=get_messages("discord_command_description", guild_id),
+        color=0xFFB6C1 if is_kawaii else discord.Color.blue()
+    )
+    
+    # Create a View to hold the button
+    view = View()
+    
+    # Create a button that links to your server
+    button = Button(
+        label=get_messages("discord_command_button", guild_id),
+        style=discord.ButtonStyle.link,
+        url="https://discord.gg/JeH8g6g3cG" # Your server invite link
+    )
+    
+    # Add the button to the view
+    view.add_item(button)
+    
+    # Send the response with the embed and button
+    await interaction.response.send_message(embed=embed, view=view)    
 
 # ==============================================================================
 # 6. DISCORD EVENTS
