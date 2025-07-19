@@ -9,6 +9,7 @@ from discord.ext import commands
 from discord import app_commands, Embed
 from discord.ui import View, Button
 from discord import ButtonStyle
+from discord.app_commands import Choice
 import asyncio
 import yt_dlp
 import re
@@ -36,6 +37,8 @@ import traceback # --- NEW --- To format exceptions
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
+SILENT_MESSAGES = True
 
 # --- Logging ---
 
@@ -482,6 +485,42 @@ messages = {
         "normal": "Join Server",
         "kawaii": "Join Us! ♡"
     },
+    "24_7_on_title": {
+        "normal": "📻 24/7 Radio ON",
+        "kawaii": "📻 24/7 Radio ON ✧"
+    },
+    "24_7_on_desc": {
+        "normal": "Queue will loop indefinitely – bot stays & auto-resumes when you re-join.",
+        "kawaii": "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Radio forever! Bot never sleeps, just pauses when alone~"
+    },
+    "24_7_off_title": {
+        "normal": "📴 24/7 Radio OFF",
+        "kawaii": "📴 24/7 Radio OFF (；一_一)"
+    },
+    "24_7_off_desc": {
+        "normal": "Queue cleared – bot will disconnect after 60 s if left alone.",
+        "kawaii": "Bye-bye radio! Queue wiped, bot will nap soon~"
+    },
+        "24_7_auto_title": {
+        "normal": "🔄 24/7 Auto Mode",
+        "kawaii": "🔄 24/7 Auto Mode ✨"
+    },
+    "24_7_auto_desc": {
+        "normal": "Autoplay enabled - will add similar songs when playlist ends!",
+        "kawaii": "Autoplay on! New similar songs will appear magically~ ✨"
+    },
+    "24_7_normal_title": {
+        "normal": "🔁 24/7 Loop Mode",
+        "kawaii": "🔁 24/7 Loop Mode ♾️"
+    },
+    "24_7_normal_desc": {
+        "normal": "Playlist will loop indefinitely without adding new songs.",
+        "kawaii": "Playlist looping forever~ No new songs added! ♾️"
+    },
+    "24_7_invalid_mode": {
+        "normal": "Invalid mode! Use `/24_7 auto` or `/24_7 normal`",
+        "kawaii": "Oops! Use `/24_7 auto` or `/24_7 normal` (◕‿◕)"
+    }
 }
 
 # --- Discord Bot Initialization ---
@@ -505,6 +544,7 @@ music_players = {}  # {guild_id: MusicPlayer()}
 kawaii_mode = {}    # {guild_id: bool}
 server_filters = {} # {guild_id: set("filter1", "filter2")}
 karaoke_disclaimer_shown = set()
+_24_7_active = {}  # {guild_id: bool}
 
 # --- Core Music Player Class ---
 
@@ -513,6 +553,7 @@ class MusicPlayer:
         self.voice_client = None
         self.current_task = None
         self.queue = asyncio.Queue()
+        self.history = []
         self.current_url = None
         self.current_info = None
         self.text_channel = None
@@ -528,8 +569,8 @@ class MusicPlayer:
         self.lyrics_task = None
         self.lyrics_message = None
         self.synced_lyrics = None
-        self.is_seeking = False  # NEW: To know if we are changing filters
-        self.playback_speed = 1.0  # NEW: To synchronize the karaoke speed
+        self.is_seeking = False
+        self.playback_speed = 1.0
 
 # --- Discord UI Classes (Views & Modals) ---
 
@@ -594,14 +635,14 @@ class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
         try:
             loop = asyncio.get_running_loop()
             if not genius:
-                await interaction.followup.send("Genius API is not configured.", ephemeral=True)
+                await interaction.followup.send("Genius API is not configured.", silent=SILENT_MESSAGES, ephemeral=True)
                 return
 
             song = await loop.run_in_executor(None, lambda: genius.search_song(new_query))
 
             if not song:
                 fail_message = get_messages("lyrics_not_found_description", self.guild_id).format(query=new_query)
-                await interaction.followup.send(fail_message.split('\n')[0], ephemeral=True)
+                await interaction.followup.send(fail_message.split('\n')[0], silent=SILENT_MESSAGES, ephemeral=True)
                 return
 
             raw_lyrics = song.lyrics
@@ -628,15 +669,15 @@ class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
             if len(pages) <= 1:
                 view.children[1].disabled = True
 
-            message = await self.original_interaction.followup.send(embed=initial_embed, view=view, wait=True)
+            message = await self.original_interaction.followup.send(silent=SILENT_MESSAGES,embed=initial_embed, view=view, wait=True)
 
             view.message = message
 
-            await interaction.followup.send("Lyrics found!", ephemeral=True)
+            await interaction.followup.send("Lyrics found!", silent=SILENT_MESSAGES, ephemeral=True)
 
         except Exception as e:
             logger.error(f"Error during lyrics retry: {e}")
-            await interaction.followup.send("An error occurred during the new search.", ephemeral=True)
+            await interaction.followup.send("An error occurred during the new search.", silent=SILENT_MESSAGES, ephemeral=True)
 
 class LyricsRetryView(discord.ui.View):
     # We add guild_id to the initialization
@@ -695,14 +736,14 @@ class KaraokeRetryModal(discord.ui.Modal, title="Refine Karaoke Search"):
 
         if not lrc:
             fail_message = get_messages("karaoke_retry_fail", self.guild_id).format(query=new_query)
-            await interaction.followup.send(fail_message, ephemeral=True)
+            await interaction.followup.send(fail_message, silent=SILENT_MESSAGES, ephemeral=True)
             return
 
         lyrics_lines = [{'time': int(m.group(1))*60000 + int(m.group(2))*1000 + int(m.group(3)), 'text': m.group(4).strip()} for line in lrc.splitlines() if (m := re.match(r'\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)', line))]
 
         if not lyrics_lines:
             fail_message = get_messages("karaoke_retry_fail", self.guild_id).format(query=new_query)
-            await interaction.followup.send(fail_message, ephemeral=True)
+            await interaction.followup.send(fail_message, silent=SILENT_MESSAGES, ephemeral=True)
             return
 
         # Success! Start the karaoke.
@@ -716,13 +757,13 @@ class KaraokeRetryModal(discord.ui.Modal, title="Refine Karaoke Search"):
         )
 
         # We use the original interaction's followup to send the main message
-        lyrics_message = await self.original_interaction.followup.send(embed=embed, wait=True)
+        lyrics_message = await self.original_interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, wait=True)
         self.music_player.lyrics_message = lyrics_message
         self.music_player.lyrics_task = asyncio.create_task(update_karaoke_task(self.guild_id))
 
         # Notify the user who clicked the button that it worked
         success_message = get_messages("karaoke_retry_success", self.guild_id)
-        await interaction.followup.send(success_message, ephemeral=True)
+        await interaction.followup.send(success_message, silent=SILENT_MESSAGES, ephemeral=True)
 
 class RefineLyricsModal(discord.ui.Modal, title="Refine Lyrics Search"):
     def __init__(self, message_to_edit: discord.Message):
@@ -745,7 +786,7 @@ class RefineLyricsModal(discord.ui.Modal, title="Refine Lyrics Search"):
         logger.info(f"Refining lyrics search with new query: '{new_query}'")
 
         if not genius:
-            await interaction.followup.send("Genius API is not configured.", ephemeral=True)
+            await interaction.followup.send("Genius API is not configured.", silent=SILENT_MESSAGES, ephemeral=True)
             return
 
         try:
@@ -753,7 +794,7 @@ class RefineLyricsModal(discord.ui.Modal, title="Refine Lyrics Search"):
             song = await loop.run_in_executor(None, lambda: genius.search_song(new_query))
 
             if not song:
-                await interaction.followup.send(f"Sorry, I still couldn't find lyrics for **{new_query}**.", ephemeral=True)
+                await interaction.followup.send(f"Sorry, I still couldn't find lyrics for **{new_query}**.", silent=SILENT_MESSAGES, ephemeral=True)
                 return
 
             raw_lyrics = song.lyrics
@@ -787,11 +828,11 @@ class RefineLyricsModal(discord.ui.Modal, title="Refine Lyrics Search"):
             await self.message_to_edit.edit(embed=final_embed, view=new_view)
 
 
-            await interaction.followup.send("Lyrics updated successfully!", ephemeral=True)
+            await interaction.followup.send("Lyrics updated successfully!", silent=SILENT_MESSAGES, ephemeral=True)
 
         except Exception as e:
             logger.error(f"Error during lyrics refinement: {e}", exc_info=True)
-            await interaction.followup.send("An error occurred during the new search.", ephemeral=True)
+            await interaction.followup.send("An error occurred during the new search.", silent=SILENT_MESSAGES, ephemeral=True)
 
 class KaraokeRetryView(discord.ui.View):
     def __init__(self, original_interaction: discord.Interaction, suggested_query: str, guild_id: int):
@@ -836,7 +877,7 @@ class KaraokeWarningView(View):
     async def continue_button(self, interaction: discord.Interaction, button: Button):
         # We check that it's the original user who is clicking
         if interaction.user.id != self.interaction.user.id:
-            await interaction.response.send_message("Only the person who ran the command can do this!", ephemeral=True)
+            await interaction.response.send_message("Only the person who ran the command can do this!", silent=SILENT_MESSAGES, ephemeral=True)
             return
 
         # We add the server to the list of "warned" guilds
@@ -1012,7 +1053,7 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
     loop = asyncio.get_running_loop()
 
     if not genius:
-        return await interaction.followup.send("Genius API is not configured.", ephemeral=True)
+        return await interaction.followup.send("Genius API is not configured.", silent=SILENT_MESSAGES, ephemeral=True)
 
     clean_title, artist_name = get_cleaned_song_info(music_player.current_info)
     precise_query = f"{clean_title} {artist_name}"
@@ -1050,7 +1091,7 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
                 suggested_query=clean_title,
                 guild_id=guild_id
             )
-            await interaction.followup.send(embed=error_embed, view=view)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=error_embed, view=view)
             return
 
         # --- The rest of the logic (fetching lyrics, pagination) ---
@@ -1079,7 +1120,7 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
             pages.append(f"```{current_page_content.strip()}```")
 
         if not pages:
-            return await interaction.followup.send("Could not format the lyrics.", ephemeral=True)
+            return await interaction.followup.send("Could not format the lyrics.", silent=SILENT_MESSAGES, ephemeral=True)
 
         base_embed = Embed(
             title=f"📜 Lyrics for {song.title}",
@@ -1096,16 +1137,16 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
         if len(pages) <= 1:
             view.children[1].disabled = True
 
-        message = await interaction.followup.send(embed=initial_embed, view=view, wait=True)
+        message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=initial_embed, view=view, wait=True)
 
         view.message = message
 
     except asyncio.TimeoutError:
         logger.error(f"Genius search timed out for '{clean_title}'.")
-        await interaction.followup.send("Sorry, the lyrics search took too long to respond. Please try again later.", ephemeral=True)
+        await interaction.followup.send("Sorry, the lyrics search took too long to respond. Please try again later.", silent=SILENT_MESSAGES, ephemeral=True)
     except Exception as e:
         logger.error(f"Error fetching/displaying Genius lyrics for '{clean_title}': {e}")
-        await interaction.followup.send("An error occurred while displaying the lyrics.", ephemeral=True)
+        await interaction.followup.send("An error occurred while displaying the lyrics.", silent=SILENT_MESSAGES, ephemeral=True)
 
 def format_lyrics_display(lyrics_lines, current_line_index):
     """
@@ -1252,13 +1293,13 @@ async def process_spotify_url(url, interaction):
         except Exception as e:
             logger.error(f"Both methods (API and Scraper) failed. Final SpotifyScraper error: {e}", exc_info=True)
             embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             return None
 
     logger.critical("No client (Spotipy or SpotifyScraper) is functional.")
     # Optional: send an error message if no client is available
     embed = Embed(description="Critical error: Spotify services are unreachable.", color=discord.Color.dark_red())
-    await interaction.followup.send(embed=embed, ephemeral=True)
+    await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
     return None
 
 # Process Deezer URLs
@@ -1372,7 +1413,7 @@ async def process_deezer_url(url, interaction):
             description="Network error while retrieving Deezer data. Please try again later.",
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return None
     except ValueError as e:
         logger.error(f"Invalid Deezer data for URL {url}: {e}")
@@ -1380,7 +1421,7 @@ async def process_deezer_url(url, interaction):
             description=f"Error: {str(e)}",
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return None
     except Exception as e:
         logger.error(f"Unexpected error processing Deezer URL {url}: {e}")
@@ -1388,7 +1429,7 @@ async def process_deezer_url(url, interaction):
             description=get_messages("deezer_error", guild_id),
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return None
 
 # Process Apple Music URLs
@@ -1475,7 +1516,7 @@ async def process_apple_music_url(url, interaction):
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
         try:
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         except discord.errors.InteractionResponded:
             await interaction.edit_original_response(embed=embed)
         return None
@@ -1608,7 +1649,7 @@ async def process_tidal_url(url, interaction):
         logger.error(f"Major error in process_tidal_url for {url}: {e}")
         if interaction:
                 embed = Embed(description=get_messages("tidal_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return None
     finally:
         if browser:
@@ -1722,7 +1763,7 @@ async def process_amazon_music_url(url, interaction):
         embed = Embed(description=get_messages("amazon_music_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
         try:
             if interaction and not interaction.is_expired():
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         except Exception as send_error:
             logger.error(f"Unable to send error message: {send_error}")
         return None
@@ -1843,7 +1884,7 @@ async def handle_playback_error(guild_id: int, error: Exception):
     embed.set_footer(text="Your help is appreciated!")
 
     try:
-        await music_player.text_channel.send(embed=embed)
+        await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
     except Exception as e:
         logger.error(f"Failed to send error report embed to guild {guild_id}: {e}")
 
@@ -1863,21 +1904,19 @@ async def handle_playback_error(guild_id: int, error: Exception):
         logger.info(f"Player for guild {guild_id} has been reset and disconnected due to a critical error.")
 
 
-async def play_audio(guild_id, seek_time=0):
+async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     """
     Handles audio playback for a guild.
     Plays a track, applies filters, and handles queuing the next one.
     """
     music_player = get_player(guild_id)
-    try: # --- NEW --- Wrap entire function in a try...except block
+    try:
         # Cancel tasks ONLY if it's NOT a filter/seek change
         if not music_player.is_seeking:
             if music_player.lyrics_task and not music_player.lyrics_task.done():
                 music_player.lyrics_task.cancel()
 
-        # We reset the flag
         music_player.is_seeking = False
-
         skip_now_playing = False
 
         if seek_time > 0:
@@ -1885,25 +1924,24 @@ async def play_audio(guild_id, seek_time=0):
         else:
             if music_player.queue.empty():
                 is_kawaii = get_mode(guild_id)
-                if music_player.autoplay_enabled and music_player.last_was_single and music_player.current_url:
+                # 1. Check for Autoplay first
+                if music_player.autoplay_enabled and music_player.current_url:
                     if music_player.text_channel:
                         embed = Embed(description=get_messages("autoplay_added", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
-                        await music_player.text_channel.send(embed=embed)
-
+                        await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
                     if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url:
                         mix_playlist_url = get_mix_playlist_url(music_player.current_url)
                         if mix_playlist_url:
                             try:
                                 ydl_opts_mix = {"extract_flat": True, "quiet": True}
                                 info = await extract_info_async(ydl_opts_mix, mix_playlist_url)
-                                if "entries" in info:
+                                if info.get("entries"):
                                     current_video_id = get_video_id(music_player.current_url)
                                     for entry in info["entries"]:
                                         if entry and get_video_id(entry.get("url", "")) != current_video_id:
                                             await music_player.queue.put({'url': entry["url"], 'is_single': True})
                             except Exception as e:
                                 logger.error(f"YouTube Mix Error: {e}")
-
                     elif "soundcloud.com" in music_player.current_url:
                         track_id = await bot.loop.run_in_executor(None, get_soundcloud_track_id, music_player.current_url)
                         if track_id:
@@ -1912,25 +1950,30 @@ async def play_audio(guild_id, seek_time=0):
                                 try:
                                     ydl_opts_station = {"extract_flat": True, "quiet": True}
                                     info = await extract_info_async(ydl_opts_station, station_url)
-                                    if "entries" in info:
+                                    if info.get("entries"):
                                         for entry in info["entries"]:
                                             if entry and await bot.loop.run_in_executor(None, get_soundcloud_track_id, entry.get("url", "")) != track_id:
                                                 await music_player.queue.put({'url': entry["url"], 'is_single': True})
                                 except Exception as e:
                                     logger.error(f"SoundCloud Station Error: {e}")
 
+                elif _24_7_active.get(guild_id, False) and music_player.history:
+                    logger.info(f"24/7 Normal: La file est vide. Re-mise en file de {len(music_player.history)} morceaux de l'historique.")
+                    for track_info in music_player.history:
+                        await music_player.queue.put(track_info)
+                    music_player.history.clear()
+
                 if music_player.queue.empty():
                     music_player.current_task = None
                     music_player.current_info = None
-                    # --- NEW --- Wait a bit before disconnecting if bot is alone
-                    await asyncio.sleep(60) # Wait 60 seconds
+                    await asyncio.sleep(60)
                     if music_player.voice_client and not music_player.voice_client.is_playing() and len(music_player.voice_client.channel.members) == 1:
-                        logger.info(f"Bot is alone in channel for guild {guild_id}. Disconnecting and cleaning up.")
+                        logger.info(f"Bot is alone in channel for guild {guild_id}. Disconnecting.")
                         await music_player.voice_client.disconnect()
-                        # Full reset is handled by on_voice_state_update
                     return
-
+            
             track_info = await music_player.queue.get()
+            music_player.history.append(track_info)
             music_player.current_url = track_info['url']
             music_player.last_was_single = track_info.get('is_single', True)
             skip_now_playing = track_info.get('skip_now_playing', False)
@@ -1940,21 +1983,33 @@ async def play_audio(guild_id, seek_time=0):
             return
 
         active_filters = server_filters.get(guild_id, set())
-        music_player.active_filter = None
-
-        filter_chain = ""
-        if active_filters:
-            filter_list = [AUDIO_FILTERS[f] for f in active_filters if f in AUDIO_FILTERS]
-            if filter_list:
-                filter_chain = ",".join(filter_list)
-                music_player.active_filter = filter_chain
+        filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in AUDIO_FILTERS]) if active_filters else ""
+        music_player.active_filter = filter_chain if filter_chain else None
 
         ydl_opts_play = {
             "format": "bestaudio[acodec=opus]/bestaudio/best",
             "quiet": True, "no_warnings": True, "no_color": True,
             "socket_timeout": 10,
         }
-        info = await extract_info_async(ydl_opts_play, music_player.current_url)
+
+        try:
+            info = await extract_info_async(ydl_opts_play, music_player.current_url)
+        except yt_dlp.utils.DownloadError as e:
+            logger.warning(f"Failed to play track {music_player.current_url}: {e}")
+            if music_player.text_channel:
+                is_kawaii = get_mode(guild_id)
+                emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
+                embed = Embed(
+                    title=f'{emoji} Playback Failed',
+                    description=get_messages(desc_key, guild_id),
+                    color=0xFF9AA2 if is_kawaii else discord.Color.orange()
+                )
+                embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
+                await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+            
+            music_player.current_task = bot.loop.create_task(play_audio(guild_id))
+            return 
+        
         music_player.current_info = info
         audio_url = info["url"]
 
@@ -1963,7 +2018,6 @@ async def play_audio(guild_id, seek_time=0):
             before_options += f" -ss {seek_time}"
 
         ffmpeg_options = {"before_options": before_options, "options": "-vn"}
-
         if music_player.active_filter:
             ffmpeg_options["options"] += f" -af \"{music_player.active_filter}\""
 
@@ -1972,36 +2026,36 @@ async def play_audio(guild_id, seek_time=0):
         def after_playing(error):
             if error:
                 logger.error(f'Error after playing in guild {guild_id}: {error}')
-
+            
             async def schedule_next():
-                """Async function to handle post-playback logic."""
                 if music_player.seek_info is not None:
                     new_seek_time = music_player.seek_info
                     music_player.seek_info = None
                     await play_audio(guild_id, seek_time=new_seek_time)
-
                 elif music_player.loop_current:
                     current_track_data = {'url': music_player.current_url, 'is_single': music_player.last_was_single}
-                    items = [current_track_data]
+                    items_in_queue = []
                     while not music_player.queue.empty():
-                        items.append(await music_player.queue.get())
+                        items_in_queue.append(await music_player.queue.get())
+                    
+                    if music_player.history:
+                        music_player.history.pop()
 
-                    for item in items:
+                    await music_player.queue.put(current_track_data)
+                    for item in items_in_queue: 
                         await music_player.queue.put(item)
-
-                    await play_audio(guild_id)
-
+                    
+                    await play_audio(guild_id, is_a_loop=True)
                 else:
                     await play_audio(guild_id)
 
             music_player.current_task = bot.loop.create_task(schedule_next())
 
         music_player.voice_client.play(source, after=after_playing)
-
         music_player.start_time = seek_time
         music_player.playback_started_at = time.time()
 
-        if not skip_now_playing and seek_time == 0:
+        if not skip_now_playing and seek_time == 0 and not is_a_loop:
             is_kawaii = get_mode(guild_id)
             title = info.get("title", "Unknown Title")
             webpage_url = info.get("webpage_url", music_player.current_url)
@@ -2009,10 +2063,9 @@ async def play_audio(guild_id, seek_time=0):
             if info.get("thumbnail"):
                 embed.set_thumbnail(url=info["thumbnail"])
             if music_player.text_channel:
-                await music_player.text_channel.send(embed=embed)
+                await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
 
     except Exception as e:
-        # --- NEW --- Call the global error handler
         await handle_playback_error(guild_id, e)
 
 async def update_karaoke_task(guild_id: int):
@@ -2084,7 +2137,7 @@ async def lyrics(interaction: discord.Interaction):
     music_player = get_player(guild_id)
 
     if not music_player.voice_client or not music_player.voice_client.is_playing() or not music_player.current_info:
-        return await interaction.response.send_message("No music is currently playing.", ephemeral=True)
+        return await interaction.response.send_message("No music is currently playing.", silent=SILENT_MESSAGES, ephemeral=True)
 
     await interaction.response.defer()
     # We ONLY search for lyrics on Genius
@@ -2097,10 +2150,10 @@ async def karaoke(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
 
     if not music_player.voice_client or not music_player.voice_client.is_playing() or not music_player.current_info:
-        return await interaction.response.send_message("No music is currently playing.", ephemeral=True)
+        return await interaction.response.send_message("No music is currently playing.", silent=SILENT_MESSAGES, ephemeral=True)
 
     if music_player.lyrics_task and not music_player.lyrics_task.done():
-        return await interaction.response.send_message("Lyrics are already being displayed!", ephemeral=True)
+        return await interaction.response.send_message("Lyrics are already being displayed!", silent=SILENT_MESSAGES, ephemeral=True)
 
     async def proceed_with_karaoke():
         if not interaction.response.is_done():
@@ -2155,7 +2208,7 @@ async def karaoke(interaction: discord.Interaction):
                 guild_id=guild_id
             )
             # Use followup.send because the interaction is already deferred
-            await interaction.followup.send(embed=error_embed, view=view)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=error_embed, view=view)
             return
         # --- END OF CORRECTION ---
 
@@ -2163,7 +2216,7 @@ async def karaoke(interaction: discord.Interaction):
         music_player.synced_lyrics = lyrics_lines
         embed = Embed(title=f"🎤 Karaoke for {clean_title}", description="Starting karaoke...", color=0xC7CEEA if is_kawaii else discord.Color.blue())
 
-        lyrics_message = await interaction.followup.send(embed=embed, wait=True)
+        lyrics_message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, wait=True)
         music_player.lyrics_message = lyrics_message
         music_player.lyrics_task = asyncio.create_task(update_karaoke_task(guild_id))
 
@@ -2181,7 +2234,7 @@ async def karaoke(interaction: discord.Interaction):
         button_label = get_messages("karaoke_warning_button", guild_id)
         view.children[0].label = button_label
 
-        await interaction.response.send_message(embed=warning_embed, view=view)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=warning_embed, view=view)
 
 # /kaomoji command
 @bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
@@ -2195,7 +2248,7 @@ async def toggle_kawaii(interaction: discord.Interaction):
         description=get_messages("kawaii_toggle", guild_id).format(state=state),
         color=0xFFB6C1 if kawaii_mode[guild_id] else discord.Color.blue()
     )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 @bot.tree.command(name="play", description="Play a link or search for a song")
 @app_commands.describe(query="Link or title of the song/video to play")
@@ -2209,7 +2262,7 @@ async def play(interaction: discord.Interaction, query: str):
             description=get_messages("no_voice_channel", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return
 
     await interaction.response.defer()
@@ -2229,15 +2282,15 @@ async def play(interaction: discord.Interaction, query: str):
                  music_player.voice_client = interaction.guild.voice_client
             else: # If something else is wrong, send an error
                  embed = Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-                 # MODIFIÉ: On utilise followup.send() car on a déjà "defer".
-                 await interaction.followup.send(embed=embed, ephemeral=True)
+                 # MODIFIED: Using followup.send() because the interaction is already deferred.
+                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
                  return
         except Exception as e:
             embed = Embed(
                 description=get_messages("connection_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.error(f"Error connecting: {e}")
             return
 
@@ -2384,21 +2437,21 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Spotify conversion error for {query}: {e}")
                 embed = Embed(
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         else:
             embed = Embed(
                 title="Spotify playlist processing",
                 description="Starting...",
                 color=0xFFB6C1 if is_kawaii else discord.Color.blue()
             )
-            message = await interaction.followup.send(embed=embed)
+            message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
             total_tracks = len(spotify_tracks)
             processed = 0
@@ -2461,7 +2514,7 @@ async def play(interaction: discord.Interaction, query: str):
                 description="No Deezer tracks could be processed. Check the URL or try again.",
                 color=0xFFB6C1 if is_kawaii else discord.Color.red()
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             return
 
         if len(deezer_tracks) == 1:
@@ -2499,21 +2552,21 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Error converting Deezer track to YouTube for {query}: {e}")
                 embed = Embed(
                     description=get_messages("search_error", guild_id),
                     color=0xFFB6C1 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         else:
             embed = Embed(
                 title="Deezer playlist processing",
                 description="Starting...",
                 color=0xFFB6C1 if is_kawaii else discord.Color.blue()
             )
-            message = await interaction.followup.send(embed=embed)
+            message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
             total_tracks = len(deezer_tracks)
             processed = 0
@@ -2606,21 +2659,21 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Apple Music conversion error for {query}: {e}")
                 embed = Embed(
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         else:
             embed = Embed(
                 title="Apple Music playlist processing",
                 description="Starting...",
                 color=0xFFB6C1 if is_kawaii else discord.Color.blue()
             )
-            message = await interaction.followup.send(embed=embed)
+            message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             total_tracks = len(apple_tracks)
             processed = 0
             failed = 0
@@ -2704,21 +2757,21 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Tidal conversion error for {query}: {e}")
                 embed = Embed(
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         else:
             embed = Embed(
                 title="Tidal mix/playlist processing",
                 description="Starting...",
                 color=0xFFB6C1 if is_kawaii else discord.Color.blue()
             )
-            message = await interaction.followup.send(embed=embed)
+            message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             total_tracks = len(tidal_tracks)
             processed = 0
             failed = 0
@@ -2805,21 +2858,21 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
-                await interaction.followup.send(embed=embed)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Amazon Music conversion error for {query}: {e}")
                 embed = Embed(
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         else:
             embed = Embed(
                 title="Amazon Music playlist processing",
                 description="Starting...",
                 color=0xFFB6C1 if is_kawaii else discord.Color.blue()
             )
-            message = await interaction.followup.send(embed=embed)
+            message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             total_tracks = len(amazon_tracks)
             processed = 0
             failed = 0
@@ -2916,7 +2969,7 @@ async def play(interaction: discord.Interaction, query: str):
                     description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks),
                     color=0xFFB6C1 if is_kawaii else discord.Color.blue()
                 )
-                message = await interaction.followup.send(embed=embed)
+                message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
                 for track_entry in tracks_to_add:
                     await music_player.queue.put({'url': track_entry['url'], 'is_single': False})
@@ -2950,7 +3003,7 @@ async def play(interaction: discord.Interaction, query: str):
                 )
                 if info.get("thumbnail"):
                     embed.set_thumbnail(url=info["thumbnail"])
-                await interaction.followup.send(embed=embed)
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
             
@@ -2973,14 +3026,14 @@ async def play(interaction: discord.Interaction, query: str):
                 inline=False
             )
             
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.warning(f"A user-facing download error occurred: {str(e).splitlines()[0]}")
         except Exception as e:
             embed = Embed(
                 description=get_messages("video_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.error(f"Error processing generic URL/Playlist: {e}", exc_info=True)
     else:
         try:
@@ -3014,7 +3067,7 @@ async def play(interaction: discord.Interaction, query: str):
                 embed.set_thumbnail(url=video["thumbnail"])
             if is_kawaii:
                 embed.set_footer(text="☆⌒(≧▽° )")
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
             
@@ -3037,14 +3090,14 @@ async def play(interaction: discord.Interaction, query: str):
                 inline=False
             )
             
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.warning(f"A user-facing download error occurred: {str(e).splitlines()[0]}")
         except Exception as e:
             embed = Embed(
                 description=get_messages("search_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.error(f"Error searching for {query}: {e}")
 
     if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
@@ -3063,7 +3116,7 @@ async def queue(interaction: discord.Interaction):
             description=get_messages("queue_empty", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return
 
     queue_items = list(music_player.queue._queue)[:5]
@@ -3096,9 +3149,8 @@ async def queue(interaction: discord.Interaction):
             inline=False
         )
 
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
-# /clearqueue command
 @bot.tree.command(name="clearqueue", description="Clear the current queue")
 async def clear_queue(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -3108,11 +3160,13 @@ async def clear_queue(interaction: discord.Interaction):
     while not music_player.queue.empty():
         music_player.queue.get_nowait()
 
+    music_player.history.clear()
+
     embed = Embed(
         description=get_messages("clear_queue_success", guild_id),
         color=0xB5EAD7 if is_kawaii else discord.Color.green()
     )
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
 
 @bot.tree.command(name="playnext", description="Add a song to play next")
 @app_commands.describe(query="Link or title of the video/song to play next")
@@ -3126,7 +3180,7 @@ async def play_next(interaction: discord.Interaction, query: str):
             description=get_messages("no_voice_channel", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return
 
     if not music_player.voice_client or not music_player.voice_client.is_connected():
@@ -3137,7 +3191,7 @@ async def play_next(interaction: discord.Interaction, query: str):
                 description=get_messages("connection_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.error(f"Error: {e}")
             return
 
@@ -3214,7 +3268,7 @@ async def play_next(interaction: discord.Interaction, query: str):
             embed.set_thumbnail(url=video["thumbnail"])
         if is_kawaii:
             embed.set_footer(text="☆⌒(≧▽° )")
-        await interaction.followup.send(embed=embed)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
         # Start playback if nothing is playing
         if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
@@ -3227,14 +3281,14 @@ async def play_next(interaction: discord.Interaction, query: str):
             description=get_messages("extraction_error_reason", guild_id).format(error_message=error_message),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         logger.warning(f"A user-facing download error occurred during /playnext for '{query}': {error_message}")
     except Exception as e:
         embed = Embed(
             description=get_messages("search_error", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         logger.error(f"Error processing /playnext for '{query}': {e}")
 
 # /nowplaying command
@@ -3256,13 +3310,13 @@ async def now_playing(interaction: discord.Interaction):
         )
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_song_playing", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 @bot.tree.command(name="filter", description="Applies or removes audio filters in real time.")
 async def filter_command(interaction: discord.Interaction):
@@ -3275,7 +3329,7 @@ async def filter_command(interaction: discord.Interaction):
             description=get_messages("no_filter_playback", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         return
 
     # Creates and sends the view with the buttons
@@ -3287,7 +3341,7 @@ async def filter_command(interaction: discord.Interaction):
     )
 
     # KEY CHANGE: "ephemeral=True" is removed to make the message public
-    await interaction.response.send_message(embed=embed, view=view)
+    await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, view=view)
 
 # /pause command
 @bot.tree.command(name="pause", description="Pause the current playback")
@@ -3302,13 +3356,13 @@ async def pause(interaction: discord.Interaction):
             description=get_messages("pause", guild_id),
             color=0xFFB7B2 if is_kawaii else discord.Color.orange()
         )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_playback", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 # /resume command
 @bot.tree.command(name="resume", description="Resume the playback")
@@ -3323,13 +3377,13 @@ async def resume(interaction: discord.Interaction):
             description=get_messages("resume", guild_id),
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
         )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_paused", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 # /skip command
 @bot.tree.command(name="skip", description="Skip to the next song")
@@ -3352,13 +3406,13 @@ async def skip(interaction: discord.Interaction):
             description=get_messages("skip", guild_id),
             color=0xE2F0CB if is_kawaii else discord.Color.blue()
         )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_song", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
@@ -3379,7 +3433,7 @@ async def loop(interaction: discord.Interaction):
     )
     
     # 2. Send the actual response as a follow-up
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
 # /stop command
 @bot.tree.command(name="stop", description="Stop playback and disconnect the bot")
@@ -3412,13 +3466,13 @@ async def stop(interaction: discord.Interaction):
             description=get_messages("stop", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
         embed = Embed(
             description=get_messages("not_connected", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 # /shuffle command
 @bot.tree.command(name="shuffle", description="Shuffle the current queue")
@@ -3442,13 +3496,13 @@ async def shuffle(interaction: discord.Interaction):
             description=get_messages("shuffle_success", guild_id),
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
         )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
         embed = Embed(
             description=get_messages("queue_empty", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 # /autoplay command
 @bot.tree.command(name="autoplay", description="Enable/disable autoplay of similar songs")
@@ -3464,7 +3518,7 @@ async def toggle_autoplay(interaction: discord.Interaction):
         description=get_messages("autoplay_toggle", guild_id).format(state=state),
         color=0xC7CEEA if is_kawaii else discord.Color.blue()
     )
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
 
 # /status command (hyper-complete version)
 @bot.tree.command(name="status", description="Displays the bot's full performance and diagnostic stats.")
@@ -3578,7 +3632,7 @@ async def status(interaction: discord.Interaction):
     embed.set_footer(text=f"Data requested by {interaction.user.display_name}")
     embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
 
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
 # /discord command
 @bot.tree.command(name="discord", description="Get an invite to the official community and support server.")
@@ -3607,53 +3661,150 @@ async def discord_command(interaction: discord.Interaction):
     view.add_item(button)
     
     # Send the response with the embed and button
-    await interaction.response.send_message(embed=embed, view=view)    
+    await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, view=view)    
+
+@bot.tree.command(name="24_7", description="Enable or disable 24/7 mode.")
+@app_commands.describe(mode="Choose the mode: auto (adds songs), normal (loops the queue), or off.")
+@app_commands.choices(mode=[
+    Choice(name="Normal (Loops the current queue)", value="normal"),
+    Choice(name="Auto (Adds similar songs when the queue is empty)", value="auto"),
+    Choice(name="Off (Disable 24/7 mode)", value="off")
+])
+async def radio_24_7(interaction: discord.Interaction, mode: str):
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+
+    await interaction.response.defer(thinking=True)
+
+    # Case 1: The user wants to disable 24/7 mode
+    if mode == "off":
+        if not _24_7_active.get(guild_id, False):
+            await interaction.followup.send("24/7 mode was not active.", silent=SILENT_MESSAGES, ephemeral=True)
+            return
+
+        # Reset all 24/7-related states
+        _24_7_active[guild_id] = False
+        music_player.autoplay_enabled = False 
+        music_player.loop_current = False
+        music_player.history.clear()
+        
+        embed = Embed(
+            title=get_messages("24_7_off_title", guild_id),
+            description=get_messages("24_7_off_desc", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
+        return
+
+    # Case 2: The user wants to enable 24/7 mode (normal or auto)
+    
+    # Connect if necessary
+    if not music_player.voice_client or not music_player.voice_client.is_connected():
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            await interaction.followup.send("You are not in a voice channel.", silent=SILENT_MESSAGES, ephemeral=True)
+            return
+        try:
+            music_player.voice_client = await interaction.user.voice.channel.connect()
+        except Exception as e:
+            logger.error(f"Failed to connect for 24/7 command: {e}")
+            await interaction.followup.send("Could not connect to the voice channel.", silent=SILENT_MESSAGES, ephemeral=True)
+            return
+
+    # Configure the chosen mode
+    _24_7_active[guild_id] = True
+    music_player.loop_current = False # Single song loop is incompatible with 24/7
+
+    if mode == "auto":
+        music_player.autoplay_enabled = True
+        embed = Embed(
+            title=get_messages("24_7_auto_title", guild_id),
+            description=get_messages("24_7_auto_desc", guild_id),
+            color=0xB5EAD7 if is_kawaii else discord.Color.green()
+        )
+    else: # mode == "normal"
+        music_player.autoplay_enabled = False
+        embed = Embed(
+            title=get_messages("24_7_normal_title", guild_id),
+            description=get_messages("24_7_normal_desc", guild_id),
+            color=0xB5EAD7 if is_kawaii else discord.Color.green()
+        )
+    
+    # Start playback if nothing is playing
+    if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
+        music_player.current_task = asyncio.create_task(play_audio(guild_id))
+
+    await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
 
 # ==============================================================================
 # 6. DISCORD EVENTS
 # ==============================================================================
 
-# --- MODIFIED --- Complete overhaul of the on_voice_state_update event
 @bot.event
 async def on_voice_state_update(member, before, after):
     """
-    Handles voice state changes for cleanup and memory management.
-    - Resets the player when the bot is disconnected.
-    - Resets the player if it's left alone in a channel.
+    Comprehensive voice state event handler.
+    - Pauses/resumes music if the channel empties/re-populates.
+    - Handles automatic disconnection (except in 24/7 mode).
+    - Cleans up and resets the player when the bot is disconnected.
     """
-    # Ignore state changes from other members unless it affects a channel the bot is in
-    if not member.guild.voice_client or member.guild.voice_client.channel is None:
+    guild = member.guild
+
+    # Do nothing if the bot isn't in a voice channel on this server
+    if not guild.voice_client:
         return
 
-    bot_channel = member.guild.voice_client.channel
-    guild_id = member.guild.id
+    guild_id = guild.id
+    vc = guild.voice_client
+    bot_channel = vc.channel
 
-    # Case 1: The bot itself was disconnected (by a user or /stop command)
+    # CASE 1: The bot is disconnected (by a user, /stop, or inactivity)
+    # This is the most important case for cleanup.
     if member.id == bot.user.id and before.channel is not None and after.channel is None:
         logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
-        if guild_id in music_players:
-            music_player = get_player(guild_id)
-            if music_player.current_task and not music_player.current_task.done():
-                music_player.current_task.cancel()
-            music_players[guild_id] = MusicPlayer() # Reset the player
-            logger.info(f"Music player for guild {guild_id} has been reset.")
+        music_player = get_player(guild_id)
+        if music_player.current_task and not music_player.current_task.done():
+            music_player.current_task.cancel()
+        
+        # Full reset of the player for this guild
+        music_players[guild_id] = MusicPlayer()
+        # Ensure filters and other states are also reset if needed
+        if guild_id in server_filters:
+            del server_filters[guild_id]
+        if guild_id in _24_7_active:
+            del _24_7_active[guild_id]
+        
+        logger.info(f"Player for guild {guild_id} has been reset.")
         return
 
-    # Case 2: A user leaves a channel, and the bot might be left alone
-    if before.channel == bot_channel:
-        # Check if the bot is the only member left (ignore other bots)
-        members_in_channel = [m for m in bot_channel.members if not m.bot]
-        if len(members_in_channel) == 0:
-            logger.info(f"Bot is now alone in channel for guild {guild_id}. Starting cleanup timer.")
-            # Wait for a short period before disconnecting
-            await asyncio.sleep(60)
-            # Re-check conditions in case someone joined back
-            if member.guild.voice_client and member.guild.voice_client.channel == bot_channel:
-                 current_members = [m for m in bot_channel.members if not m.bot]
-                 if len(current_members) == 0:
-                    logger.info(f"Cleanup timer finished. Disconnecting from guild {guild_id}.")
-                    await member.guild.voice_client.disconnect()
-                    # The reset will be handled by Case 1 via the disconnect event firing again for the bot
+    # CASE 2: A user leaves the bot's channel
+    if before.channel == bot_channel and after.channel != bot_channel:
+        # Check if any human members are left
+        humans_in_channel = [m for m in bot_channel.members if not m.bot]
+        
+        if not humans_in_channel:
+            logger.info(f"Bot is now alone in channel for guild {guild_id}.")
+            if vc.is_playing():
+                vc.pause()
+                logger.info(f"Playback paused for guild {guild_id}.")
+
+            # If 24/7 mode is NOT active, schedule disconnection
+            if not _24_7_active.get(guild_id, False):
+                await asyncio.sleep(60) # Wait 60 seconds
+                
+                # Re-check in case someone came back
+                if vc.is_connected():
+                    humans_still_in_channel = [m for m in vc.channel.members if not m.bot]
+                    if not humans_still_in_channel:
+                        logger.info(f"Disconnecting from guild {guild_id} after 60s of inactivity.")
+                        await vc.disconnect() # This will trigger CASE 1 for cleanup
+
+    # CASE 3: A user joins the bot's channel
+    if after.channel == bot_channel and before.channel != bot_channel:
+        # If playback was paused (because the bot was alone), resume it
+        if vc.is_paused():
+            logger.info(f"A user joined in guild {guild_id}. Resuming playback.")
+            vc.resume()
 
 @bot.event
 async def on_ready():
