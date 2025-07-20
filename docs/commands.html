@@ -413,10 +413,12 @@
     </div>
   </nav>
   <section class="commands">
+
+    <!-- Basic Controls Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-play-circle"></i>
-        Basic Controls
+        Music Controls
       </h3>
       <div class="commands-table">
         <div class="table-header">
@@ -469,11 +471,22 @@
           </div>
           <p class="command-desc">Shows the currently playing song.</p>
         </div>
+         <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-forward"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/skip</h3>
+          </div>
+          <p class="command-desc">Skips to the next song in the queue.</p>
+        </div>
       </div>
     </div>
+
+    <!-- Queue Management Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
-        <i class="fas fa-list"></i>
+        <i class="fas fa-list-ol"></i>
         Queue Management
       </h3>
       <div class="commands-table">
@@ -484,12 +497,21 @@
         </div>
         <div class="command-row">
           <div class="command-icon">
-            <i class="fas fa-forward"></i>
+            <i class="fas fa-list"></i>
           </div>
           <div class="command-name">
-            <h3 class="command-title">/skip</h3>
+            <h3 class="command-title">/queue</h3>
           </div>
-          <p class="command-desc">Skips to the next song in the queue.</p>
+          <p class="command-desc">Displays the current queue of songs with interactive pages.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-level-up-alt"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/playnext [query]</h3>
+          </div>
+          <p class="command-desc">Adds a song to the front of the queue to be played next.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
@@ -502,6 +524,30 @@
         </div>
         <div class="command-row">
           <div class="command-icon">
+            <i class="fas fa-trash"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/clearqueue</h3>
+          </div>
+          <p class="command-desc">Clears all songs from the queue.</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Playback Modes Category -->
+    <div class="category-section fade-in">
+      <h3 class="category-title">
+        <i class="fas fa-infinity"></i>
+        Playback Modes
+      </h3>
+      <div class="commands-table">
+        <div class="table-header">
+          <h3></h3>
+          <h3>Command</h3>
+          <h3>Description</h3>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
             <i class="fas fa-redo"></i>
           </div>
           <div class="command-name">
@@ -511,45 +557,29 @@
         </div>
         <div class="command-row">
           <div class="command-icon">
-            <i class="fas fa-random"></i>
+            <i class="fas fa-magic"></i>
           </div>
           <div class="command-name">
             <h3 class="command-title">/autoplay</h3>
           </div>
-          <p class="command-desc">Enables/disables automatic playback of similar songs when the queue is empty.</p>
+          <p class="command-desc">Enables/disables automatic playback of similar songs when the queue ends.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
-            <i class="fas fa-list-ol"></i>
+            <i class="fas fa-broadcast-tower"></i>
           </div>
           <div class="command-name">
-            <h3 class="command-title">/queue</h3>
+            <h3 class="command-title">/24_7 [mode]</h3>
           </div>
-          <p class="command-desc">Displays the current queue of songs.</p>
-        </div>
-        <div class="command-row">
-          <div class="command-icon">
-            <i class="fas fa-trash"></i>
-          </div>
-          <div class="command-name">
-            <h3 class="command-title">/clearqueue</h3>
-          </div>
-          <p class="command-desc">Clears all songs from the queue.</p>
-        </div>
-        <div class="command-row">
-          <div class="command-icon">
-            <i class="fas fa-play-circle"></i>
-          </div>
-          <div class="command-name">
-            <h3 class="command-title">/playnext [query]</h3>
-          </div>
-          <p class="command-desc">Adds a song to play next in the queue.</p>
+          <p class="command-desc">Keeps the bot in the channel. Modes: `normal` (loops queue), `auto`, or `off`.</p>
         </div>
       </div>
     </div>
+    
+    <!-- Lyrics & Karaoke Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
-        <i class="fas fa-microphone"></i>
+        <i class="fas fa-microphone-alt"></i>
         Lyrics & Karaoke
       </h3>
       <div class="commands-table">
@@ -560,7 +590,7 @@
         </div>
         <div class="command-row">
           <div class="command-icon">
-            <i class="fas fa-book"></i>
+            <i class="fas fa-book-open"></i>
           </div>
           <div class="command-name">
             <h3 class="command-title">/lyrics</h3>
@@ -574,14 +604,16 @@
           <div class="command-name">
             <h3 class="command-title">/karaoke</h3>
           </div>
-          <p class="command-desc">Starts a karaoke session with synced lyrics. <strong>Pro Tip:</strong> For best results, add `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).</p>
+          <p class="command-desc">Starts a karaoke session with synced lyrics. For best results, add `topic` or `audio` to your search.</p>
         </div>
       </div>
     </div>
+
+    <!-- Settings & Utilities Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
-        <i class="fas fa-cog"></i>
-        Settings & Preferences
+        <i class="fas fa-tools"></i>
+        Settings & Utilities
       </h3>
       <div class="commands-table">
         <div class="table-header">
@@ -591,22 +623,21 @@
         </div>
         <div class="command-row">
           <div class="command-icon">
-            <i class="fas fa-smile"></i>
-          </div>
-          <div class="command-name">
-            <h3 class="command-title">/kaomoji</h3>
-            <span class="admin-badge">ADMIN</span>
-          </div>
-          <p class="command-desc">Toggles kawaii mode for fun responses.</p>
-        </div>
-        <div class="command-row">
-          <div class="command-icon">
             <i class="fas fa-sliders-h"></i>
           </div>
           <div class="command-name">
             <h3 class="command-title">/filter</h3>
           </div>
-          <p class="command-desc">Applies or removes audio filters (e.g., slowed, nightcore, bassboost) in real time.</p>
+          <p class="command-desc">Applies audio filters (e.g., slowed, nightcore, bassboost) in real time.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-sync-alt"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/reconnect</h3>
+          </div>
+          <p class="command-desc">Refreshes the voice connection to fix lag or audio issues.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
@@ -617,9 +648,29 @@
           </div>
           <p class="command-desc">Displays the bot's full performance and diagnostic stats.</p>
         </div>
+         <div class="command-row">
+          <div class="command-icon">
+            <i class="fab fa-discord"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/discord</h3>
+          </div>
+          <p class="command-desc">Get an invite to the official Playify community and support server.</p>
         </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-smile-beam"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/kaomoji</h3>
+            <span class="admin-badge">ADMIN</span>
+          </div>
+          <p class="command-desc">Toggles kawaii mode for fun, cute bot responses.</p>
+        </div>
+      </div>
     </div>
   </section>
+
   <footer>
     <div class="footer-content">
       <div class="footer-column">
@@ -627,7 +678,7 @@
         <p style="color: var(--text-secondary); margin-bottom: 20px;">The music bot for Discord that delivers premium quality with a sleek interface.</p>
         <div class="social-links">
           <a href="https://github.com/alan7383/playify" target="_blank"><i class="fab fa-github"></i></a>
-          <a href="https://x.com/PlayifyBot" target="_blank"><i class="fa-brands fa-twitter"></i></a>
+          <a href="https://x.com/PlayifyBot" target="_blank"><i class="fab fa-twitter"></i></a>
           <a href="https://discord.gg/JeH8g6g3cG" target="_blank"><i class="fab fa-discord"></i></a>
         </div>
       </div>
@@ -651,7 +702,7 @@
       </div>
     </div>
     <div class="copyright">
-      © 2025 Playify by @alananasssss. All rights reserved.
+      © 2025 Playify by @alanmussot. All rights reserved.
     </div>
   </footer>
   <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
