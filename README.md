@@ -45,7 +45,7 @@ Type `/play <url or query>` and let the music flow~
 
 * ✅ Individual tracks  
 * ✅ Personal & public playlists  
-* ✅ Spotify-curated mixes (e.g., *Release Radar*, *Your Mix*) via SpotifyScraper—bypasses API limits!
+* ✅ Spotify-curated mixes (e.g., *Release Radar*, *Your Mix*) via [SpotifyScraper](https://github.com/AliAkhtari78/SpotifyScraper)—bypasses API limits!
 
 > *Note:* Dynamic Spotify radios/mixes may vary from your app—they update constantly.
 
