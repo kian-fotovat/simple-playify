@@ -116,9 +116,9 @@ MIT License — do what you want, just be kind\~ (´｡• ᵕ •｡\`)
 
 Got questions? Want to support this cute project?
 
-* [Join the Discord Server](https://discord.gg/yourserverlink) — come say hi\~ (´｡• ω •｡\`)
-* [Patreon](https://patreon.com/yourpatreon) — support Playify and get a special role\~ (≧◡≦)
-* [PayPal](https://paypal.me/yourpaypal) — help keep Playify alive and ad-free (´• ω •\`)
+* [Join the Discord Server](https://discord.gg/JeH8g6g3cG) — come say hi\~ (´｡• ω •｡\`)
+* [Patreon](patreon.com/Playify) — support Playify and get a special role\~ (≧◡≦)
+* [PayPal](https://www.paypal.com/paypalme/alanmussot1) — help keep Playify alive and ad-free (´• ω •\`)
 
 > Your support keeps me going! (๑>ᴗ<๑)
 
