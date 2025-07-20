@@ -6,25 +6,29 @@
 
 ---
 
-![GitHub license](https://img.shields.io/github/license/alan7383/playify.svg)
-![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
-[![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server\&logo=discord\&style=for-the-badge)](https://discord.gg/JeH8g6g3cG)
+<p align="center">
+  ![GitHub license](https://img.shields.io/github/license/alan7383/playify.svg)  
+  ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)  
+  [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server&logo=discord&style=for-the-badge)](https://discord.gg/JeH8g6g3cG)
+</p>
 
-# Playify
+---
 
 ## Table of Contents
 
 * [What is Playify?](#what-is-playify)
 * [Spotify Support](#spotify-support)
 * [Key Features](#key-features)
-* [Installation & Self-Hosting](#installation--self-hosting)
+* [Installation & Self-Hosting](#installation-self-hosting)
 * [Command Reference](#command-reference)
 * [Troubleshooting](#troubleshooting)
-* [Privacy & Data](#privacy--data)
-* [Contribute & Support](#contribute--support)
-* [License](#license) ♪
+* [Privacy & Data](#privacy-and-data)
+* [Contribute & Support](#contribute-and-support)
+* [License](#license)
 
-## ＼(＾O＾)／ What is Playify?
+---
+
+<h2 id="what-is-playify">＼(＾O＾)／ What is Playify?</h2>
 
 Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers, no limits, just music and kawaii vibes!
 
@@ -35,15 +39,15 @@ Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers,
 **Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music.**
 Type `/play <url or query>` and let the music flow\~
 
-## (＾◡＾) Spotify Support
+<h2 id="spotify-support">(＾◡＾) Spotify Support</h2>
 
 * ✅ Individual tracks
 * ✅ Personal & public playlists
 * ✅ Spotify-curated mixes (e.g., *Release Radar*, *Your Mix*) via SpotifyScraper—bypasses API limits!
 
-> 🔄 *Note:* Dynamic Spotify radios/mixes may vary from your app—they update constantly.\~
+> *Note:* Dynamic Spotify radios/mixes may vary from your app—they update constantly.
 
-## (≧◡≦) Key Features
+<h2 id="key-features">(≧◡≦) Key Features</h2>
 
 * Play from **9+ platforms**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music
 * Slash commands: `/play`, `/pause`, `/skip`, `/queue`, `/clearqueue`, + more!
@@ -53,7 +57,7 @@ Type `/play <url or query>` and let the music flow\~
 * Audio **filters**: slowed, reverb, bass boost, nightcore, and more
 * Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
-## (＾∀＾) Installation & Self-Hosting
+<h2 id="installation-self-hosting">(＾∀＾) Installation & Self-Hosting</h2>
 
 *For a more detailed step-by-step guide, see the [Wiki](https://github.com/alan7383/playify/wiki).*
 
@@ -105,7 +109,7 @@ Type `/play <url or query>` and let the music flow\~
    * Generate invite link with: Connect, Speak, Send Messages
    * Add the bot and enjoy `/play`!
 
-## (⊙‿⊙) Command Reference
+<h2 id="command-reference">(⊙‿⊙) Command Reference</h2>
 
 | Command             | Description                               |
 | ------------------- | ----------------------------------------- |
@@ -130,28 +134,28 @@ Type `/play <url or query>` and let the music flow\~
 | `/kaomoji`          | Toggle kawaii mode                        |
 | `/discord`          | Get invite to support server              |
 
-## (｀・ω・´) Troubleshooting
+<h2 id="troubleshooting">(｀・ω・´) Troubleshooting</h2>
 
 * **FFmpeg not found**: Ensure it’s installed & in your PATH
 * **Spotify errors**: Verify API credentials in `.env`
 * **Bot offline/unresponsive**: Check `DISCORD_TOKEN` and permissions
 
-## (ﾉ◕ヮ◕)ﾉ Privacy & Data
+<h2 id="privacy-and-data">(ﾉ◕ヮ◕)ﾉ Privacy & Data</h2>
 
 * **Self-hosted**: All logs are local, no telemetry.
 * **Public bot**: Minimal error logs only, no tracking or analytics.
 
-## (ง＾◡＾)ง Contribute & Support
+<h2 id="contribute-and-support">(ง＾◡＾)ง Contribute & Support</h2>
 
 * Fork the repo, open an issue or PR—fixes get merged faster!
 * Star the repo if you enjoy it!
-* Join our [Discord Support Server](https://discord.gg/JeH8g6g3cG) for help, updates, and community chat!
+* [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server\&logo=discord\&style=for-the-badge)](https://discord.gg/JeH8g6g3cG)
 * Become a Patron on [Patreon](https://patreon.com/Playify) for a special backer shoutout and gratitude!
 * Sponsor via PayPal for faster bugfixes:
 
   * [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1)
 
-## (＾ω＾) License
+<h2 id="license">(＾ω＾) License</h2>
 
 MIT License — do what you want, just be kind!
 
