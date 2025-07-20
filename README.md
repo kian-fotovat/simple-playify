@@ -19,11 +19,11 @@
 * [What is Playify?](#what-is-playify)
 * [Spotify Support](#spotify-support)
 * [Key Features](#key-features)
-* [Installation & Self-Hosting](#installation-self-hosting)
+* [Installation & Self-Hosting](#installation--self-hosting)
 * [Command Reference](#command-reference)
 * [Troubleshooting](#troubleshooting)
-* [Privacy & Data](#privacy-and-data)
-* [Contribute & Support](#contribute-and-support)
+* [Privacy & Data](#privacy--data)
+* [Contribute & Support](#contribute--support)
 * [License](#license)
 
 ---
