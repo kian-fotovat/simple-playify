@@ -1,4 +1,4 @@
-<h1 align="center">Playify ♪( ° □ °) ♪</h1>
+<h1 align="center">Playify ♪(｡◕‿◕｡)</h1>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5c1d5fba-3a34-4ffe-bd46-ef68e1175360" alt="Playify Banner" width="900">
@@ -6,48 +6,55 @@
 
 ---
 
-## ＼(ノºДº)ノ What is Playify?
+## ＼( O_O )／ What is Playify?
 
-A **minimalist**, **open-source** Discord music bot that **just works** — no ads, no tracking, no premium tier.  
-Just pure music and good vibes (◕‿◕)ノ
-
-✅ Supports:  
-YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music
+A super cute, open-source Discord music bot that just wants to play good music for you...  
+No ads, no weird premium tiers, just tunes and good vibes~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
 
 ---
 
-## 🧰 Manual Setup (Recommended)
+## (｡♥‿♥｡) Supported Platforms
+
+> YouTube • YouTube Music • SoundCloud • Spotify  
+> Deezer • Bandcamp • Apple Music • Tidal • Amazon Music
+
+---
+
+## (o･ω･)ﾉ Manual Setup
 
 ### 1. Clone the repo
 ```bash
 git clone https://github.com/alan7383/playify.git
 cd playify
-```
+````
 
 ### 2. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 playwright install
 ```
 
-### 3. Set up your `.env`
+### 3. Set up your secrets
+
 ```bash
 cp .env.example .env
-# Edit .env with your tokens
+# Then edit .env with your tokens!
 ```
 
-### 4. Run the bot
+### 4. Run the bot!
+
 ```bash
 python playify.py
 ```
 
-> 💡 Make sure **FFmpeg** is installed and in your PATH.
+> (O\_O;) Make sure **FFmpeg** is installed and added to your PATH!
 
 ---
 
-## 📁 Environment Variables
+## (´-ω-\`) Environment Variables
 
-Create a `.env` file in the root folder:
+Create a `.env` file like this:
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token_here
@@ -56,64 +63,67 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
 GENIUS_TOKEN=your_genius_api_token_here
 ```
 
-> ⚠️ Never commit `.env` to GitHub. It’s ignored by `.gitignore`.
+> (¬\_¬) Shhh... Don't commit your `.env` file! It’s secret for a reason\~
 
 ---
 
-## 🎶 Features (◕‿◕)ノ
+## (ﾉ´ヮ´)ﾉ\*:･ﾟ✧ Features
 
-- 🎵 Play from **9+ platforms**  
-- 🎧 Real-time audio filters (slowed, nightcore, bass boost...)  
-- 🎤 Karaoke mode with **synced lyrics**  
-- 🔁 Loop, shuffle, autoplay  
-- 💖 Kawaii mode toggle (`/kaomoji`)  
-- 🧪 Slash commands only  
-- 🔒 Zero tracking, zero logs stored
-
----
-
-## 🧪 Command List (with kaomoji style)
-
-| Command | Description |
-|---------|-------------|
-| `/play <url or query>` | Add a song or playlist to the queue ♪(´▽｀) |
-| `/queue` | Show current queue (◕‿◕)ノ |
-| `/clearqueue` | Empty the queue (≧▽≦) |
-| `/playnext <url>` | Add as next song (っ◕‿◕)っ |
-| `/nowplaying` | Show what's playing now ♫♬ |
-| `/pause` | Pause music (´･_･`) |
-| `/resume` | Resume music ☆*:.｡.o(≧▽≦)o.｡.:*☆ |
-| `/skip` | Skip to next track (ノ°ο°)ノ |
-| `/loop` | Toggle loop mode 🔁 |
-| `/stop` | Stop & disconnect (ﾉ´･ω･)ﾉ ﾐ ┸━┸ |
-| `/shuffle` | Shuffle queue (✿◕‿◕) |
-| `/autoplay` | Toggle autoplay ♫ |
-| `/filter` | Change audio filters 🎧 |
-| `/lyrics` | Show lyrics 📜 |
-| `/karaoke` | Start synced karaoke 🎤 |
-| `/status` | Bot dashboard & stats 📊 |
-| `/kaomoji` | Toggle kawaii mode (◕‿◕✿) |
+・ Plays from over 9 platforms! (so friendly\~)
+・ Real-time audio filters like slowed, reverb, nightcore\~
+・ Karaoke mode with synced lyrics ♪
+・ Loop, shuffle, and autoplay so the music never stops\~
+・ `/kaomoji` mode for extra cuteness! (◕‿◕✿)
+・ Simple slash commands anyone can use\~
+・ No data collection at all! (｡•́︿•̀｡)✧
 
 ---
 
-## 📄 License
+## (・◇・) Command List
 
-MIT License — do whatever you want, just don’t break it (too badly) (⊙‿‿⊙)
+| Command                 | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| `/play <url/query>`     | Add a song or playlist ♪(´▽｀)               |
+| `/pause`                | Pause the music (´･\_･\`)                   |
+| `/resume`               | Resume the music\~ o(≧▽≦)o                  |
+| `/skip`                 | Skip to the next track (ノ°ο°)ノ              |
+| `/stop`                 | Stop and rest (ﾉ´･ω･)ﾉ ﾐ ┸━┸                |
+| `/queue`                | Show the current queue (◕‿◕)ノ               |
+| `/clearqueue`           | Clear the queue! (≧▽≦)                      |
+| `/playnext <url/query>` | Play something right after this one (っ◕‿◕)っ |
+| `/nowplaying`           | What’s this song? ヽ(o^ ^o)ﾉ                 |
+| `/loop`                 | Loop the current track ( •̀ ω •́ )✧         |
+| `/shuffle`              | Shuffle the queue\~ (✿◕‿◕)                  |
+| `/autoplay`             | Autoplay when queue ends (b ᵔ▽ᵔ)b           |
+| `/filter`               | Apply audio filters! (⌐■\_■)                |
+| `/lyrics`               | Get the lyrics φ(..)                        |
+| `/karaoke`              | Sing along with synced lyrics\~             |
+| `/24_7 <mode>`          | Stay connected forever (￣^￣)ゞ               |
+| `/reconnect`            | Reconnect if it’s buggy (o\_O;)             |
+| `/status`               | See resource usage (⌐□\_□)                  |
+| `/kaomoji`              | Toggle cute mode! (◕‿◕✿)                    |
+| `/discord`              | Join the support server! ヽ(・∀・)ﾉ            |
 
 ---
 
----
+## ( ´ ▽ \` )ﾉ License
 
-## ❤️ Support
-
-Need help or want to suggest something?
-
-👉 [Join the Discord Server](https://discord.gg/JeH8g6g3cG) – get support, report bugs, or just hang out 🎧  
-👉 [Patreon](https://patreon.com/Playify) – support Playify and get a special Discord role + recognition 💛  
-👉 [PayPal](https://paypal.me/alanmussot1) – help keep Playify ad-free and alive  
-
-Your support might fix bugs *slightly* faster... no promises (´• ω •`)
+MIT License — do what you want, just be kind\~
 
 ---
 
-<p align="center">Built with 💢 and ☕ by <a href="https://github.com/alan7383">alan7383</a></p>
+## (・\_・?) Support
+
+Have a question? Got a cool idea?
+
+・ [Join the Discord Server](https://discord.gg/yourserverlink) — come say hi\~
+・ [Patreon](https://patreon.com/yourpatreon) — support Playify and get a special role\~
+・ [PayPal](https://paypal.me/yourpaypal) — help keep Playify alive and ad-free!
+
+> Your support keeps me going! (๑>ᴗ<๑)
+
+---
+
+<p align="center">
+  Built with love and coffee by <a href="https://github.com/alan7383">alan7383</a> (｡♥‿♥｡)
+</p>
