@@ -2182,21 +2182,51 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                             mix_playlist_url = get_mix_playlist_url(music_player.current_url)
                             if mix_playlist_url:
                                 try:
+                                    logger.info(f"[{guild_id}] Autoplay: Fetching YouTube Mix: {mix_playlist_url}")
                                     ydl_opts_mix = {"extract_flat": True, "quiet": True, "noplaylist": False}
                                     info = await extract_info_async(ydl_opts_mix, mix_playlist_url)
+                                    
                                     if info.get("entries"):
                                         current_video_id = get_video_id(music_player.current_url)
-                                        # Add only the first few recommendations to avoid very long implicit queues
-                                        added_count = 0
                                         for entry in info["entries"]:
-                                            if added_count >= 5: break # Limit to 5 recommended songs
                                             if entry and get_video_id(entry.get("url", "")) != current_video_id:
-                                                queue_item = {'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'thumbnail': entry.get('thumbnail'), 'is_single': True}
+                                                queue_item = {
+                                                    'url': entry.get('url'), 
+                                                    'title': entry.get('title', 'Unknown Title'), 
+                                                    'webpage_url': entry.get('webpage_url', entry.get('url')), 
+                                                    'thumbnail': entry.get('thumbnail'), 
+                                                    'is_single': True
+                                                }
                                                 await music_player.queue.put(queue_item)
-                                                added_count += 1
+                                        logger.info(f"[{guild_id}] Autoplay: Added {len(info.get('entries')) - 1} tracks from YouTube Mix.")
                                 except Exception as e:
                                     logger.error(f"YouTube Mix Error for autoplay: {e}")
-                # --- END OF MODIFIED 24/7 LOGIC ---
+
+                        elif "soundcloud.com" in music_player.current_url:
+                            track_id = get_soundcloud_track_id(music_player.current_url)
+                            station_url = get_soundcloud_station_url(track_id)
+                            if station_url:
+                                try:
+                                    logger.info(f"[{guild_id}] Autoplay: Fetching SoundCloud station: {station_url}")
+                                    ydl_opts_station = {"extract_flat": True, "quiet": True, "noplaylist": False}
+                                    info = await extract_info_async(ydl_opts_station, station_url)
+                                    
+                                    if info.get("entries") and len(info.get("entries")) > 1:
+                                        for entry in info["entries"][1:]:
+                                            if entry:
+                                                queue_item = {
+                                                    'url': entry.get('url'), 
+                                                    'title': entry.get('title', 'Unknown Title'), 
+                                                    'webpage_url': entry.get('webpage_url', entry.get('url')), 
+                                                    'thumbnail': entry.get('thumbnail'), 
+                                                    'is_single': True
+                                                }
+                                                await music_player.queue.put(queue_item)
+                                        
+                                        added_count = len(info.get("entries")) - 1
+                                        logger.info(f"[{guild_id}] Autoplay: Added {added_count} tracks from SoundCloud station.")
+                                except Exception as e:
+                                    logger.error(f"SoundCloud Station Error for autoplay: {e}")
 
                 if music_player.queue.empty():
                     music_player.current_task = None
