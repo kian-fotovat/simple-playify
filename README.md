@@ -19,11 +19,11 @@
 * [What is Playify?](#what-is-playify)
 * [Spotify Support](#spotify-support)
 * [Key Features](#key-features)
-* [Installation & Self-Hosting](#installation--self-hosting)
+* [Installation & Self-Hosting](#installation-self-hosting)
 * [Command Reference](#command-reference)
 * [Troubleshooting](#troubleshooting)
-* [Privacy & Data](#privacy--data)
-* [Contribute & Support](#contribute--support)
+* [Privacy & Data](#privacy-data)
+* [Contribute & Support](#contribute-support)
 * [License](#license)
 
 ---
@@ -158,7 +158,7 @@ Type `/play <url or query>` and let the music flow~
 * Sponsor via PayPal for faster bugfixes:
   * [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1)
 
-## (＾ω＾) License
+## <a id="license"></a>(＾ω＾) License
 
 MIT License — do what you want, just be kind!
 
