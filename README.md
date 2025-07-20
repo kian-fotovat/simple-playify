@@ -81,7 +81,7 @@ Type `/play <url or query>` and let the music flow~
    ```bash
    git clone https://github.com/alan7383/playify.git
    cd playify
-````
+    ````
 
 2. Install dependencies:
 
