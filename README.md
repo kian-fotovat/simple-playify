@@ -69,13 +69,13 @@ GENIUS_TOKEN=your_genius_api_token_here
 
 ## (ﾉ´ヮ´)ﾉ\*:･ﾟ✧ Features
 
-・ Plays from over 9 platforms! (so friendly\~)
-・ Real-time audio filters like slowed, reverb, nightcore\~
-・ Karaoke mode with synced lyrics ♪
-・ Loop, shuffle, and autoplay so the music never stops\~
-・ `/kaomoji` mode for extra cuteness! (◕‿◕✿)
-・ Simple slash commands anyone can use\~
-・ No data collection at all! (｡•́︿•̀｡)✧
+* Plays from over 9 platforms! (so friendly\~) (＾▽＾)
+* Real-time audio filters like slowed, reverb, nightcore\~ (≧◡≦)
+* Karaoke mode with synced lyrics ♪ (〜￣▽￣)〜
+* Loop, shuffle, and autoplay so the music never stops\~ (ﾉ◕ヮ◕)ﾉ\*:･ﾟ✧
+* `/kaomoji` mode for extra cuteness! (◕‿◕✿)
+* Simple slash commands anyone can use\~ (｡･ω･｡)
+* No data collection at all! (｡•́︿•̀｡)
 
 ---
 
@@ -97,7 +97,7 @@ GENIUS_TOKEN=your_genius_api_token_here
 | `/autoplay`             | Autoplay when queue ends (b ᵔ▽ᵔ)b           |
 | `/filter`               | Apply audio filters! (⌐■\_■)                |
 | `/lyrics`               | Get the lyrics φ(..)                        |
-| `/karaoke`              | Sing along with synced lyrics\~             |
+| `/karaoke`              | Sing along with synced lyrics\~ (o´ω\`o)ﾉ   |
 | `/24_7 <mode>`          | Stay connected forever (￣^￣)ゞ               |
 | `/reconnect`            | Reconnect if it’s buggy (o\_O;)             |
 | `/status`               | See resource usage (⌐□\_□)                  |
@@ -108,17 +108,17 @@ GENIUS_TOKEN=your_genius_api_token_here
 
 ## ( ´ ▽ \` )ﾉ License
 
-MIT License — do what you want, just be kind\~
+MIT License — do what you want, just be kind\~ (´｡• ᵕ •｡\`)
 
 ---
 
 ## (・\_・?) Support
 
-Have a question? Got a cool idea?
+Got questions? Want to support this cute project?
 
-・ [Join the Discord Server](https://discord.gg/yourserverlink) — come say hi\~
-・ [Patreon](https://patreon.com/yourpatreon) — support Playify and get a special role\~
-・ [PayPal](https://paypal.me/yourpaypal) — help keep Playify alive and ad-free!
+* [Join the Discord Server](https://discord.gg/yourserverlink) — come say hi\~ (´｡• ω •｡\`)
+* [Patreon](https://patreon.com/yourpatreon) — support Playify and get a special role\~ (≧◡≦)
+* [PayPal](https://paypal.me/yourpaypal) — help keep Playify alive and ad-free (´• ω •\`)
 
 > Your support keeps me going! (๑>ᴗ<๑)
 
