@@ -6,124 +6,155 @@
 
 ---
 
-## ＼( O_O )／ What is Playify?
+![GitHub license](https://img.shields.io/github/license/alan7383/playify.svg)
+![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
+[![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server\&logo=discord\&style=for-the-badge)](https://discord.gg/JeH8g6g3cG)
 
-A super cute, open-source Discord music bot that just wants to play good music for you...  
-No ads, no weird premium tiers, just tunes and good vibes~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
+# Playify
 
----
+## Table of Contents
 
-## (｡♥‿♥｡) Supported Platforms
+* [What is Playify?](#what-is-playify)
+* [Spotify Support](#spotify-support)
+* [Key Features](#key-features)
+* [Installation & Self-Hosting](#installation--self-hosting)
+* [Command Reference](#command-reference)
+* [Troubleshooting](#troubleshooting)
+* [Privacy & Data](#privacy--data)
+* [Contribute & Support](#contribute--support)
+* [License](#license) ♪
 
-> YouTube • YouTube Music • SoundCloud • Spotify  
-> Deezer • Bandcamp • Apple Music • Tidal • Amazon Music
+## ＼(＾O＾)／ What is Playify?
 
----
+Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers, no limits, just music and kawaii vibes!
 
-## (o･ω･)ﾉ Manual Setup
+* **No web UI**: Only simple slash commands.
+* **100% free**: All features unlocked for everyone.
+* **Unlimited playback**: Giant playlists, endless queues, eternal tunes!
 
-### 1. Clone the repo
-```bash
-git clone https://github.com/alan7383/playify.git
-cd playify
-````
+**Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music.**
+Type `/play <url or query>` and let the music flow\~
 
-### 2. Install dependencies
+## (＾◡＾) Spotify Support
 
-```bash
-pip install -r requirements.txt
-playwright install
-```
+* ✅ Individual tracks
+* ✅ Personal & public playlists
+* ✅ Spotify-curated mixes (e.g., *Release Radar*, *Your Mix*) via SpotifyScraper—bypasses API limits!
 
-### 3. Set up your secrets
+> 🔄 *Note:* Dynamic Spotify radios/mixes may vary from your app—they update constantly.\~
 
-```bash
-cp .env.example .env
-# Then edit .env with your tokens!
-```
+## (≧◡≦) Key Features
 
-### 4. Run the bot!
+* Play from **9+ platforms**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music
+* Slash commands: `/play`, `/pause`, `/skip`, `/queue`, `/clearqueue`, + more!
+* **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
+* **Loop** & **shuffle** controls
+* **Kawaii Mode** toggles cute kaomoji responses (`/kaomoji`)
+* Audio **filters**: slowed, reverb, bass boost, nightcore, and more
+* Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
-```bash
-python playify.py
-```
+## (＾∀＾) Installation & Self-Hosting
 
-> (O\_O;) Make sure **FFmpeg** is installed and added to your PATH!
+*For a more detailed step-by-step guide, see the [Wiki](https://github.com/alan7383/playify/wiki).*
 
----
+**Requirements:**
 
-## (´-ω-\`) Environment Variables
+* Python 3.9+
+* FFmpeg installed & in PATH
+* Git
+* Discord Bot Token
+* (Optional) Spotify API credentials
+* (Optional) Genius API token for lyrics
 
-Create a `.env` file like this:
+**Setup Steps:**
 
-```env
-DISCORD_TOKEN=your_discord_bot_token_here
-SPOTIFY_CLIENT_ID=your_spotify_client_id_here
-SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
-GENIUS_TOKEN=your_genius_api_token_here
-```
+1. Clone the repo:
 
-> (¬\_¬) Shhh... Don't commit your `.env` file! It’s secret for a reason\~
+   ```bash
+   git clone https://github.com/alan7383/playify.git
+   cd playify
+   ```
+2. Install dependencies:
 
----
+   ```bash
+   pip install -r requirements.txt
+   playwright install
+   ```
+3. Copy & configure environment:
 
-## (ﾉ´ヮ´)ﾉ\*:･ﾟ✧ Features
+   ```bash
+   cp .env.example .env
+   ```
 
-* Plays from over 9 platforms! (so friendly\~) (＾▽＾)
-* Real-time audio filters like slowed, reverb, nightcore\~ (≧◡≦)
-* Karaoke mode with synced lyrics ♪ (〜￣▽￣)〜
-* Loop, shuffle, and autoplay so the music never stops\~ (ﾉ◕ヮ◕)ﾉ\*:･ﾟ✧
-* `/kaomoji` mode for extra cuteness! (◕‿◕✿)
-* Simple slash commands anyone can use\~ (｡･ω･｡)
-* No data collection at all! (｡•́︿•̀｡)
+   *Edit `.env`:*
 
----
+   ```ini
+   DISCORD_TOKEN=your_discord_bot_token
+   SPOTIFY_CLIENT_ID=your_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+   GENIUS_TOKEN=your_genius_api_token
+   ```
+4. Run the bot:
 
-## (・◇・) Command List
+   ```bash
+   python playify.py
+   ```
+5. Invite to Discord:
 
-| Command                 | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `/play <url/query>`     | Add a song or playlist ♪(´▽｀)               |
-| `/pause`                | Pause the music (´･\_･\`)                   |
-| `/resume`               | Resume the music\~ o(≧▽≦)o                  |
-| `/skip`                 | Skip to the next track (ノ°ο°)ノ              |
-| `/stop`                 | Stop and rest (ﾉ´･ω･)ﾉ ﾐ ┸━┸                |
-| `/queue`                | Show the current queue (◕‿◕)ノ               |
-| `/clearqueue`           | Clear the queue! (≧▽≦)                      |
-| `/playnext <url/query>` | Play something right after this one (っ◕‿◕)っ |
-| `/nowplaying`           | What’s this song? ヽ(o^ ^o)ﾉ                 |
-| `/loop`                 | Loop the current track ( •̀ ω •́ )✧         |
-| `/shuffle`              | Shuffle the queue\~ (✿◕‿◕)                  |
-| `/autoplay`             | Autoplay when queue ends (b ᵔ▽ᵔ)b           |
-| `/filter`               | Apply audio filters! (⌐■\_■)                |
-| `/lyrics`               | Get the lyrics φ(..)                        |
-| `/karaoke`              | Sing along with synced lyrics\~ (o´ω\`o)ﾉ   |
-| `/24_7 <mode>`          | Stay connected forever (￣^￣)ゞ               |
-| `/reconnect`            | Reconnect if it’s buggy (o\_O;)             |
-| `/status`               | See resource usage (⌐□\_□)                  |
-| `/kaomoji`              | Toggle cute mode! (◕‿◕✿)                    |
-| `/discord`              | Join the support server! ヽ(・∀・)ﾉ            |
+   * Enable **Guilds** & **Voice States** intents in the Developer Portal
+   * Generate invite link with: Connect, Speak, Send Messages
+   * Add the bot and enjoy `/play`!
 
----
+## (⊙‿⊙) Command Reference
 
-## ( ´ ▽ \` )ﾉ License
+| Command             | Description                               |
+| ------------------- | ----------------------------------------- |
+| `/play <url/query>` | Add a song or playlist                    |
+| `/pause`            | Pause playback                            |
+| `/resume`           | Resume playback                           |
+| `/skip`             | Skip current track                        |
+| `/stop`             | Stop and clear queue                      |
+| `/queue`            | Show current queue                        |
+| `/clearqueue`       | Clear the queue                           |
+| `/playnext <...>`   | Queue to play next                        |
+| `/nowplaying`       | Display current track info                |
+| `/loop`             | Toggle loop on current track              |
+| `/shuffle`          | Shuffle the queue                         |
+| `/autoplay`         | Toggle autoplay of similar tracks         |
+| `/filter <type>`    | Apply audio filters (nightcore, bass+...) |
+| `/lyrics`           | Fetch lyrics via Genius                   |
+| `/karaoke`          | Sing along with synced lyrics             |
+| `/24_7 <on/off>`    | Stay connected indefinitely               |
+| `/reconnect`        | Force reconnect if voice issues           |
+| `/status`           | Show bot resource usage                   |
+| `/kaomoji`          | Toggle kawaii mode                        |
+| `/discord`          | Get invite to support server              |
 
-MIT License — do what you want, just be kind\~ (´｡• ᵕ •｡\`)
+## (｀・ω・´) Troubleshooting
 
----
+* **FFmpeg not found**: Ensure it’s installed & in your PATH
+* **Spotify errors**: Verify API credentials in `.env`
+* **Bot offline/unresponsive**: Check `DISCORD_TOKEN` and permissions
 
-## (・\_・?) Support
+## (ﾉ◕ヮ◕)ﾉ Privacy & Data
 
-Got questions? Want to support this cute project?
+* **Self-hosted**: All logs are local, no telemetry.
+* **Public bot**: Minimal error logs only, no tracking or analytics.
 
-* [Join the Discord Server](https://discord.gg/JeH8g6g3cG) — come say hi\~ (´｡• ω •｡\`)
-* [Patreon](https://patreon.com/Playify) — support Playify and get a special role\~ (≧◡≦)
-* [PayPal](https://www.paypal.com/paypalme/alanmussot1) — help keep Playify alive and ad-free (´• ω •\`)
+## (ง＾◡＾)ง Contribute & Support
 
-> Your support keeps me going! (๑>ᴗ<๑)
+* Fork the repo, open an issue or PR—fixes get merged faster!
+* Star the repo if you enjoy it!
+* Join our [Discord Support Server](https://discord.gg/JeH8g6g3cG) for help, updates, and community chat!
+* Become a Patron on [Patreon](https://patreon.com/Playify) for a special backer shoutout and gratitude!
+* Sponsor via PayPal for faster bugfixes:
 
----
+  * [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1)
+
+## (＾ω＾) License
+
+MIT License — do what you want, just be kind!
 
 <p align="center">
-  Built with love and coffee by <a href="https://github.com/alan7383">alan7383</a> (｡♥‿♥｡)
+  Built with ☕ and love by <a href="https://github.com/alan7383">alan7383</a> (｡♥‿♥｡)
 </p>
