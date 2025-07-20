@@ -2162,7 +2162,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             if music_player.queue.empty():
                 is_kawaii = get_mode(guild_id)
                 
-                # --- START OF MODIFIED 24/7 LOGIC ---
                 is_24_7_on = _24_7_active.get(guild_id, False)
 
                 # Mode 24/7 Normal: Use the dedicated radio_playlist
@@ -2241,7 +2240,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             
             track_info = await music_player.queue.get()
             
-            # History is now just a log, not used for looping logic
             if not music_player.loop_current:
                  music_player.history.append(track_info)
 
@@ -2250,7 +2248,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             skip_now_playing = track_info.get('skip_now_playing', False)
             music_player.current_info = track_info
 
-        # --- COMMON PLAYBACK LOGIC (Unchanged) ---
         if not music_player.voice_client or not music_player.voice_client.is_connected():
             logger.warning(f"Voice client not available for guild {guild_id}. Stopping playback.")
             return
@@ -2277,13 +2274,26 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         music_player.current_info = info
         audio_url = info["url"]
 
-        before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
-        if seek_time > 0:
-            before_options += f" -ss {seek_time}"
+        # --- START OF LIVESTREAM FIX ---
+        # Base options for network resilience.
+        before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -reconnect_on_network_error 1 -reconnect_on_http_error 4xx,5xx"
 
-        ffmpeg_options = {"before_options": before_options, "options": "-vn"}
+        # Options specifically for HLS (livestreams).
+        # -http_persistent 0: Forces new connections, preventing expired link issues.
+        # -seekable 0: Informs FFmpeg the stream is not seekable (typical for a live broadcast).
+        ffmpeg_options = {
+            "before_options": f"{before_options} -http_persistent 0",
+            "options": "-vn -seekable 0"
+        }
+
+        # Apply seek time if this is a seek operation.
+        if seek_time > 0:
+            ffmpeg_options["before_options"] += f" -ss {seek_time}"
+
+        # Apply audio filters if they are active.
         if music_player.active_filter:
             ffmpeg_options["options"] += f" -af \"{music_player.active_filter}\""
+        # --- END OF LIVESTREAM FIX ---
 
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
 
@@ -2329,7 +2339,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
 
     except Exception as e:
         await handle_playback_error(guild_id, e)
-
+        
 async def update_karaoke_task(guild_id: int):
     """Background task for karaoke mode, manages filters and speed."""
     music_player = get_player(guild_id)
