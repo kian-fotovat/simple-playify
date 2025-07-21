@@ -2283,6 +2283,11 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     Plays a track, applies filters, and intelligently handles auto-queuing.
     """
     music_player = get_player(guild_id)
+
+    if music_player.voice_client and music_player.voice_client.is_playing() and not seek_time > 0:
+        logger.warning(f"[{guild_id}] Warning: play_audio was called while playback was already in progress. Call ignored.")
+        return
+
     try:
         if seek_time == 0 and not is_a_loop:
              if music_player.lyrics_task and not music_player.lyrics_task.done():
@@ -3974,7 +3979,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
 
         if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
             music_player.current_task = asyncio.create_task(play_audio(guild_id))
-            
+
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -4368,10 +4373,7 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
         music_player.autoplay_enabled = False
         music_player.loop_current = False
         music_player.radio_playlist.clear()
-        
-        # --- ADDED CLEANUP LOGIC ---
-        clear_audio_cache(guild_id)
-        
+                
         embed = Embed(
             title=get_messages("24_7_off_title", guild_id),
             description=get_messages("24_7_off_desc", guild_id),
