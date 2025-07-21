@@ -3830,19 +3830,33 @@ async def clear_queue(interaction: discord.Interaction):
     embed = Embed(description=get_messages("clear_queue_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
     await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
 
-@bot.tree.command(name="playnext", description="Add a song to play next")
-@app_commands.describe(query="Link or title of the video/song to play next")
-async def play_next(interaction: discord.Interaction, query: str):
+@bot.tree.command(name="playnext", description="Add a song or a local file to play next")
+@app_commands.describe(
+    query="Link or title of the video/song to play next.",
+    file="The local audio/video file to play next."
+)
+async def play_next(interaction: discord.Interaction, query: str = None, file: discord.Attachment = None):
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
+
+    # --- NEW VALIDATION LOGIC ---
+    # Ensure the user provided exactly one argument, not both or none.
+    if (query and file) or (not query and not file):
+        embed = Embed(
+            description="Please provide either a link/search term OR a file, but not both.",
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        return
+    # --- END VALIDATION ---
 
     if not interaction.user.voice or not interaction.user.voice.channel:
         embed = Embed(
             description=get_messages("no_voice_channel", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
         return
 
     if not music_player.voice_client or not music_player.voice_client.is_connected():
@@ -3853,113 +3867,114 @@ async def play_next(interaction: discord.Interaction, query: str):
                 description=get_messages("connection_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-            logger.error(f"Error: {e}")
+            await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            logger.error(f"Error connecting: {e}")
             return
 
     music_player.text_channel = interaction.channel
     await interaction.response.defer()
 
-    # Re-using regexes from the play command
-    spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
-    deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
-    apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
-    tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
-    amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
+    queue_item = None
 
-    try:
-        tracks = None
-        # Check for platform links first
-        if spotify_regex.match(query):
-            tracks = await process_spotify_url(query, interaction)
-        elif deezer_regex.match(query):
-            tracks = await process_deezer_url(query, interaction)
-        elif apple_music_regex.match(query):
-            tracks = await process_apple_music_url(query, interaction)
-        elif tidal_regex.match(query):
-            tracks = await process_tidal_url(query, interaction)
-        elif amazon_music_regex.match(query):
-            tracks = await process_amazon_music_url(query, interaction)
+    # --- BRANCH 1: User provided a link or search query ---
+    if query:
+        try:
+            spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+            deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
+            apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
+            tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
+            amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
 
-        search_query_for_yt = query # Default to original query
+            tracks = None
+            if spotify_regex.match(query): tracks = await process_spotify_url(query, interaction)
+            elif deezer_regex.match(query): tracks = await process_deezer_url(query, interaction)
+            elif apple_music_regex.match(query): tracks = await process_apple_music_url(query, interaction)
+            elif tidal_regex.match(query): tracks = await process_tidal_url(query, interaction)
+            elif amazon_music_regex.match(query): tracks = await process_amazon_music_url(query, interaction)
 
-        if tracks:
-            if len(tracks) != 1:
-                raise Exception("Only single tracks are supported for /playnext, not playlists or albums.")
-            track_name, artist_name = tracks[0]
-            search_query_for_yt = f"{track_name} {artist_name}"
+            search_query_for_yt = query
+            if tracks:
+                if len(tracks) != 1:
+                    raise Exception("Only single tracks are supported for /playnext, not playlists or albums.")
+                track_name, artist_name = tracks[0]
+                search_query_for_yt = f"{track_name} {artist_name}"
 
-        # Now, search on YouTube with the determined query
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
-            "no_color": True,
-            "socket_timeout": 10,
-        }
+            ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True, "no_color": True, "socket_timeout": 10}
+            yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
+            info = await extract_info_async(ydl_opts, yt_search_term)
+            video = info["entries"][0] if "entries" in info and info["entries"] else info
+            
+            queue_item = {
+                'url': video.get("webpage_url", video.get("url")),
+                'title': video.get('title', 'Unknown Title'),
+                'webpage_url': video.get("webpage_url", video.get("url")),
+                'thumbnail': video.get('thumbnail'),
+                'is_single': True
+            }
 
-        # If it wasn't a platform link, it might be a direct URL or search term
-        yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
+        except Exception as e:
+            embed = Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            logger.error(f"Error processing /playnext for query '{query}': {e}")
+            return
+            
+    # --- BRANCH 2: User provided a local file ---
+    elif file:
+        try:
+            if not file.content_type or not (file.content_type.startswith("audio/") or file.content_type.startswith("video/")):
+                embed = Embed(description="Invalid file type. Please upload an audio or video file.", color=0xFF9AA2 if is_kawaii else discord.Color.red())
+                await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+                return
 
-        info = await extract_info_async(ydl_opts, yt_search_term)
-        video = info["entries"][0] if "entries" in info and info["entries"] else info
-        video_url = video.get("webpage_url", video.get("url"))
+            guild_cache_dir = os.path.join("audio_cache", str(guild_id))
+            os.makedirs(guild_cache_dir, exist_ok=True)
+            file_path = os.path.join(guild_cache_dir, file.filename)
+            await file.save(file_path)
+            logger.info(f"File saved for /playnext in guild {guild_id}: {file_path}")
 
-        if not video_url:
-            raise KeyError("No valid URL found in video metadata")
+            queue_item = {
+                'url': file_path,
+                'title': file.filename,
+                'webpage_url': None,
+                'thumbnail': None,
+                'is_single': True,
+                'source_type': 'file'
+            }
+        except Exception as e:
+            embed = Embed(description="An error occurred while processing the file.", color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            logger.error(f"Error processing file in /playnext for guild {guild_id}: {e}")
+            return
 
-        logger.debug(f"Metadata for playnext: {video}")
-
-        queue_item = {
-            'url': video_url,
-            'title': video.get('title', 'Unknown Title'),
-            'webpage_url': video_url,
-            'thumbnail': video.get('thumbnail'),
-            'is_single': True
-        }
-
+    # --- COMMON LOGIC: Add to queue and confirm ---
+    if queue_item:
         new_queue = asyncio.Queue()
         await new_queue.put(queue_item)
-
         while not music_player.queue.empty():
             item = await music_player.queue.get()
             await new_queue.put(item)
-
         music_player.queue = new_queue
+
+        description_text = ""
+        if queue_item.get('source_type') == 'file':
+            description_text = f"💿 `{queue_item['title']}`"
+        else:
+            description_text = f"[{queue_item['title']}]({queue_item['webpage_url']})"
 
         embed = Embed(
             title=get_messages("play_next_added", guild_id),
-            description=f"[{video.get('title', 'Unknown Title')}]({video_url})",
+            description=description_text,
             color=0xC7CEEA if is_kawaii else discord.Color.blue()
         )
-        if video.get("thumbnail"):
-            embed.set_thumbnail(url=video["thumbnail"])
+        if queue_item.get("thumbnail"):
+            embed.set_thumbnail(url=queue_item["thumbnail"])
         if is_kawaii:
             embed.set_footer(text="☆⌒(≧▽° )")
-        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
+        await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
-        # Start playback if nothing is playing
         if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
             music_player.current_task = asyncio.create_task(play_audio(guild_id))
-
-    except yt_dlp.utils.DownloadError as e:
-        error_message = str(e).split(':', 1)[-1].strip().split('\n')[0]
-        embed = Embed(
-            title=get_messages("extraction_error", guild_id),
-            description=get_messages("extraction_error_reason", guild_id).format(error_message=error_message),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
-        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-        logger.warning(f"A user-facing download error occurred during /playnext for '{query}': {error_message}")
-    except Exception as e:
-        embed = Embed(
-            description=get_messages("search_error", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
-        await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-        logger.error(f"Error processing /playnext for '{query}': {e}")
-
+            
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
     guild_id = interaction.guild_id
