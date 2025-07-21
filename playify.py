@@ -35,6 +35,7 @@ import sys
 import math # Needed for the format_bytes helper
 import traceback # --- NEW --- To format exceptions
 import os
+import shutil
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -570,6 +571,10 @@ messages = {
         "normal": "I can only reconnect during active playback.",
         "kawaii": "I can only do my magic reconnect trick when a song is playing! (´• ω •`)"
     },
+    "autoplay_file_notice": {
+        "normal": "💿 The last track was a local file, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
+        "kawaii": "💿 The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+    },
 }
 
 # --- Discord Bot Initialization ---
@@ -1025,7 +1030,6 @@ class QueueView(View):
         self.current_page = 0
         self.total_pages = math.ceil(len(self.tracks) / self.items_per_page) if self.tracks else 1
 
-        # Create and configure buttons dynamically
         self.previous_button = Button(label=get_messages("previous_button", self.guild_id), style=ButtonStyle.secondary)
         self.next_button = Button(label=get_messages("next_button", self.guild_id), style=ButtonStyle.secondary)
 
@@ -1036,7 +1040,7 @@ class QueueView(View):
         self.add_item(self.next_button)
 
     async def create_queue_embed(self) -> Embed:
-        """Creates the embed for the current page, fetching missing titles if necessary."""
+        """Creates the embed for the current page, handling local file display."""
         # --- Status Logic ---
         status_lines = []
         if self.music_player.loop_current:
@@ -1055,18 +1059,27 @@ class QueueView(View):
             color=0xB5EAD7 if self.is_kawaii else discord.Color.blue()
         )
         embed.add_field(name=get_messages("queue_status_title", self.guild_id), value=status_description, inline=False)
+        
+        # --- START: MODIFIED Now Playing Display ---
         if self.music_player.current_info:
             title = self.music_player.current_info.get("title", "Unknown Title")
-            url = self.music_player.current_info.get("webpage_url", self.music_player.current_url)
-            embed.add_field(name=get_messages("now_playing_in_queue", self.guild_id), value=f"[{title}]({url})", inline=False)
+            now_playing_text = ""
+            # Display differently if it's a local file
+            if self.music_player.current_info.get('source_type') == 'file':
+                now_playing_text = f"💿 `{title}`" # Icon + clean text
+            else:
+                url = self.music_player.current_info.get("webpage_url", self.music_player.current_url)
+                now_playing_text = f"[{title}]({url})" # Standard link
+            embed.add_field(name=get_messages("now_playing_in_queue", self.guild_id), value=now_playing_text, inline=False)
+        # --- END: MODIFIED Now Playing Display ---
 
-        # --- On-the-fly Hydration Logic ---
+        # --- On-the-fly Hydration Logic (unchanged) ---
         if self.tracks:
             start_index = self.current_page * self.items_per_page
             end_index = start_index + self.items_per_page
             tracks_on_page = self.tracks[start_index:end_index]
 
-            tracks_to_hydrate = [track for track in tracks_on_page if not track.get('title') or track.get('title') == 'Unknown Title']
+            tracks_to_hydrate = [track for track in tracks_on_page if (not track.get('title') or track.get('title') == 'Unknown Title') and not track.get('source_type') == 'file']
             
             if tracks_to_hydrate:
                 logger.info(f"Queue: Hydrating {len(tracks_to_hydrate)} tracks for page {self.current_page + 1}")
@@ -1081,16 +1094,23 @@ class QueueView(View):
                         track['title'] = new_data.get('title', 'Unknown Title')
                         track['webpage_url'] = new_data.get('webpage_url', track['url'])
 
+            # --- START: MODIFIED Queue List Display ---
             next_songs_list = []
             for i, item in enumerate(tracks_on_page, start=start_index):
                 title = item.get('title', 'Title not available')
-                url = item.get('webpage_url', '#')
-                # Corrected field name from "queue_next" to "Next Up:" as per your original messages
-                next_songs_list.append(f"`{i + 1}.` {get_messages('queue_song', self.guild_id).format(title=title, url=url)}")
+                display_line = ""
+                # Display differently if it's a local file
+                if item.get('source_type') == 'file':
+                    display_line = f"💿 `{title}`" # Icon + clean text
+                else:
+                    url = item.get('webpage_url', '#')
+                    display_line = f"[{title}]({url})" # Standard link
+                
+                next_songs_list.append(f"`{i + 1}.` {display_line}")
+            # --- END: MODIFIED Queue List Display ---
             
             if next_songs_list:
-                # Corrected field name from "queue_next" to use the right key
-                embed.add_field(name=messages["queue_next"][ "normal" if not self.is_kawaii else "kawaii"], value="\n".join(next_songs_list), inline=False)
+                embed.add_field(name=get_messages("queue_next", self.guild_id), value="\n".join(next_songs_list), inline=False)
 
         embed.set_footer(text=get_messages("queue_page_footer", self.guild_id).format(current_page=self.current_page + 1, total_pages=self.total_pages))
         return embed
@@ -1116,11 +1136,133 @@ class QueueView(View):
         new_embed = await self.create_queue_embed()
         await interaction.edit_original_response(embed=new_embed, view=self)
 
+class RemoveSelect(discord.ui.Select):
+    """ The dropdown menu component, now with multi-select enabled. """
+    def __init__(self, tracks_on_page: list, page_offset: int):
+        options = []
+        for i, track in enumerate(tracks_on_page):
+            global_index = i + page_offset
+            options.append(discord.SelectOption(
+                label=f"{global_index + 1}. {track.get('title', 'Unknown Title')}"[:100],
+                value=str(global_index)
+            ))
+        
+        super().__init__(
+            placeholder="Select one or more songs to remove...",
+            min_values=1,
+            max_values=len(options) if options else 1,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        """ This is the corrected callback that properly handles the interaction response. """
+        guild_id = interaction.guild_id
+        is_kawaii = get_mode(guild_id)
+        music_player = get_player(guild_id)
+        
+        indices_to_remove = sorted([int(v) for v in self.values], reverse=True)
+        
+        queue_list = list(music_player.queue._queue)
+        removed_titles = []
+
+        for index in indices_to_remove:
+            if 0 <= index < len(queue_list):
+                removed_track = queue_list.pop(index)
+                removed_titles.append(removed_track.get('title', 'a song'))
+            
+        new_queue = asyncio.Queue()
+        for item in queue_list:
+            await new_queue.put(item)
+        music_player.queue = new_queue
+
+        # --- START OF BUG FIX ---
+        
+        # 1. Respond to the interaction by editing the original message.
+        # This is the one and only "official" response to the user's click.
+        self.view.clear_items()
+        await interaction.response.edit_message(content="*Selection has been processed.*", embed=None, view=self.view)
+
+        # 2. Send the confirmation as a NEW, separate message to the channel.
+        # We can't use followup.send() anymore, so we use the channel directly.
+        embed = Embed(
+            title=f"✅ {len(removed_titles)} Song(s) Removed",
+            description="\n".join([f"• `{title}`" for title in removed_titles]),
+            color=0xB5EAD7 if is_kawaii else discord.Color.green()
+        )
+        await interaction.channel.send(embed=embed, silent=SILENT_MESSAGES)
+        
+        # --- END OF BUG FIX ---
+
+class RemoveView(View):
+    """ The interactive view holding the dropdown and pagination buttons. """
+    def __init__(self, interaction: discord.Interaction, all_tracks: list):
+        super().__init__(timeout=300.0)
+        self.interaction = interaction
+        self.all_tracks = all_tracks
+        self.current_page = 0
+        self.items_per_page = 25
+        self.total_pages = math.ceil(len(self.all_tracks) / self.items_per_page) if self.all_tracks else 1
+        
+    async def update_view(self):
+        """ Asynchronously hydrates tracks for the current page and rebuilds components. """
+        self.clear_items()
+
+        start_index = self.current_page * self.items_per_page
+        end_index = start_index + self.items_per_page
+        tracks_on_page = self.all_tracks[start_index:end_index]
+
+        tracks_to_hydrate = [t for t in tracks_on_page if (not t.get('title') or t.get('title') == 'Unknown Title') and not t.get('source_type') == 'file']
+        
+        if tracks_to_hydrate:
+            logger.info(f"RemoveView: Hydrating {len(tracks_to_hydrate)} tracks for page {self.current_page + 1}")
+            tasks = [fetch_meta(track['url'], extract_info_async) for track in tracks_to_hydrate]
+            hydrated_results = await asyncio.gather(*tasks)
+            hydrated_map = {res['url']: res for res in hydrated_results if res}
+            for track in tracks_on_page:
+                if track['url'] in hydrated_map:
+                    track['title'] = hydrated_map[track['url']].get('title', 'Unknown Title')
+
+        self.add_item(RemoveSelect(tracks_on_page, page_offset=start_index))
+
+        if self.total_pages > 1:
+            prev_button = Button(label="⬅️ Previous", style=ButtonStyle.secondary, disabled=(self.current_page == 0))
+            next_button = Button(label="Next ➡️", style=ButtonStyle.secondary, disabled=(self.current_page >= self.total_pages - 1))
+            
+            prev_button.callback = self.prev_page
+            next_button.callback = self.next_page
+            
+            self.add_item(prev_button)
+            self.add_item(next_button)
+            
+    async def prev_page(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if self.current_page > 0:
+            self.current_page -= 1
+        await self.update_view()
+        await interaction.edit_original_response(view=self)
+
+    async def next_page(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if self.current_page < self.total_pages - 1:
+            self.current_page += 1
+        await self.update_view()
+        await interaction.edit_original_response(view=self)
+
 # ==============================================================================
 # 3. UTILITY & HELPER FUNCTIONS
 # ==============================================================================
 
 # --- General & State Helpers ---
+
+def clear_audio_cache(guild_id: int):
+    """Deletes the audio cache directory for a specific guild."""
+    guild_cache_path = os.path.join("audio_cache", str(guild_id))
+    if os.path.exists(guild_cache_path):
+        try:
+            shutil.rmtree(guild_cache_path)
+            logger.info(f"Audio cache for guild {guild_id} successfully cleared.")
+        except Exception as e:
+            logger.error(f"Error while deleting cache for guild {guild_id}: {e}")
 
 # --- NEW --- Helper functions for instant /queue
 def get_full_opts():
@@ -2138,7 +2280,7 @@ async def handle_playback_error(guild_id: int, error: Exception):
 async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     """
     Handles audio playback for a guild.
-    Plays a track, applies filters, and handles queuing the next one.
+    Plays a track, applies filters, and intelligently handles auto-queuing.
     """
     music_player = get_player(guild_id)
     try:
@@ -2161,80 +2303,73 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         else:
             if music_player.queue.empty():
                 is_kawaii = get_mode(guild_id)
-                
                 is_24_7_on = _24_7_active.get(guild_id, False)
 
-                # Mode 24/7 Normal: Use the dedicated radio_playlist
+                # --- 24/7 Normal Mode Logic ---
                 if is_24_7_on and not music_player.autoplay_enabled and music_player.radio_playlist:
-                    logger.info(f"[{guild_id}] 24/7 Normal: Queue is empty. Re-queuing {len(music_player.radio_playlist)} tracks from radio playlist.")
+                    logger.info(f"[{guild_id}] 24/7 Normal: Queue empty. Re-queuing {len(music_player.radio_playlist)} tracks.")
                     for track_info_radio in music_player.radio_playlist:
                         await music_player.queue.put(track_info_radio)
                 
-                # Mode 24/7 Auto (or standard Autoplay)
+                # --- START: NEW Smarter Autoplay Logic ---
                 elif (is_24_7_on and music_player.autoplay_enabled) or music_player.autoplay_enabled:
-                    if music_player.current_url:
+                    seed_url = None
+                    
+                    # First, try to use the very last played song if it's a real link
+                    if music_player.current_info and not music_player.current_info.get('source_type') == 'file':
+                        seed_url = music_player.current_url
+                    else:
+                        # If the last song was a file, inform the user and search history for a valid link
                         if music_player.text_channel:
-                            embed = Embed(description=get_messages("autoplay_added", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
-                            await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                            await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_file_notice", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
                         
-                        if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url:
-                            mix_playlist_url = get_mix_playlist_url(music_player.current_url)
+                        # Determine which history to search (24/7 permanent list or session history)
+                        source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
+                        for track in reversed(source_list):
+                            if track.get('url') and not track.get('source_type') == 'file':
+                                seed_url = track.get('url')
+                                logger.info(f"Autoplay fallback found. Using seed: {seed_url}")
+                                break # Found a valid link, stop searching
+                    
+                    # If we found a valid URL (either from the last song or history), start recommendations
+                    if seed_url:
+                        if "youtube.com" in seed_url or "youtu.be" in seed_url:
+                            mix_playlist_url = get_mix_playlist_url(seed_url)
                             if mix_playlist_url:
                                 try:
                                     logger.info(f"[{guild_id}] Autoplay: Fetching YouTube Mix: {mix_playlist_url}")
-                                    ydl_opts_mix = {"extract_flat": True, "quiet": True, "noplaylist": False}
-                                    info = await extract_info_async(ydl_opts_mix, mix_playlist_url)
-                                    
+                                    info = await extract_info_async({"extract_flat": True, "quiet": True, "noplaylist": False}, mix_playlist_url)
                                     if info.get("entries"):
-                                        current_video_id = get_video_id(music_player.current_url)
+                                        current_video_id = get_video_id(seed_url)
                                         for entry in info["entries"]:
                                             if entry and get_video_id(entry.get("url", "")) != current_video_id:
-                                                queue_item = {
-                                                    'url': entry.get('url'), 
-                                                    'title': entry.get('title', 'Unknown Title'), 
-                                                    'webpage_url': entry.get('webpage_url', entry.get('url')), 
-                                                    'thumbnail': entry.get('thumbnail'), 
-                                                    'is_single': True
-                                                }
-                                                await music_player.queue.put(queue_item)
+                                                await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
                                         logger.info(f"[{guild_id}] Autoplay: Added {len(info.get('entries')) - 1} tracks from YouTube Mix.")
                                 except Exception as e:
                                     logger.error(f"YouTube Mix Error for autoplay: {e}")
 
-                        elif "soundcloud.com" in music_player.current_url:
-                            track_id = get_soundcloud_track_id(music_player.current_url)
+                        elif "soundcloud.com" in seed_url:
+                            track_id = get_soundcloud_track_id(seed_url)
                             station_url = get_soundcloud_station_url(track_id)
                             if station_url:
                                 try:
                                     logger.info(f"[{guild_id}] Autoplay: Fetching SoundCloud station: {station_url}")
-                                    ydl_opts_station = {"extract_flat": True, "quiet": True, "noplaylist": False}
-                                    info = await extract_info_async(ydl_opts_station, station_url)
-                                    
+                                    info = await extract_info_async({"extract_flat": True, "quiet": True, "noplaylist": False}, station_url)
                                     if info.get("entries") and len(info.get("entries")) > 1:
                                         for entry in info["entries"][1:]:
-                                            if entry:
-                                                queue_item = {
-                                                    'url': entry.get('url'), 
-                                                    'title': entry.get('title', 'Unknown Title'), 
-                                                    'webpage_url': entry.get('webpage_url', entry.get('url')), 
-                                                    'thumbnail': entry.get('thumbnail'), 
-                                                    'is_single': True
-                                                }
-                                                await music_player.queue.put(queue_item)
-                                        
-                                        added_count = len(info.get("entries")) - 1
-                                        logger.info(f"[{guild_id}] Autoplay: Added {added_count} tracks from SoundCloud station.")
+                                            if entry: await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
+                                        logger.info(f"[{guild_id}] Autoplay: Added {len(info.get('entries')) - 1} tracks from SoundCloud station.")
                                 except Exception as e:
                                     logger.error(f"SoundCloud Station Error for autoplay: {e}")
+                # --- END: NEW Smarter Autoplay Logic ---
 
+                # Final check: if the queue is still empty, stop or disconnect
                 if music_player.queue.empty():
                     music_player.current_task = None
                     music_player.current_info = None
-                    # Wait before disconnecting, only if not in 24/7 mode
                     if not _24_7_active.get(guild_id, False):
                         await asyncio.sleep(60)
                         if music_player.voice_client and not music_player.voice_client.is_playing() and len(music_player.voice_client.channel.members) == 1:
-                            logger.info(f"Bot is alone in channel for guild {guild_id}. Disconnecting.")
                             await music_player.voice_client.disconnect()
                     return
             
@@ -2255,52 +2390,56 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         active_filters = server_filters.get(guild_id, set())
         filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in AUDIO_FILTERS]) if active_filters else ""
         music_player.active_filter = filter_chain if filter_chain else None
-
-        ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
-
-        try:
-            info = await extract_info_async(ydl_opts_play, music_player.current_url)
-        except yt_dlp.utils.DownloadError as e:
-            logger.warning(f"Failed to play track {music_player.current_url}: {e}")
-            if music_player.text_channel:
-                is_kawaii = get_mode(guild_id)
-                emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
-                embed = Embed(title=f'{emoji} Playback Failed', description=get_messages(desc_key, guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
-                embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
-                await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
-            music_player.current_task = bot.loop.create_task(play_audio(guild_id))
-            return 
         
-        music_player.current_info = info
-        audio_url = info["url"]
+        audio_url = None
+        if music_player.current_info.get('source_type') == 'file':
+            logger.info(f"[{guild_id}] Playing a local file: {music_player.current_url}")
+            audio_url = music_player.current_url
+            music_player.current_info['webpage_url'] = None # Local files don't have a webpage URL
+        else:
+            ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
+            try:
+                info = await extract_info_async(ydl_opts_play, music_player.current_url)
+                music_player.current_info = info
+                audio_url = info["url"]
+            except yt_dlp.utils.DownloadError as e:
+                logger.warning(f"Failed to play track {music_player.current_url}: {e}")
+                if music_player.text_channel:
+                    is_kawaii = get_mode(guild_id)
+                    emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
+                    embed = Embed(title=f'{emoji} Playback Failed', description=get_messages(desc_key, guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
+                    embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
+                    await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                music_player.current_task = bot.loop.create_task(play_audio(guild_id))
+                return
+        
+        if not audio_url:
+            logger.error(f"[{guild_id}] Could not determine a valid audio URL. Stopping playback for this track.")
+            music_player.current_task = bot.loop.create_task(play_audio(guild_id))
+            return
+            
+        ffmpeg_options = {}
+        if music_player.current_info.get('source_type') == 'file':
+            logger.info(f"[{guild_id}] Using file-specific FFmpeg options.")
+            ffmpeg_options = {"options": "-vn"}
+        else:
+            logger.info(f"[{guild_id}] Using stream-specific FFmpeg options.")
+            ffmpeg_options = {
+                "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -reconnect_on_network_error 1 -reconnect_on_http_error 4xx,5xx",
+                "options": "-vn"
+            }
 
-        # --- START OF LIVESTREAM FIX ---
-        # Base options for network resilience.
-        before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -reconnect_on_network_error 1 -reconnect_on_http_error 4xx,5xx"
-
-        # Options specifically for HLS (livestreams).
-        # -http_persistent 0: Forces new connections, preventing expired link issues.
-        # -seekable 0: Informs FFmpeg the stream is not seekable (typical for a live broadcast).
-        ffmpeg_options = {
-            "before_options": f"{before_options} -http_persistent 0",
-            "options": "-vn -seekable 0"
-        }
-
-        # Apply seek time if this is a seek operation.
         if seek_time > 0:
-            ffmpeg_options["before_options"] += f" -ss {seek_time}"
+            ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}"
 
-        # Apply audio filters if they are active.
         if music_player.active_filter:
-            ffmpeg_options["options"] += f" -af \"{music_player.active_filter}\""
-        # --- END OF LIVESTREAM FIX ---
+            ffmpeg_options["options"] = f"{ffmpeg_options.get('options', '')} -af \"{music_player.active_filter}\""
 
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
 
         def after_playing(error):
             if error:
                 logger.error(f'Error after playing in guild {guild_id}: {error}')
-            
             if music_player.is_reconnecting:
                 logger.info(f"[{guild_id}] after_playing: Reconnect in progress. Next song scheduling suppressed.")
                 return 
@@ -2311,12 +2450,16 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                     music_player.seek_info = None
                     await play_audio(guild_id, seek_time=new_seek_time)
                 elif music_player.loop_current:
-                    current_track_data = {'url': music_player.current_url, 'is_single': music_player.last_was_single, 'title': music_player.current_info.get('title')}
+                    current_track_data = {
+                        'url': music_player.current_url, 
+                        'is_single': music_player.last_was_single, 
+                        'title': music_player.current_info.get('title'),
+                        'source_type': music_player.current_info.get('source_type')
+                    }
                     items_in_queue = list(music_player.queue._queue)
                     music_player.queue = asyncio.Queue()
                     await music_player.queue.put(current_track_data)
-                    for item in items_in_queue: 
-                        await music_player.queue.put(item)
+                    for item in items_in_queue: await music_player.queue.put(item)
                     await play_audio(guild_id, is_a_loop=True)
                 else:
                     await play_audio(guild_id)
@@ -2329,17 +2472,22 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
 
         if not skip_now_playing and seek_time == 0 and not is_a_loop:
             is_kawaii = get_mode(guild_id)
-            title = info.get("title", "Unknown Title")
-            webpage_url = info.get("webpage_url", music_player.current_url)
-            embed = Embed(title=get_messages("now_playing_title", guild_id), description=get_messages("now_playing_description", guild_id).format(title=title, url=webpage_url), color=0xC7CEEA if is_kawaii else discord.Color.green())
-            if info.get("thumbnail"):
-                embed.set_thumbnail(url=info["thumbnail"])
+            title = music_player.current_info.get("title", "Unknown Title")
+            webpage_url = music_player.current_info.get("webpage_url") 
+            embed = Embed(
+                title=get_messages("now_playing_title", guild_id),
+                # Use a link only if webpage_url exists
+                description=f"[{title}]({webpage_url})" if webpage_url else title,
+                color=0xC7CEEA if is_kawaii else discord.Color.green()
+            )
+            if music_player.current_info.get("thumbnail"):
+                embed.set_thumbnail(url=music_player.current_info["thumbnail"])
             if music_player.text_channel:
                 await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
 
     except Exception as e:
         await handle_playback_error(guild_id, e)
-        
+
 async def update_karaoke_task(guild_id: int):
     """Background task for karaoke mode, manages filters and speed."""
     music_player = get_player(guild_id)
@@ -3539,6 +3687,103 @@ async def play(interaction: discord.Interaction, query: str):
     if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
 
+@bot.tree.command(name="play-files", description="Plays one or more uploaded audio or video files.")
+@app_commands.describe(
+    file1="The first audio/video file to play.",
+    file2="An optional audio/video file.",
+    file3="An optional audio/video file.",
+    file4="An optional audio/video file.",
+    file5="An optional audio/video file.",
+    file6="An optional audio/video file.",
+    file7="An optional audio/video file.",
+    file8="An optional audio/video file.",
+    file9="An optional audio/video file.",
+    file10="An optional audio/video file."
+)
+async def play_files(
+    interaction: discord.Interaction, 
+    file1: discord.Attachment,
+    file2: discord.Attachment = None, file3: discord.Attachment = None,
+    file4: discord.Attachment = None, file5: discord.Attachment = None,
+    file6: discord.Attachment = None, file7: discord.Attachment = None,
+    file8: discord.Attachment = None, file9: discord.Attachment = None,
+    file10: discord.Attachment = None
+):
+    """
+    Downloads, saves, and queues one or more user-uploaded audio/video files.
+    """
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+
+    if not interaction.user.voice or not interaction.user.voice.channel:
+        embed = Embed(description=get_messages("no_voice_channel", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
+    await interaction.response.defer()
+
+    base_cache_dir = "audio_cache"
+    guild_cache_dir = os.path.join(base_cache_dir, str(guild_id))
+    os.makedirs(guild_cache_dir, exist_ok=True)
+    
+    attachments = [f for f in [file1, file2, file3, file4, file5, file6, file7, file8, file9, file10] if f is not None]
+    
+    added_files = []
+    failed_files = []
+
+    for attachment in attachments:
+        # --- MODIFIED LINE ---
+        # Now accepts both audio and video files.
+        if not attachment.content_type or not (attachment.content_type.startswith("audio/") or attachment.content_type.startswith("video/")):
+            failed_files.append(attachment.filename)
+            continue
+            
+        file_path = os.path.join(guild_cache_dir, attachment.filename)
+        try:
+            await attachment.save(file_path)
+            logger.info(f"File saved for guild {guild_id}: {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to save file {attachment.filename}: {e}")
+            failed_files.append(attachment.filename)
+            continue
+
+        queue_item = {
+            'url': file_path,
+            'title': attachment.filename,
+            'webpage_url': None,
+            'thumbnail': None,
+            'is_single': True,
+            'skip_now_playing': True,
+            'source_type': 'file'
+        }
+        await music_player.queue.put(queue_item)
+        added_files.append(attachment.filename)
+
+    if not music_player.voice_client or not music_player.voice_client.is_connected():
+        try:
+            music_player.voice_client = await interaction.user.voice.channel.connect()
+            music_player.text_channel = interaction.channel
+        except Exception:
+            await interaction.followup.send(embed=Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES)
+            return
+
+    if not added_files:
+        await interaction.followup.send(embed=Embed(description="No valid audio/video files were added.", color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
+    description = f"**{len(added_files)} file(s) added to the queue:**\n" + "\n".join([f"• `{name}`" for name in added_files[:10]])
+    if len(added_files) > 10:
+        description += f"\n... and {len(added_files) - 10} more."
+    if failed_files:
+        description += f"\n\n**{len(failed_files)} file(s) ignored (invalid type).**"
+
+    embed = Embed(title="Files Added to Queue", description=description, color=0xB5EAD7 if is_kawaii else discord.Color.blue())
+    await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
+
+    if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
+        music_player.current_task = asyncio.create_task(play_audio(guild_id))
+
 # /queue command
 @bot.tree.command(name="queue", description="Show the current song queue and status with pages.")
 async def queue(interaction: discord.Interaction):
@@ -3574,13 +3819,12 @@ async def clear_queue(interaction: discord.Interaction):
         music_player.queue.get_nowait()
 
     music_player.history.clear()
-    # --- MODIFICATION ---
-    music_player.radio_playlist.clear() # Also clear the 24/7 playlist
+    music_player.radio_playlist.clear()
 
-    embed = Embed(
-        description=get_messages("clear_queue_success", guild_id),
-        color=0xB5EAD7 if is_kawaii else discord.Color.green()
-    )
+    # --- LINE REMOVED ---
+    # clear_audio_cache(guild_id) # We no longer clear the cache here
+
+    embed = Embed(description=get_messages("clear_queue_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
     await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
 
 @bot.tree.command(name="playnext", description="Add a song to play next")
@@ -3722,23 +3966,35 @@ async def now_playing(interaction: discord.Interaction):
 
     if music_player.current_info:
         title = music_player.current_info.get("title", "Unknown Title")
-        url = music_player.current_info.get("webpage_url", music_player.current_url)
         thumbnail = music_player.current_info.get("thumbnail")
+        description_text = ""
+
+        # --- START OF CORRECTION ---
+        # Check if the source is a local file and format the description accordingly
+        if music_player.current_info.get('source_type') == 'file':
+            # For local files, display clean text with an icon
+            description_text = f"💿 `{title}`"
+        else:
+            # For web links, create a clickable link using the message template
+            url = music_player.current_info.get("webpage_url", music_player.current_url)
+            description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
+        # --- END OF CORRECTION ---
 
         embed = Embed(
             title=get_messages("now_playing_title", guild_id),
-            description=get_messages("now_playing_description", guild_id).format(title=title, url=url),
+            description=description_text,
             color=0xC7CEEA if is_kawaii else discord.Color.green()
         )
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
+            
+        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_song_playing", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
 @bot.tree.command(name="filter", description="Applies or removes audio filters in real time.")
 async def filter_command(interaction: discord.Interaction):
@@ -3864,36 +4120,27 @@ async def stop(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    # Cancels lyrics or animation tasks
     if music_player.lyrics_task and not music_player.lyrics_task.done():
         music_player.lyrics_task.cancel()
 
     if music_player.voice_client:
-        # Cancel the current playback task to prevent it from continuing
         if music_player.current_task and not music_player.current_task.done():
             music_player.current_task.cancel()
 
         if music_player.voice_client.is_playing():
             music_player.voice_client.stop()
 
-        while not music_player.queue.empty():
-            music_player.queue.get_nowait()
-
         await music_player.voice_client.disconnect()
 
-        # Complete reset of the player state
+        # --- LINE ADDED ---
+        clear_audio_cache(guild_id) # Clean up saved files
+
         music_players[guild_id] = MusicPlayer()
 
-        embed = Embed(
-            description=get_messages("stop", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
+        embed = Embed(description=get_messages("stop", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
         await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
     else:
-        embed = Embed(
-            description=get_messages("not_connected", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
+        embed = Embed(description=get_messages("not_connected", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
         await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
 
 # /shuffle command
@@ -4085,8 +4332,6 @@ async def discord_command(interaction: discord.Interaction):
     # Send the response with the embed and button
     await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, view=view)    
 
-# In Section 5: DISCORD SLASH COMMANDS
-
 @bot.tree.command(name="24_7", description="Enable or disable 24/7 mode.")
 @app_commands.describe(mode="Choose the mode: auto (adds songs), normal (loops the queue), or off.")
 @app_commands.choices(mode=[
@@ -4099,7 +4344,6 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    # No need to defer here, can be handled by followup
     await interaction.response.defer(thinking=True)
 
     # Case 1: The user wants to disable 24/7 mode
@@ -4108,12 +4352,13 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
             await interaction.followup.send("24/7 mode was not active.", silent=SILENT_MESSAGES, ephemeral=True)
             return
 
-        # Reset all 24/7-related states
         _24_7_active[guild_id] = False
         music_player.autoplay_enabled = False
         music_player.loop_current = False
-        # --- MODIFICATION ---
-        music_player.radio_playlist.clear() # Clear the dedicated 24/7 playlist
+        music_player.radio_playlist.clear()
+        
+        # --- ADDED CLEANUP LOGIC ---
+        clear_audio_cache(guild_id)
         
         embed = Embed(
             title=get_messages("24_7_off_title", guild_id),
@@ -4124,8 +4369,6 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
         return
 
     # Case 2: The user wants to enable 24/7 mode (normal or auto)
-    
-    # Connect if necessary
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         if not interaction.user.voice or not interaction.user.voice.channel:
             await interaction.followup.send("You are not in a voice channel.", silent=SILENT_MESSAGES, ephemeral=True)
@@ -4138,13 +4381,16 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
             await interaction.followup.send("Could not connect to the voice channel.", silent=SILENT_MESSAGES, ephemeral=True)
             return
 
-    # --- MODIFICATION: Snapshot the queue into the radio playlist ---
     if not music_player.radio_playlist:
         logger.info(f"[{guild_id}] 24/7 mode enabled. Creating radio playlist snapshot.")
-        # Combine history (songs already played) and queue (songs to be played)
-        # to form the complete playlist for looping.
         if music_player.current_info:
-             music_player.radio_playlist.append({'url': music_player.current_url, 'title': music_player.current_info.get('title', 'Unknown Title'), 'webpage_url': music_player.current_info.get('webpage_url', music_player.current_url), 'is_single': False})
+             music_player.radio_playlist.append({
+                 'url': music_player.current_url, 
+                 'title': music_player.current_info.get('title', 'Unknown Title'), 
+                 'webpage_url': music_player.current_info.get('webpage_url', music_player.current_url), 
+                 'is_single': False,
+                 'source_type': music_player.current_info.get('source_type')
+            })
         
         queue_snapshot = list(music_player.queue._queue)
         music_player.radio_playlist.extend(queue_snapshot)
@@ -4153,9 +4399,8 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
         await interaction.followup.send("The queue is empty. Add songs before enabling 24/7 normal mode.", silent=SILENT_MESSAGES, ephemeral=True)
         return
 
-    # Configure the chosen mode
     _24_7_active[guild_id] = True
-    music_player.loop_current = False # Single song loop is incompatible with 24/7
+    music_player.loop_current = False
 
     if mode == "auto":
         music_player.autoplay_enabled = True
@@ -4172,7 +4417,6 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
         )
     
-    # Start playback if nothing is playing
     if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
 
@@ -4251,11 +4495,66 @@ async def reconnect(interaction: discord.Interaction):
         music_player.is_reconnecting = False
         logger.info(f"[{guild_id}] Reconnect: Process finished, flag reset.")
 
+# This is the autocomplete function. It's called by Discord as the user types.
+async def song_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    guild_id = interaction.guild.id
+    music_player = get_player(guild_id)
+    choices = []
+    
+    # Get a snapshot of the queue to work with
+    tracks = list(music_player.queue._queue)
+
+    # Iterate through the queue and create a choice for each song
+    for i, track in enumerate(tracks):
+        # We only show up to 25 choices, which is Discord's limit
+        if i >= 25:
+            break
+            
+        title = track.get('title', 'Unknown Title')
+        
+        # The 'name' is what the user sees, the 'value' is what the bot receives
+        # We use the index (1-based) as the value for easy removal later.
+        choice_name = f"{i + 1}. {title}"
+        
+        # Filter choices based on what the user is typing
+        if current.lower() in choice_name.lower():
+            choices.append(app_commands.Choice(name=choice_name[:100], value=str(i + 1)))
+            
+    return choices
+
+@bot.tree.command(name="remove", description="Opens an interactive menu to remove songs from the queue.")
+async def remove(interaction: discord.Interaction):
+    """
+    Shows an interactive, paginated, multi-select view for removing songs.
+    """
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+
+    if music_player.queue.empty():
+        embed = Embed(description=get_messages("queue_empty", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        return
+    
+    # --- BUG FIX: Defer the response publicly, not ephemerally ---
+    await interaction.response.defer()
+    
+    all_tracks = list(music_player.queue._queue)
+    view = RemoveView(interaction, all_tracks)
+    await view.update_view() # Hydrate and build page 1
+    
+    embed = Embed(
+        title="Remove Songs",
+        description="Use the dropdown menu to select one or more songs to remove.\nUse the buttons to navigate if you have more than 25 songs.",
+        color=0xC7CEEA if is_kawaii else discord.Color.blue()
+    )
+    
+    # --- BUG FIX: The message is now public and can be edited. ---
+    await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
+
 # ==============================================================================
 # 6. DISCORD EVENTS
 # ==============================================================================
-
-# In Section 6: DISCORD EVENTS
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -4277,18 +4576,18 @@ async def on_voice_state_update(member, before, after):
             guild_id = guild.id
             music_player = get_player(guild_id)
 
-            # --- KEY CHANGE ---
-            # If this is a planned reconnect, do NOT reset the player state.
             if music_player.is_reconnecting:
                 logger.info(f"Bot is reconnecting in guild {guild_id}. Skipping state reset.")
-                return # Exit the event handler early to preserve state
+                return
 
-            # Otherwise, proceed with the full cleanup for a normal disconnect.
             logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
+            
+            # --- LINE ADDED ---
+            clear_audio_cache(guild_id) # Clean up files if bot is kicked/disconnected
+
             if music_player.current_task and not music_player.current_task.done():
                 music_player.current_task.cancel()
             
-            # Full reset of the player for this guild
             music_players[guild_id] = MusicPlayer()
             if guild_id in server_filters:
                 del server_filters[guild_id]
@@ -4298,9 +4597,8 @@ async def on_voice_state_update(member, before, after):
             logger.info(f"Player for guild {guild_id} has been reset.")
         return
 
-    # --- The rest of the function remains the same ---
     vc = guild.voice_client
-    if not vc: # Check if voice client exists after the bot-specific logic
+    if not vc: 
         return
         
     bot_channel = vc.channel
