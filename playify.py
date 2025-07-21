@@ -2311,27 +2311,22 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                     for track_info_radio in music_player.radio_playlist:
                         await music_player.queue.put(track_info_radio)
                 
-                # --- START: NEW Smarter Autoplay Logic ---
                 elif (is_24_7_on and music_player.autoplay_enabled) or music_player.autoplay_enabled:
                     seed_url = None
                     
-                    # First, try to use the very last played song if it's a real link
                     if music_player.current_info and not music_player.current_info.get('source_type') == 'file':
                         seed_url = music_player.current_url
                     else:
-                        # If the last song was a file, inform the user and search history for a valid link
                         if music_player.text_channel:
                             await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_file_notice", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
                         
-                        # Determine which history to search (24/7 permanent list or session history)
                         source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
                         for track in reversed(source_list):
                             if track.get('url') and not track.get('source_type') == 'file':
                                 seed_url = track.get('url')
                                 logger.info(f"Autoplay fallback found. Using seed: {seed_url}")
-                                break # Found a valid link, stop searching
+                                break
                     
-                    # If we found a valid URL (either from the last song or history), start recommendations
                     if seed_url:
                         if "youtube.com" in seed_url or "youtu.be" in seed_url:
                             mix_playlist_url = get_mix_playlist_url(seed_url)
@@ -2361,9 +2356,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                                         logger.info(f"[{guild_id}] Autoplay: Added {len(info.get('entries')) - 1} tracks from SoundCloud station.")
                                 except Exception as e:
                                     logger.error(f"SoundCloud Station Error for autoplay: {e}")
-                # --- END: NEW Smarter Autoplay Logic ---
 
-                # Final check: if the queue is still empty, stop or disconnect
                 if music_player.queue.empty():
                     music_player.current_task = None
                     music_player.current_info = None
@@ -2395,7 +2388,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         if music_player.current_info.get('source_type') == 'file':
             logger.info(f"[{guild_id}] Playing a local file: {music_player.current_url}")
             audio_url = music_player.current_url
-            music_player.current_info['webpage_url'] = None # Local files don't have a webpage URL
+            music_player.current_info['webpage_url'] = None
         else:
             ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
             try:
@@ -2473,13 +2466,20 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         if not skip_now_playing and seek_time == 0 and not is_a_loop:
             is_kawaii = get_mode(guild_id)
             title = music_player.current_info.get("title", "Unknown Title")
-            webpage_url = music_player.current_info.get("webpage_url") 
+            
+            description_text = ""
+            if music_player.current_info.get('source_type') == 'file':
+                description_text = f"💿 `{title}`"
+            else:
+                webpage_url = music_player.current_info.get("webpage_url", music_player.current_url)
+                description_text = get_messages("now_playing_description", guild_id).format(title=title, url=webpage_url)
+            
             embed = Embed(
                 title=get_messages("now_playing_title", guild_id),
-                # Use a link only if webpage_url exists
-                description=f"[{title}]({webpage_url})" if webpage_url else title,
+                description=description_text, 
                 color=0xC7CEEA if is_kawaii else discord.Color.green()
             )
+
             if music_player.current_info.get("thumbnail"):
                 embed.set_thumbnail(url=music_player.current_info["thumbnail"])
             if music_player.text_channel:
@@ -3733,8 +3733,6 @@ async def play_files(
     failed_files = []
 
     for attachment in attachments:
-        # --- MODIFIED LINE ---
-        # Now accepts both audio and video files.
         if not attachment.content_type or not (attachment.content_type.startswith("audio/") or attachment.content_type.startswith("video/")):
             failed_files.append(attachment.filename)
             continue
@@ -3754,11 +3752,16 @@ async def play_files(
             'webpage_url': None,
             'thumbnail': None,
             'is_single': True,
-            'skip_now_playing': True,
+            # 'skip_now_playing': True,  <- This line is removed
             'source_type': 'file'
         }
         await music_player.queue.put(queue_item)
         added_files.append(attachment.filename)
+
+        # If 24/7 mode is active, also add the file to the permanent radio playlist
+        if _24_7_active.get(guild_id, False):
+            music_player.radio_playlist.append(queue_item)
+            logger.info(f"Added '{attachment.filename}' to the active 24/7 radio playlist for guild {guild_id}.")
 
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         try:
@@ -3957,7 +3960,6 @@ async def play_next(interaction: discord.Interaction, query: str):
         await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
         logger.error(f"Error processing /playnext for '{query}': {e}")
 
-# /nowplaying command
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
     guild_id = interaction.guild_id
@@ -3967,18 +3969,13 @@ async def now_playing(interaction: discord.Interaction):
     if music_player.current_info:
         title = music_player.current_info.get("title", "Unknown Title")
         thumbnail = music_player.current_info.get("thumbnail")
+        
         description_text = ""
-
-        # --- START OF CORRECTION ---
-        # Check if the source is a local file and format the description accordingly
         if music_player.current_info.get('source_type') == 'file':
-            # For local files, display clean text with an icon
             description_text = f"💿 `{title}`"
         else:
-            # For web links, create a clickable link using the message template
             url = music_player.current_info.get("webpage_url", music_player.current_url)
             description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
-        # --- END OF CORRECTION ---
 
         embed = Embed(
             title=get_messages("now_playing_title", guild_id),
@@ -4556,6 +4553,10 @@ async def remove(interaction: discord.Interaction):
 # 6. DISCORD EVENTS
 # ==============================================================================
 
+# ==============================================================================
+# 6. DISCORD EVENTS
+# ==============================================================================
+
 @bot.event
 async def on_voice_state_update(member, before, after):
     """
@@ -4566,28 +4567,31 @@ async def on_voice_state_update(member, before, after):
     """
     guild = member.guild
 
+    # Ignore if the event is not related to a channel the bot is in
     if not guild.voice_client and after.channel is None:
         return
 
     # Check if the event is for the bot itself
     if member.id == bot.user.id:
-        # Bot was disconnected
+        # Bot was disconnected (either manually or by an event)
         if before.channel is not None and after.channel is None:
             guild_id = guild.id
             music_player = get_player(guild_id)
 
+            # This is a controlled reconnect (e.g., /reconnect command), so we don't reset anything.
             if music_player.is_reconnecting:
                 logger.info(f"Bot is reconnecting in guild {guild_id}. Skipping state reset.")
                 return
 
+            # This is a full disconnect, so we perform a full cleanup.
             logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
             
-            # --- LINE ADDED ---
             clear_audio_cache(guild_id) # Clean up files if bot is kicked/disconnected
 
             if music_player.current_task and not music_player.current_task.done():
                 music_player.current_task.cancel()
             
+            # Reset the player state for the guild
             music_players[guild_id] = MusicPlayer()
             if guild_id in server_filters:
                 del server_filters[guild_id]
@@ -4597,6 +4601,7 @@ async def on_voice_state_update(member, before, after):
             logger.info(f"Player for guild {guild_id} has been reset.")
         return
 
+    # From here, we only care about events related to the bot's current voice channel
     vc = guild.voice_client
     if not vc: 
         return
@@ -4605,20 +4610,29 @@ async def on_voice_state_update(member, before, after):
 
     # A user leaves the bot's channel
     if before.channel == bot_channel and after.channel != bot_channel:
+        # Check if the bot is now the only one in the channel (excluding other bots)
         if len([m for m in bot_channel.members if not m.bot]) == 0:
             logger.info(f"Bot is now alone in channel for guild {guild.id}.")
             if vc.is_playing():
                 vc.pause()
                 logger.info(f"Playback paused for guild {guild.id}.")
+            
+            # --- THIS IS THE CRITICAL FIX ---
+            # The bot will only schedule a disconnect if 24/7 mode is NOT active.
             if not _24_7_active.get(guild.id, False):
                 await asyncio.sleep(60)
+                # Re-check in case someone rejoined during the 60s
                 if vc.is_connected() and len([m for m in vc.channel.members if not m.bot]) == 0:
                     logger.info(f"Disconnecting from guild {guild.id} after 60s of inactivity.")
                     await vc.disconnect()
+            else:
+                # If 24/7 is on, we do nothing and let the bot wait patiently.
+                logger.info(f"24/7 mode is active for guild {guild.id}. Bot will remain in the channel.")
 
     # A user joins the bot's channel
     elif after.channel == bot_channel and before.channel != bot_channel:
-        if vc.is_paused():
+        # Check if the bot is paused AND if there are now actual users in the channel
+        if vc.is_paused() and len([m for m in bot_channel.members if not m.bot]) > 0:
             logger.info(f"A user joined in guild {guild.id}. Resuming playback.")
             vc.resume()
 
