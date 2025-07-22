@@ -37,14 +37,14 @@ Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers,
 * **100% free**: All features unlocked for everyone.
 * **Unlimited playback**: Giant playlists, endless queues, eternal tunes!
 
-**Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music.**  
+**Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music, and local files.**
 Type `/play <url or query>` and let the music flow~
 
 <a id="spotify-support"></a>
 ## (＾◡＾) Spotify Support
 
-* ✅ Individual tracks  
-* ✅ Personal & public playlists  
+* ✅ Individual tracks
+* ✅ Personal & public playlists
 * ✅ Spotify-curated mixes (e.g., *Release Radar*, *Your Mix*) via [SpotifyScraper](https://github.com/AliAkhtari78/SpotifyScraper)—bypasses API limits!
 
 > *Note:* Dynamic Spotify radios/mixes may vary from your app—they update constantly.
@@ -52,12 +52,13 @@ Type `/play <url or query>` and let the music flow~
 <a id="key-features"></a>
 ## (≧◡≦) Key Features
 
-* Play from **9+ platforms**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music  
-* Slash commands: `/play`, `/pause`, `/skip`, `/queue`, `/clearqueue`, + more!  
-* **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)  
-* **Loop** & **shuffle** controls  
-* **Kawaii Mode** toggles cute kaomoji responses (`/kaomoji`)  
-* Audio **filters**: slowed, reverb, bass boost, nightcore, and more  
+* Play from **10+ sources**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music • **Local Files**
+* Slash commands: `/play`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
+* **Play Local Files**: Directly upload and play your own audio/video files.
+* **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
+* **Loop** & **shuffle** controls
+* **Kawaii Mode** toggles cute kaomoji responses (`/kaomoji`)
+* Audio **filters**: slowed, reverb, bass boost, nightcore, and more
 * Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
 <a id="installation--self-hosting"></a>
@@ -67,11 +68,11 @@ Type `/play <url or query>` and let the music flow~
 
 **Requirements:**
 
-* Python 3.9+  
-* FFmpeg installed & in PATH  
-* Git  
-* Discord Bot Token  
-* (Optional) Spotify API credentials  
+* Python 3.9+
+* FFmpeg installed & in PATH
+* Git
+* Discord Bot Token
+* (Optional) Spotify API credentials
 * (Optional) Genius API token for lyrics
 
 **Setup Steps:**
@@ -81,7 +82,7 @@ Type `/play <url or query>` and let the music flow~
    ```bash
    git clone https://github.com/alan7383/playify.git
    cd playify
-    ````
+    ```
 
 2. Install dependencies:
 
@@ -121,62 +122,63 @@ Type `/play <url or query>` and let the music flow~
 
 ## (⊙‿⊙) Command Reference
 
-| Command             | Description                               |
-| ------------------- | ----------------------------------------- |
-| `/play <url/query>` | Add a song or playlist                    |
-| `/pause`            | Pause playback                            |
-| `/resume`           | Resume playback                           |
-| `/skip`             | Skip current track                        |
-| `/stop`             | Stop and clear queue                      |
-| `/queue`            | Show current queue                        |
-| `/clearqueue`       | Clear the queue                           |
-| `/playnext <...>`   | Queue to play next                        |
-| `/nowplaying`       | Display current track info                |
-| `/loop`             | Toggle loop on current track              |
-| `/shuffle`          | Shuffle the queue                         |
-| `/autoplay`         | Toggle autoplay of similar tracks         |
-| `/filter <type>`    | Apply audio filters (nightcore, bass+...) |
-| `/lyrics`           | Fetch lyrics via Genius                   |
-| `/karaoke`          | Sing along with synced lyrics             |
-| `/24_7 <on/off>`    | Stay connected indefinitely               |
-| `/reconnect`        | Force reconnect if voice issues           |
-| `/status`           | Show bot resource usage                   |
-| `/kaomoji`          | Toggle kawaii mode                        |
-| `/discord`          | Get invite to support server              |
+| Command | Description |
+| :--- | :--- |
+| `/play <url/query>` | Add a song or playlist from a link or search. |
+| `/play-files <file1...>` | Play one or more uploaded audio/video files. |
+| `/playnext <query/file>` | Add a song or local file to the front of the queue. |
+| `/pause` | Pause playback. |
+| `/resume` | Resume playback. |
+| `/skip` | Skip the current track. |
+| `/stop` | Stop playback, clear queue, and disconnect. |
+| `/nowplaying` | Display the current track's information. |
+| `/queue` | Show the current song queue with interactive pages. |
+| `/remove` | Open a menu to remove specific songs from the queue. |
+| `/shuffle` | Shuffle the queue. |
+| `/clearqueue` | Clear all songs from the queue. |
+| `/loop` | Toggle looping for the current track. |
+| `/autoplay` | Toggle autoplay of similar songs when the queue ends. |
+| `/24_7 <mode>` | Keep the bot in the channel (`normal`, `auto`, or `off`). |
+| `/filter` | Apply real-time audio filters (nightcore, bassboost...). |
+| `/lyrics` | Fetch and display lyrics for the current song. |
+| `/karaoke` | Start a karaoke session with synced lyrics. |
+| `/reconnect` | Refresh the voice connection to fix lag without losing your place. |
+| `/status` | Show the bot's detailed performance and resource usage. |
+| `/kaomoji` | Toggle cute kaomoji responses. `(ADMIN)` |
+| `/discord` | Get an invite to the official support server. |
 
 <a id="troubleshooting"></a>
 
 ## (｀・ω・´) Troubleshooting
 
-* **FFmpeg not found**: Ensure it's installed & in your PATH
-* **Spotify errors**: Verify API credentials in `.env`
-* **Bot offline/unresponsive**: Check `DISCORD_TOKEN` and permissions
+* **FFmpeg not found**: Ensure it's installed & in your system's PATH.
+* **Spotify errors**: Verify your API credentials in the `.env` file.
+* **Bot offline/unresponsive**: Check your `DISCORD_TOKEN` and bot permissions in the Developer Portal.
 
 <a id="privacy--data"></a>
 
 ## (ﾉ◕ヮ◕)ﾉ Privacy & Data
 
-* **Self-hosted**: All logs are local, no telemetry.
-* **Public bot**: Minimal error logs only, no tracking or analytics.
+* **Self-hosted**: All logs are local to your machine. No telemetry is sent.
+* **Public bot**: Minimal error logs are stored for debugging purposes only. No user data or analytics are collected.
 
 <a id="contribute--support"></a>
 
 ## (ง＾◡＾)ง Contribute & Support
 
-* Fork the repo, open an issue or PR—fixes get merged faster!
-* Star the repo if you enjoy it!
-* Join our Discord server:
-  [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server\&logo=discord)](https://discord.gg/JeH8g6g3cG)
-* Become a Patron on [Patreon](https://patreon.com/Playify) for a special backer shoutout and gratitude!
-* Sponsor via PayPal for faster bugfixes:
-
-  * [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1)
+* Fork the repo, open an issue or pull request—all contributions are welcome!
+* Star the repository if you enjoy using Playify!
+* Join our Discord server for help and community discussions:
+  [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server&logo=discord)](https://discord.gg/JeH8g6g3cG)
+* Support the project to help cover hosting costs and encourage development:
+  * Become a Patron on [Patreon](https://patreon.com/Playify) for special perks and to show your ongoing support!
+  * [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1) for a one-time contribution.
 
 <a id="license"></a>
 
 ## (＾ω＾) License
 
-MIT License — do what you want, just be kind!
+MIT License — do what you want with the code, just be kind!
 
 <p align="center">
   Built with ☕ and love by <a href="https://github.com/alan7383">alan7383</a> (｡♥‿♥｡)
