@@ -604,7 +604,15 @@ messages = {
     "remove_processed": {
         "normal": "*Selection has been processed.*",
         "kawaii": "*All done!~ (´• ω •`)*"
-    }
+    },
+    "replay_success_title": {
+        "normal": "🎵 Song Replayed",
+        "kawaii": "🎵 Playing it again!~"
+    },
+    "replay_success_desc": {
+        "normal": "Restarting [{title}]({url}) from the beginning.",
+        "kawaii": "Let's listen to [{title}]({url}) one more time!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+    },
 }
 
 # --- Discord Bot Initialization ---
@@ -1371,14 +1379,33 @@ def get_messages(message_key, guild_id):
     return messages[message_key][mode]
 
 def create_queue_item_from_info(info: dict) -> dict:
-    """Creates a standardized, clean queue item from a full yt-dlp info dict."""
+    """
+    Creates a standardized, clean queue item from a full yt-dlp info dict.
+    This version correctly handles the difference between local files and online sources.
+    """
+    
+    # --- NEW: Special handling for local files ---
+    # If the source_type is 'file', we build a very specific and clean dictionary
+    # to ensure no data from previous online songs can interfere.
+    if info.get('source_type') == 'file':
+        return {
+            'url': info.get('url'),  # This is the essential file path
+            'title': info.get('title', 'Unknown File'),
+            'webpage_url': None,     # A local file has no webpage URL
+            'thumbnail': None,       # A local file has no thumbnail
+            'is_single': False,      # When re-queuing, it's considered part of a list
+            'source_type': 'file'    # Critically preserve this type
+        }
+
+    # --- Original logic for all online sources (YouTube, SoundCloud, etc.) ---
+    # This part remains the same as before.
     return {
         'url': info.get('webpage_url', info.get('url')), # Prioritize the user-friendly URL
         'title': info.get('title', 'Unknown Title'),
         'webpage_url': info.get('webpage_url', info.get('url')),
         'thumbnail': info.get('thumbnail'),
         'is_single': False, # When re-queuing, it's part of a loop, not a single add
-        'source_type': info.get('source_type') # Preserve for local files
+        'source_type': info.get('source_type') # Preserve for other potential types
     }
 
 # --- Text, Formatting & Lyrics Helpers ---
@@ -2326,6 +2353,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         return
 
     try:
+        # Cancel lyrics task only for new songs, not for loops or seeks
         if seek_time == 0 and not is_a_loop:
              if music_player.lyrics_task and not music_player.lyrics_task.done():
                 music_player.lyrics_task.cancel()
@@ -2473,29 +2501,37 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                 return 
 
             async def schedule_next():
+                # This flag determines if the "Now Playing" message should be suppressed
+                is_loop_replay = False
+
                 if music_player.seek_info is not None:
                     new_seek_time = music_player.seek_info
                     music_player.seek_info = None
-                    await play_audio(guild_id, seek_time=new_seek_time)
+                    # A seek is not a loop, so we pass False (or nothing)
+                    await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=False)
                     return
 
-                # --- START: FINAL CLEAN LOOPING LOGIC ---
-                # This ensures local files keep their special properties when looped.
+                # Create a standardized item from the song that just finished
                 track_to_requeue = create_queue_item_from_info(music_player.current_info)
 
                 if music_player.loop_current:
+                    # If single-song loop is on, put the track back at the front
                     items = list(music_player.queue._queue)
                     music_player.queue = asyncio.Queue()
                     await music_player.queue.put(track_to_requeue)
                     for item in items:
                         await music_player.queue.put(item)
+                    # Set the flag to True to suppress the "Now Playing" message
+                    is_loop_replay = True
                 
                 elif _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
+                    # If 24/7 normal mode is on, add the track to the end of the queue
                     await music_player.queue.put(track_to_requeue)
                     logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
-                # --- END: FINAL CLEAN LOOPING LOGIC ---
+                    # This is a queue loop, not a single-song loop, so the flag remains False
                 
-                await play_audio(guild_id)
+                # Pass the flag to the next play_audio call
+                await play_audio(guild_id, is_a_loop=is_loop_replay)
 
             music_player.current_task = bot.loop.create_task(schedule_next())
 
@@ -2503,9 +2539,12 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         music_player.start_time = seek_time
         music_player.playback_started_at = time.time()
 
+        # Suppress "Now Playing" if explicitly told to (e.g., by /skip)
         if music_player.suppress_next_now_playing:
             music_player.suppress_next_now_playing = False
         
+        # *** THIS IS THE KEY CHANGE ***
+        # Send "Now Playing" only if it's not a seek, not a loop, and not suppressed
         elif not skip_now_playing and seek_time == 0 and not is_a_loop:
             is_kawaii = get_mode(guild_id)
             title = music_player.current_info.get("title", "Unknown Title")
@@ -4128,29 +4167,70 @@ async def skip(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
+    if not music_player.voice_client or not music_player.voice_client.is_playing():
+        embed = Embed(
+            description=get_messages("no_song", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+        return
+
     if music_player.lyrics_task and not music_player.lyrics_task.done():
         music_player.lyrics_task.cancel()
 
-    if music_player.voice_client and music_player.voice_client.is_playing():
-        await interaction.response.defer()
+    await interaction.response.defer()
 
+    # --- START OF THE MODIFIED LOGIC ---
+    if music_player.loop_current:
+        # Get common info for the embed
+        title = music_player.current_info.get("title", "Unknown Title")
+        thumbnail = music_player.current_info.get("thumbnail") # Will be None for local files
+        
+        description_text = ""
+        # *** THIS IS THE KEY CHANGE ***
+        # We check if the current track is a local file
+        if music_player.current_info.get('source_type') == 'file':
+            # If it is, we format the song name with a disc emoji and code block
+            formatted_song = f"💿 `{title}`"
+            # We now need to manually build the description as the message dict expects a URL
+            if is_kawaii:
+                description_text = f"Let's listen to {formatted_song} one more time!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+            else:
+                description_text = f"Restarting {formatted_song} from the beginning."
+        else:
+            # If it's an online track, we use the original logic with the link
+            url = music_player.current_info.get("webpage_url", music_player.current_url)
+            description_text = get_messages("replay_success_desc", guild_id).format(title=title, url=url)
+
+        embed = Embed(
+            title=get_messages("replay_success_title", guild_id),
+            description=description_text, # Use our dynamically created description
+            color=0xC7CEEA if is_kawaii else discord.Color.blue()
+        )
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
+        
+        await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
+        
+        # Stopping the player will trigger the `after` callback which restarts the looped song
+        music_player.voice_client.stop()
+
+    # --- END OF THE MODIFIED LOGIC ---
+    else:
+        # This part for a normal skip (loop off) remains unchanged.
         queue_snapshot = list(music_player.queue._queue)
         
         if not queue_snapshot:
-            # The queue will be empty, send a simple skip message
             embed = Embed(
                 description=get_messages("skip_confirmation", guild_id) + "\n*" + get_messages("skip_queue_empty", guild_id) + "*",
                 color=0xE2F0CB if is_kawaii else discord.Color.blue()
             )
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         else:
-            # There is a next song, prepare its rich embed
             next_song_info = queue_snapshot[0]
             
-            # Ensure we have full metadata for online tracks
             if not next_song_info.get('thumbnail') and not next_song_info.get('source_type') == 'file':
                 try:
-                    logger.info(f"[{guild_id}] Skip is hydrating next track: {next_song_info['url']}")
                     full_info = await extract_info_async({"format": "bestaudio/best", "quiet": True}, next_song_info['url'])
                     next_song_info['title'] = full_info.get('title', 'Unknown Title')
                     next_song_info['thumbnail'] = full_info.get('thumbnail')
@@ -4180,14 +4260,7 @@ async def skip(interaction: discord.Interaction):
         
         music_player.suppress_next_now_playing = True
         music_player.voice_client.stop()
-        
-    else:
-        embed = Embed(
-            description=get_messages("no_song", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
-        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-
+            
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
 async def loop(interaction: discord.Interaction):
