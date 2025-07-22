@@ -414,7 +414,7 @@
   </nav>
   <section class="commands">
 
-    <!-- Basic Controls Category -->
+    <!-- Music Controls Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-play-circle"></i>
@@ -434,6 +434,15 @@
             <h3 class="command-title">/play [query]</h3>
           </div>
           <p class="command-desc">Plays songs by title or link from various platforms. <a href="index.html#platforms">See supported platforms</a></p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-upload"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/play-files</h3>
+          </div>
+          <p class="command-desc">Plays one or more uploaded audio or video files directly.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
@@ -509,9 +518,9 @@
             <i class="fas fa-level-up-alt"></i>
           </div>
           <div class="command-name">
-            <h3 class="command-title">/playnext [query]</h3>
+            <h3 class="command-title">/playnext</h3>
           </div>
-          <p class="command-desc">Adds a song to the front of the queue to be played next.</p>
+          <p class="command-desc">Adds a song by link/search or a local file to the front of the queue.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
@@ -521,6 +530,15 @@
             <h3 class="command-title">/shuffle</h3>
           </div>
           <p class="command-desc">Shuffles the current queue randomly.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon">
+            <i class="fas fa-times-circle"></i>
+          </div>
+          <div class="command-name">
+            <h3 class="command-title">/remove</h3>
+          </div>
+          <p class="command-desc">Opens an interactive menu to remove one or more songs from the queue.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
@@ -571,7 +589,7 @@
           <div class="command-name">
             <h3 class="command-title">/24_7 [mode]</h3>
           </div>
-          <p class="command-desc">Keeps the bot in the channel. Modes: `normal` (loops queue), `auto`, or `off`.</p>
+          <p class="command-desc">Keeps the bot in the channel. Modes: `normal` (loops queue), `auto` (adds similar songs), or `off`.</p>
         </div>
       </div>
     </div>
@@ -637,7 +655,7 @@
           <div class="command-name">
             <h3 class="command-title">/reconnect</h3>
           </div>
-          <p class="command-desc">Refreshes the voice connection to fix lag or audio issues.</p>
+          <p class="command-desc">Refreshes the voice connection to fix lag or audio issues without losing the queue.</p>
         </div>
         <div class="command-row">
           <div class="command-icon">
