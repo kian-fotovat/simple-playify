@@ -2481,7 +2481,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
 
                 # --- START: FINAL CLEAN LOOPING LOGIC ---
                 # This ensures local files keep their special properties when looped.
-                track_to_requeue = music_player.current_info
+                track_to_requeue = create_queue_item_from_info(music_player.current_info)
 
                 if music_player.loop_current:
                     items = list(music_player.queue._queue)
@@ -2720,7 +2720,8 @@ async def play(interaction: discord.Interaction, query: str):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    if not interaction.user.voice or not interaction.user.voice.channel:
+    member = interaction.guild.get_member(interaction.user.id)
+    if not member or not member.voice or not member.voice.channel:
         embed = Embed(
             description=get_messages("no_voice_channel", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
@@ -2748,6 +2749,7 @@ async def play(interaction: discord.Interaction, query: str):
                  # MODIFIED: Using followup.send() because the interaction is already deferred.
                  await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
                  return
+
         except Exception as e:
             embed = Embed(
                 description=get_messages("connection_error", guild_id),
@@ -3759,7 +3761,8 @@ async def play_files(
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    if not interaction.user.voice or not interaction.user.voice.channel:
+    member = interaction.guild.get_member(interaction.user.id)
+    if not member or not member.voice or not member.voice.channel:
         embed = Embed(description=get_messages("no_voice_channel", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
