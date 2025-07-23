@@ -1288,6 +1288,70 @@ class RemoveView(View):
 
 # --- General & State Helpers ---
 
+async def ensure_voice_connection(interaction: discord.Interaction) -> discord.VoiceClient | None:
+    """
+    Checks and ensures that the bot is connected to the user's voice channel.
+    Manages connection, reconnection, and promotion by intervening on scenes.
+    Returns the voice client on success, None on failure.    
+    """
+    guild_id = interaction.guild_id
+    music_player = get_player(guild_id)
+    is_kawaii = get_mode(guild_id)
+
+    #1. Check if the user is in a voice chat room
+    member = interaction.guild.get_member(interaction.user.id)
+    if not member or not member.voice or not member.voice.channel:
+        embed = Embed(
+            description=get_messages("no_voice_channel", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        # Use followup.send if the interaction is already deferred
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        else:
+            await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        return None
+
+    voice_channel = member.voice.channel
+
+    #2. If the bot is already connected, make sure it is in the correct channel
+    if music_player.voice_client and music_player.voice_client.is_connected():
+        if music_player.voice_client.channel != voice_channel:
+            await music_player.voice_client.move_to(voice_channel)
+    #3. If the bot is not connected, connect it
+    else:
+        try:
+            music_player.voice_client = await voice_channel.connect()
+        except Exception as e:
+            embed = Embed(
+                description=get_messages("connection_error", guild_id),
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+            logger.error(f"Erreur de connexion : {e}")
+            return None
+
+    #4. Managing the Stage Salons case (the crucial correction)
+    if isinstance(voice_channel, discord.StageChannel):
+        # We only try to become a speaker if we are not already one
+        if voice_channel.guild.me.voice.suppress:
+            logger.info(f"[{guild_id}] The room is a stage. Attempt to become a speaker.")
+            try:
+                await interaction.guild.me.edit(suppress=False)
+                await asyncio.sleep(0.5) # Small delay to give time to the Discord API
+            except discord.Forbidden:
+                logger.warning(f"[{guild_id}] Failed to become a logger: 'Mute Members' permission is missing.")
+                # Optionally, the user can be warned
+            except Exception as e:
+                logger.error(f"[{guild_id}] Unexpected error becoming a commenter: {e}")
+
+    #5. Update the reader's text channel and return the client
+    music_player.text_channel = interaction.channel
+    return music_player.voice_client
+
 def clear_audio_cache(guild_id: int):
     """Deletes the audio cache directory for a specific guild."""
     guild_cache_path = os.path.join("audio_cache", str(guild_id))
@@ -2381,6 +2445,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                         await music_player.queue.put(track_info_radio)
                 
                 elif (is_24_7_on and music_player.autoplay_enabled) or music_player.autoplay_enabled:
+                    music_player.suppress_next_now_playing = False
                     seed_url = None
                     if music_player.current_info and not music_player.current_info.get('source_type') == 'file':
                         seed_url = music_player.current_url
@@ -2394,6 +2459,14 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                                 logger.info(f"Autoplay fallback found. Using seed: {seed_url}")
                                 break
                     if seed_url:
+                        if music_player.text_channel:
+                            # We get the kawaii mode for the embed color
+                            is_kawaii = get_mode(guild_id)
+                            embed = Embed(
+                                description=get_messages("autoplay_added", guild_id),
+                                color=0xC7CEEA if is_kawaii else discord.Color.blue()
+                            )
+                            await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
                         if "youtube.com" in seed_url or "youtu.be" in seed_url:
                             mix_playlist_url = get_mix_playlist_url(seed_url)
                             if mix_playlist_url:
@@ -2759,46 +2832,11 @@ async def play(interaction: discord.Interaction, query: str):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    member = interaction.guild.get_member(interaction.user.id)
-    if not member or not member.voice or not member.voice.channel:
-        embed = Embed(
-            description=get_messages("no_voice_channel", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-        return
-
     await interaction.response.defer()
 
-    if not music_player.voice_client or not music_player.voice_client.is_connected():
-        try:
-            # If there's an old, invalid client, clean it up first
-            if music_player.voice_client:
-                await music_player.voice_client.disconnect(force=True)
-            music_player.voice_client = await interaction.user.voice.channel.connect()
-        except discord.errors.ClientException as e:
-            # This handles the "Already connected" error gracefully
-            logger.warning(f"Connection attempt failed, likely already connected. Error: {e}")
-            # If the bot thinks it's connected, but the user is in another channel, move it.
-            if interaction.guild.voice_client:
-                 await interaction.guild.voice_client.move_to(interaction.user.voice.channel)
-                 music_player.voice_client = interaction.guild.voice_client
-            else: # If something else is wrong, send an error
-                 embed = Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-                 # MODIFIED: Using followup.send() because the interaction is already deferred.
-                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-                 return
-
-        except Exception as e:
-            embed = Embed(
-                description=get_messages("connection_error", guild_id),
-                color=0xFF9AA2 if is_kawaii else discord.Color.red()
-            )
-            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-            logger.error(f"Error connecting: {e}")
-            return
-
-    music_player.text_channel = interaction.channel
+    voice_client = await ensure_voice_connection(interaction)
+    if not voice_client:
+        return # La fonction helper a déjà géré l'erreur.
     
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
@@ -2956,7 +2994,11 @@ async def play(interaction: discord.Interaction, query: str):
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+                try:
+                    await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+                except discord.errors.NotFound:
+                    logger.warning(f"Interaction expired for single Spotify track error. Sending public message.")
+                    await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
         else:
             embed = Embed(
                 title="Spotify playlist processing",
@@ -3093,7 +3135,11 @@ async def play(interaction: discord.Interaction, query: str):
                     description=get_messages("search_error", guild_id),
                     color=0xFFB6C1 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+                try:
+                    await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+                except discord.errors.NotFound:
+                    logger.warning(f"Interaction expired for single Deezer track error. Sending public message.")
+                    await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
         else:
             embed = Embed(
                 title="Deezer playlist processing",
@@ -3222,7 +3268,11 @@ async def play(interaction: discord.Interaction, query: str):
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+                try:
+                    await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+                except discord.errors.NotFound:
+                    logger.warning(f"Interaction expired for single Apple Music track error. Sending public message.")
+                    await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
         else:
             embed = Embed(
                 title="Apple Music playlist processing",
@@ -3343,7 +3393,11 @@ async def play(interaction: discord.Interaction, query: str):
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+                try:
+                    await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+                except discord.errors.NotFound:
+                    logger.warning(f"Interaction expired for single Tidal track error. Sending public message.")
+                    await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
         else:
             embed = Embed(
                 title="Tidal mix/playlist processing",
@@ -3466,7 +3520,11 @@ async def play(interaction: discord.Interaction, query: str):
                     description=get_messages("search_error", guild_id),
                     color=0xFF9AA2 if is_kawaii else discord.Color.red()
                 )
-                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+                try:
+                    await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+                except discord.errors.NotFound:
+                    logger.warning(f"Interaction expired for single Amazon Music track error. Sending public message.")
+                    await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
         else:
             embed = Embed(
                 title="Amazon Music playlist processing",
@@ -3693,8 +3751,12 @@ async def play(interaction: discord.Interaction, query: str):
                 description=get_messages("video_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.error(f"Error processing generic URL/Playlist: {e}", exc_info=True)
+            try:
+                await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            except discord.errors.NotFound:
+                logger.warning(f"Interaction expired for generic URL error. Sending public message.")
+                await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
     else:
         try:
             ydl_opts_full = {
@@ -3765,8 +3827,12 @@ async def play(interaction: discord.Interaction, query: str):
                 description=get_messages("search_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
-            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.error(f"Error searching for {query}: {e}")
+            try:
+                await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            except discord.errors.NotFound:
+                logger.warning(f"Interaction expired for keyword search error. Sending public message.")
+                await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
 
     if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
@@ -3800,14 +3866,12 @@ async def play_files(
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    member = interaction.guild.get_member(interaction.user.id)
-    if not member or not member.voice or not member.voice.channel:
-        embed = Embed(description=get_messages("no_voice_channel", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-        await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-        return
-
     await interaction.response.defer()
 
+    voice_client = await ensure_voice_connection(interaction)
+    if not voice_client:
+        return
+    
     base_cache_dir = "audio_cache"
     guild_cache_dir = os.path.join(base_cache_dir, str(guild_id))
     os.makedirs(guild_cache_dir, exist_ok=True)
@@ -3847,14 +3911,6 @@ async def play_files(
         if _24_7_active.get(guild_id, False):
             music_player.radio_playlist.append(queue_item)
             logger.info(f"Added '{attachment.filename}' to the active 24/7 radio playlist for guild {guild_id}.")
-
-    if not music_player.voice_client or not music_player.voice_client.is_connected():
-        try:
-            music_player.voice_client = await interaction.user.voice.channel.connect()
-            music_player.text_channel = interaction.channel
-        except Exception:
-            await interaction.followup.send(embed=Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES)
-            return
 
     if not added_files:
         await interaction.followup.send(embed=Embed(description="No valid audio/video files were added.", color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES)
@@ -3936,28 +3992,11 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
         return
     # --- END VALIDATION ---
 
-    if not interaction.user.voice or not interaction.user.voice.channel:
-        embed = Embed(
-            description=get_messages("no_voice_channel", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
-        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-        return
-
-    if not music_player.voice_client or not music_player.voice_client.is_connected():
-        try:
-            music_player.voice_client = await interaction.user.voice.channel.connect()
-        except Exception as e:
-            embed = Embed(
-                description=get_messages("connection_error", guild_id),
-                color=0xFF9AA2 if is_kawaii else discord.Color.red()
-            )
-            await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-            logger.error(f"Error connecting: {e}")
-            return
-
-    music_player.text_channel = interaction.channel
     await interaction.response.defer()
+    
+    voice_client = await ensure_voice_connection(interaction)
+    if not voice_client:
+        return
 
     queue_item = None
 
@@ -4534,18 +4573,11 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
         await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
         return
 
-    # Case 2: The user wants to enable 24/7 mode (normal or auto)
-    if not music_player.voice_client or not music_player.voice_client.is_connected():
-        if not interaction.user.voice or not interaction.user.voice.channel:
-            await interaction.followup.send("You are not in a voice channel.", silent=SILENT_MESSAGES, ephemeral=True)
-            return
-        try:
-            music_player.voice_client = await interaction.user.voice.channel.connect()
-            music_player.text_channel = interaction.channel
-        except Exception as e:
-            logger.error(f"Failed to connect for 24/7 command: {e}")
-            await interaction.followup.send("Could not connect to the voice channel.", silent=SILENT_MESSAGES, ephemeral=True)
-            return
+    voice_client = await ensure_voice_connection(interaction)
+    if not voice_client:
+        if music_player.text_channel:
+             await music_player.text_channel.send("Unable to connect to the voice chat.", silent=SILENT_MESSAGES)
+        return
 
     if not music_player.radio_playlist:
         logger.info(f"[{guild_id}] 24/7 mode enabled. Creating radio playlist snapshot.")
