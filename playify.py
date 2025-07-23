@@ -101,9 +101,9 @@ AUDIO_FILTERS = {
 # Dictionary to map filter values to their display names
 FILTER_DISPLAY_NAMES = {
     "none": "None",
-    "slowed": "Slowed ♪",
-    "spedup": "Sped Up ♫",
-    "nightcore": "Nightcore ☆",
+    "slowed": "Slowed â™ª",
+    "spedup": "Sped Up â™«",
+    "nightcore": "Nightcore â˜†",
     "reverb": "Reverb",
     "8d": "8D Audio",
     "muffled": "Muffled",
@@ -114,16 +114,16 @@ FILTER_DISPLAY_NAMES = {
 messages = {
     # --- NEW --- Error reporting messages
     "critical_error_title": {
-        "normal": "🚨 An Unexpected Error Occurred",
-        "kawaii": "(╥﹏╥) Oh no! A critical error happened..."
+        "normal": "ðŸš¨ An Unexpected Error Occurred",
+        "kawaii": "(â•¥ï¹â•¥) Oh no! A critical error happened..."
     },
     "critical_error_description": {
         "normal": "The bot encountered a problem. Please report this issue on GitHub so we can fix it!",
-        "kawaii": "Something went wrong... (´；ω；`) Can you please tell the developers on GitHub so they can make me better?"
+        "kawaii": "Something went wrong... (Â´ï¼›Ï‰ï¼›`) Can you please tell the developers on GitHub so they can make me better?"
     },
     "critical_error_report_field": {
         "normal": "Report on GitHub",
-        "kawaii": "Report the boo-boo! 🩹"
+        "kawaii": "Report the boo-boo! ðŸ©¹"
     },
     "critical_error_report_value": {
         "normal": "You can create an issue here:\n**https://github.com/alan7383/playify/issues**\n\nPlease include the error details below.",
@@ -136,87 +136,87 @@ messages = {
     # ... (rest of your messages dictionary)
     "no_voice_channel": {
         "normal": "You must be in a voice channel to use this command.",
-        "kawaii": "(>ω<) You must be in a voice channel!"
+        "kawaii": "(>Ï‰<) You must be in a voice channel!"
     },
     "connection_error": {
         "normal": "Error connecting to the voice channel.",
-        "kawaii": "(╥﹏╥) I couldn't connect..."
+        "kawaii": "(â•¥ï¹â•¥) I couldn't connect..."
     },
     "spotify_error": {
         "normal": "Error processing the Spotify link. It may be private, region-locked, or invalid.",
-        "kawaii": "(´；ω；`) Oh no! Problem with the Spotify link... maybe it’s shy or hidden?"
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Oh no! Problem with the Spotify link... maybe itâ€™s shy or hidden?"
     },
     "spotify_playlist_added": {
-        "normal": "🎶 Spotify Playlist Added",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ SPOTIFY PLAYLIST"
+        "normal": "ðŸŽ¶ Spotify Playlist Added",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† SPOTIFY PLAYLIST"
     },
     "spotify_playlist_description": {
         "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-        "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+        "kawaii": "**{count} songs** added, {failed} couldnâ€™t join! (Â´ï½¥Ï‰ï½¥`)\n{failed_tracks}"
     },
     "deezer_error": {
         "normal": "Error processing the Deezer link. It may be private, region-locked, or invalid.",
-        "kawaii": "(´；ω；`) Oh no! Problem with the Deezer link... maybe it’s shy or hidden?"
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Oh no! Problem with the Deezer link... maybe itâ€™s shy or hidden?"
     },
     "deezer_playlist_added": {
-        "normal": "🎶 Deezer Playlist Added",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ DEEZER PLAYLIST"
+        "normal": "ðŸŽ¶ Deezer Playlist Added",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† DEEZER PLAYLIST"
     },
     "deezer_playlist_description": {
         "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-        "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+        "kawaii": "**{count} songs** added, {failed} couldnâ€™t join! (Â´ï½¥Ï‰ï½¥`)\n{failed_tracks}"
     },
     "apple_music_error": {
         "normal": "Error processing the Apple Music link.",
-        "kawaii": "(´；ω；`) Oops! Trouble with the Apple Music link..."
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Oops! Trouble with the Apple Music link..."
     },
     "apple_music_playlist_added": {
-        "normal": "🎶 Apple Music Playlist Added",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ APPLE MUSIC PLAYLIST"
+        "normal": "ðŸŽ¶ Apple Music Playlist Added",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† APPLE MUSIC PLAYLIST"
     },
     "apple_music_playlist_description": {
         "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-        "kawaii": "**{count} songs** added, {failed} couldn't join! (´･ω･`)\n{failed_tracks}"
+        "kawaii": "**{count} songs** added, {failed} couldn't join! (Â´ï½¥Ï‰ï½¥`)\n{failed_tracks}"
     },
     "tidal_error": {
         "normal": "Error processing the Tidal link. It may be private, region-locked, or invalid.",
-        "kawaii": "(´；ω；`) Oh no! Problem with the Tidal link... maybe it’s shy or hidden?"
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Oh no! Problem with the Tidal link... maybe itâ€™s shy or hidden?"
     },
     "tidal_playlist_added": {
-        "normal": "🎶 Tidal Playlist Added",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ TIDAL PLAYLIST"
+        "normal": "ðŸŽ¶ Tidal Playlist Added",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† TIDAL PLAYLIST"
     },
     "tidal_playlist_description": {
         "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-        "kawaii": "**{count} songs** added, {failed} couldn’t join! (´･ω･`)\n{failed_tracks}"
+        "kawaii": "**{count} songs** added, {failed} couldnâ€™t join! (Â´ï½¥Ï‰ï½¥`)\n{failed_tracks}"
     },
     "amazon_music_error": {
         "normal": "Error processing the Amazon Music link.",
-        "kawaii": "(´；ω；`) Oh no! Something is wrong with the Amazon Music link..."
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Oh no! Something is wrong with the Amazon Music link..."
     },
     "amazon_music_playlist_added": {
-        "normal": "🎶 Amazon Music Playlist Added",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ AMAZON MUSIC PLAYLIST"
+        "normal": "ðŸŽ¶ Amazon Music Playlist Added",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† AMAZON MUSIC PLAYLIST"
     },
     "amazon_music_playlist_description": {
         "normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
-        "kawaii": "**{count} songs** added, {failed} couldn't join! (´･ω･`)\n{failed_tracks}"
+        "kawaii": "**{count} songs** added, {failed} couldn't join! (Â´ï½¥Ï‰ï½¥`)\n{failed_tracks}"
     },
     "song_added": {
-        "normal": "🎵 Added to Queue",
-        "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
+        "normal": "ðŸŽµ Added to Queue",
+        "kawaii": "(ã£â—•â€¿â—•)ã£ â™« SONG ADDED â™«"
     },
     "playlist_added": {
-        "normal": "🎶 Playlist Added",
-        "kawaii": "✧･ﾟ: *✧･ﾟ:* PLAYLIST *:･ﾟ✧*:･ﾟ✧"
+        "normal": "ðŸŽ¶ Playlist Added",
+        "kawaii": "âœ§ï½¥ï¾Ÿ: *âœ§ï½¥ï¾Ÿ:* PLAYLIST *:ï½¥ï¾Ÿâœ§*:ï½¥ï¾Ÿâœ§"
     },
     "playlist_description": {
         "normal": "**{count} tracks** added to the queue.",
         "kawaii": "**{count} songs** added!"
     },
     "ytmusic_playlist_added": {
-        "normal": "🎶 YouTube Music Playlist Added",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ YOUTUBE MUSIC PLAYLIST"
+        "normal": "ðŸŽ¶ YouTube Music Playlist Added",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† YOUTUBE MUSIC PLAYLIST"
     },
     "ytmusic_playlist_description": {
         "normal": "**{count} tracks** being added...",
@@ -224,63 +224,63 @@ messages = {
     },
     "video_error": {
         "normal": "Error adding the video or playlist.",
-        "kawaii": "(´；ω；`) Something went wrong with this video..."
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Something went wrong with this video..."
     },
     "search_error": {
         "normal": "Error during search. Try another title.",
-        "kawaii": "(︶︹︺) Couldn't find this song..."
+        "kawaii": "(ï¸¶ï¸¹ï¸º) Couldn't find this song..."
     },
     "now_playing_title": {
-        "normal": "🎵 Now Playing",
-        "kawaii": "♫♬ NOW PLAYING ♬♫"
+        "normal": "ðŸŽµ Now Playing",
+        "kawaii": "â™«â™¬ NOW PLAYING â™¬â™«"
     },
     "now_playing_description": {
         "normal": "[{title}]({url})",
-        "kawaii": "♪(´▽｀) [{title}]({url})"
+        "kawaii": "â™ª(Â´â–½ï½€) [{title}]({url})"
     },
     "pause": {
-        "normal": "⏸️ Playback paused.",
-        "kawaii": "(´･_･`) Music paused..."
+        "normal": "â¸ï¸ Playback paused.",
+        "kawaii": "(Â´ï½¥_ï½¥`) Music paused..."
     },
     "no_playback": {
         "normal": "No playback in progress.",
-        "kawaii": "(・_・;) Nothing is playing right now..."
+        "kawaii": "(ãƒ»_ãƒ»;) Nothing is playing right now..."
     },
     "resume": {
-        "normal": "▶️ Playback resumed.",
-        "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ Let's go again!"
+        "normal": "â–¶ï¸ Playback resumed.",
+        "kawaii": "â˜†*:.ï½¡.o(â‰§â–½â‰¦)o.ï½¡.:*â˜† Let's go again!"
     },
     "no_paused": {
         "normal": "No playback is paused.",
-        "kawaii": "(´･ω･`) No music is paused..."
+        "kawaii": "(Â´ï½¥Ï‰ï½¥`) No music is paused..."
     },
     "skip": {
-        "normal": "⏭️ Current song skipped.",
-        "kawaii": "(ノ°ο°)ノ Skipped! Next song ~"
+        "normal": "â­ï¸ Current song skipped.",
+        "kawaii": "(ãƒŽÂ°Î¿Â°)ãƒŽ Skipped! Next song ~"
     },
     "no_song": {
         "normal": "No song is playing.",
-        "kawaii": "(；一_一) Nothing to skip..."
+        "kawaii": "(ï¼›ä¸€_ä¸€) Nothing to skip..."
     },
     "loop": {
-        "normal": "🔁 Looping for the current song {state}.",
-        "kawaii": "🔁 Looping for the current song {state}."
+        "normal": "ðŸ” Looping for the current song {state}.",
+        "kawaii": "ðŸ” Looping for the current song {state}."
     },
     "loop_state_enabled": {
         "normal": "enabled",
-        "kawaii": "enabled (◕‿◕✿)"
+        "kawaii": "enabled (â—•â€¿â—•âœ¿)"
     },
     "loop_state_disabled": {
         "normal": "disabled",
-        "kawaii": "disabled (¨_°`)"
+        "kawaii": "disabled (Â¨_Â°`)"
     },
     "stop": {
-        "normal": "⏹️ Playback stopped and bot disconnected.",
-        "kawaii": "(ﾉ´･ω･)ﾉ ﾐ ┸━┸ All stopped! Bye bye ~"
+        "normal": "â¹ï¸ Playback stopped and bot disconnected.",
+        "kawaii": "(ï¾‰Â´ï½¥Ï‰ï½¥)ï¾‰ ï¾ â”¸â”â”¸ All stopped! Bye bye ~"
     },
     "not_connected": {
         "normal": "The bot is not connected to a voice channel.",
-        "kawaii": "(￣ω￣;) I'm not connected..."
+        "kawaii": "(ï¿£Ï‰ï¿£;) I'm not connected..."
     },
     "kawaii_toggle": {
         "normal": "Kawaii mode {state} for this server!",
@@ -288,23 +288,23 @@ messages = {
     },
     "kawaii_state_enabled": {
         "normal": "enabled",
-        "kawaii": "enabled (◕‿◕✿)"
+        "kawaii": "enabled (â—•â€¿â—•âœ¿)"
     },
     "kawaii_state_disabled": {
         "normal": "disabled",
         "kawaii": "disabled"
     },
     "shuffle_success": {
-        "normal": "🔀 Queue shuffled successfully!",
-        "kawaii": "(✿◕‿◕) Queue shuffled! Yay! ~"
+        "normal": "ðŸ”€ Queue shuffled successfully!",
+        "kawaii": "(âœ¿â—•â€¿â—•) Queue shuffled! Yay! ~"
     },
     "queue_empty": {
         "normal": "The queue is empty.",
-        "kawaii": "(´･ω･`) No songs in the queue..."
+        "kawaii": "(Â´ï½¥Ï‰ï½¥`) No songs in the queue..."
     },
     "autoplay_toggle": {
         "normal": "Autoplay {state}.",
-        "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
+        "kawaii": "â™« Autoplay {state} (â—•â€¿â—•âœ¿)"
     },
     "autoplay_state_enabled": {
         "normal": "enabled",
@@ -315,12 +315,12 @@ messages = {
         "kawaii": "disabled"
     },
     "autoplay_added": {
-        "normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute)",
-        "kawaii": "♪(´▽｀) Adding similar songs to the queue! ~ (It might take a little while!)"
+        "normal": "ðŸŽµ Adding similar songs to the queue... (This may take up to 1 minute)",
+        "kawaii": "â™ª(Â´â–½ï½€) Adding similar songs to the queue! ~ (It might take a little while!)"
     },
     "queue_title": {
-        "normal": "🎶 Queue",
-        "kawaii": "🎶 Queue (◕‿◕✿)"
+        "normal": "ðŸŽ¶ Queue",
+        "kawaii": "ðŸŽ¶ Queue (â—•â€¿â—•âœ¿)"
     },
     "queue_description": {
         "normal": "There are **{count} songs** in the queue.",
@@ -328,111 +328,111 @@ messages = {
     },
     "queue_next": {
         "normal": "Next songs:",
-        "kawaii": "Next songs: ♫"
+        "kawaii": "Next songs: â™«"
     },
     "queue_song": {
         "normal": "- [{title}]({url})",
-        "kawaii": "- ♪ [{title}]({url})"
+        "kawaii": "- â™ª [{title}]({url})"
     },
     "clear_queue_success": {
-        "normal": "✅ Queue cleared.",
-        "kawaii": "(≧▽≦) Queue cleared! ~"
+        "normal": "âœ… Queue cleared.",
+        "kawaii": "(â‰§â–½â‰¦) Queue cleared! ~"
     },
     "play_next_added": {
-        "normal": "🎵 Added as next song",
-        "kawaii": "(っ◕‿◕)っ ♫ Added as next song ♫"
+        "normal": "ðŸŽµ Added as next song",
+        "kawaii": "(ã£â—•â€¿â—•)ã£ â™« Added as next song â™«"
     },
     "no_song_playing": {
         "normal": "No song is currently playing.",
-        "kawaii": "(´･ω･`) No music is playing right now..."
+        "kawaii": "(Â´ï½¥Ï‰ï½¥`) No music is playing right now..."
     },
     "loading_playlist": {
         "normal": "Processing playlist...\n{processed}/{total} tracks added",
-        "kawaii": "(✿◕‿◕) Processing playlist...\n{processed}/{total} songs added"
+        "kawaii": "(âœ¿â—•â€¿â—•) Processing playlist...\n{processed}/{total} songs added"
     },
     "playlist_error": {
         "normal": "Error processing the playlist. It may be private, region-locked, or invalid.",
-        "kawaii": "(´；ω；`) Oh no! Problem with the playlist... maybe it’s shy or hidden?"
+        "kawaii": "(Â´ï¼›Ï‰ï¼›`) Oh no! Problem with the playlist... maybe itâ€™s shy or hidden?"
     },
     "filter_title": {
-        "normal": "🎧 Audio Filters",
-        "kawaii": "🎧 Filters! ヾ(≧▽≦*)o"
+        "normal": "ðŸŽ§ Audio Filters",
+        "kawaii": "ðŸŽ§ Filters! ãƒ¾(â‰§â–½â‰¦*)o"
     },
     "filter_description": {
         "normal": "Click on the buttons to enable or disable a filter in real time!",
-        "kawaii": "Clicky clicky to change the sound! ~☆"
+        "kawaii": "Clicky clicky to change the sound! ~â˜†"
     },
     "no_filter_playback": {
         "normal": "Nothing is currently playing to apply a filter on.",
-        "kawaii": "Nothing is playing... (´・ω・`)"
+        "kawaii": "Nothing is playing... (Â´ãƒ»Ï‰ãƒ»`)"
     },
     "lyrics_fallback_warning": {
         "normal": "Synced lyrics not found. Displaying standard lyrics instead.",
-        "kawaii": "I couldn't find the synced lyrics... (｡•́︿•̀｡) But here are the normal ones for u!"
+        "kawaii": "I couldn't find the synced lyrics... (ï½¡â€¢Ìï¸¿â€¢Ì€ï½¡) But here are the normal ones for u!"
     },
     "karaoke_disclaimer": {
-        "normal": "Please note: The timing of the arrow (») and lyric accuracy are matched automatically and can vary based on the song version or active filters.",
-        "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ ♡ The arrow (») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
+        "normal": "Please note: The timing of the arrow (Â») and lyric accuracy are matched automatically and can vary based on the song version or active filters.",
+        "kawaii": "Just so you know! à¬ª(à¹‘â€¢á´—â€¢à¹‘)à¬“ â™¡ The arrow (Â») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
     },
     "karaoke_warning_title": {
-        "normal": "🎤 Karaoke - Important Notice",
-        "kawaii": "🎤 Karaoke Time! Just a little note~ (´• ω •`)"
+        "normal": "ðŸŽ¤ Karaoke - Important Notice",
+        "kawaii": "ðŸŽ¤ Karaoke Time! Just a little note~ (Â´â€¢ Ï‰ â€¢`)"
     },
     "karaoke_warning_description": {
-        "normal": "Please note that the timing of the lyrics (») is matched automatically and can vary.\n\n**💡 Pro Tip:** For the best results, try adding `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).\n\nPress **Continue** to start.",
-        "kawaii": "The timing of the lyrics (») does its best to be perfect, but sometimes it's a little shy! ପ(๑•ᴗ•๑)ଓ ♡\n\n**💡 Pro Tip:** For the bestest results, try adding `topic` or `audio` to your search, like `party addict kets4eki topic`!\n\nSmash that **Continue** button to begin~ 💖"
+        "normal": "Please note that the timing of the lyrics (Â») is matched automatically and can vary.\n\n**ðŸ’¡ Pro Tip:** For the best results, try adding `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).\n\nPress **Continue** to start.",
+        "kawaii": "The timing of the lyrics (Â») does its best to be perfect, but sometimes it's a little shy! à¬ª(à¹‘â€¢á´—â€¢à¹‘)à¬“ â™¡\n\n**ðŸ’¡ Pro Tip:** For the bestest results, try adding `topic` or `audio` to your search, like `party addict kets4eki topic`!\n\nSmash that **Continue** button to begin~ ðŸ’–"
     },
     "karaoke_warning_button": {
         "normal": "Continue",
-        "kawaii": "Continue (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "Continue (ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§"
     },
     "lyrics_not_found_title": {
-        "normal": "😢 Lyrics Not Found",
-        "kawaii": "૮( ´• ˕ •` )ა Lyrics not found..."
+        "normal": "ðŸ˜¢ Lyrics Not Found",
+        "kawaii": "à«®( Â´â€¢ Ë• â€¢` )áƒ Lyrics not found..."
     },
     "lyrics_not_found_description": {
         "normal": "I couldn't find lyrics for **{query}**.\n\nYou can refine the search yourself. Try using just the song title.",
-        "kawaii": "I searched everywhere but I couldn't find the lyrics for **{query}** (｡•́︿•̀｡)\n\nTry searching just with the title, you can do it!~"
+        "kawaii": "I searched everywhere but I couldn't find the lyrics for **{query}** (ï½¡â€¢Ìï¸¿â€¢Ì€ï½¡)\n\nTry searching just with the title, you can do it!~"
     },
     "lyrics_refine_button": {
         "normal": "Refine Search",
-        "kawaii": "Try again! (o･ω･)ﾉ"
+        "kawaii": "Try again! (oï½¥Ï‰ï½¥)ï¾‰"
     },
     "karaoke_not_found_title": {
-        "normal": "😢 Synced Lyrics Not Found",
-        "kawaii": "૮( ´• ˕ •` )ა Synced Lyrics Not Found..."
+        "normal": "ðŸ˜¢ Synced Lyrics Not Found",
+        "kawaii": "à«®( Â´â€¢ Ë• â€¢` )áƒ Synced Lyrics Not Found..."
     },
     "karaoke_not_found_description": {
         "normal": "I couldn't find synced lyrics for **{query}**.\n\nYou can refine the search or search for standard (non-synced) lyrics on Genius.",
-        "kawaii": "I looked everywhere but couldn't find the synced lyrics for **{query}** (｡•́︿•̀｡)\n\nYou can try again, or we can look for the normal lyrics on Genius together!~"
+        "kawaii": "I looked everywhere but couldn't find the synced lyrics for **{query}** (ï½¡â€¢Ìï¸¿â€¢Ì€ï½¡)\n\nYou can try again, or we can look for the normal lyrics on Genius together!~"
     },
     "karaoke_retry_button": {
         "normal": "Refine Search",
-        "kawaii": "Try Again! (o･ω･)ﾉ"
+        "kawaii": "Try Again! (oï½¥Ï‰ï½¥)ï¾‰"
     },
     "karaoke_genius_fallback_button": {
         "normal": "Search on Genius",
-        "kawaii": "Find on Genius 📜"
+        "kawaii": "Find on Genius ðŸ“œ"
     },
     "karaoke_retry_success": {
         "normal": "Lyrics found! Starting karaoke...",
-        "kawaii": "Yay, I found them! Starting karaoke~ 🎤"
+        "kawaii": "Yay, I found them! Starting karaoke~ ðŸŽ¤"
     },
     "karaoke_retry_fail": {
         "normal": "Sorry, I still couldn't find synced lyrics for **{query}**.",
-        "kawaii": "Aww, still no luck finding the synced lyrics for **{query}**... (´-ω-`)"
+        "kawaii": "Aww, still no luck finding the synced lyrics for **{query}**... (Â´-Ï‰-`)"
     },
         "extraction_error": {
-        "normal": "⚠️ Could Not Add Track",
-        "kawaii": "(ﾉ><)ﾉ I couldn't add that one!"
+        "normal": "âš ï¸ Could Not Add Track",
+        "kawaii": "(ï¾‰><)ï¾‰ I couldn't add that one!"
     },
     "extraction_error_reason": {
         "normal": "Reason: {error_message}",
-        "kawaii": "Here's why: {error_message} (´• ω •`)"
+        "kawaii": "Here's why: {error_message} (Â´â€¢ Ï‰ â€¢`)"
     },
         "error_title_age_restricted": {
         "normal": "Age-Restricted Video",
-        "kawaii": "Video for Grown-ups! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"
+        "kawaii": "Video for Grown-ups! (â„ â„>â„ á—¨ â„<â„ â„)"
     },
     "error_desc_age_restricted": {
         "normal": "This video requires sign-in to confirm the user's age and cannot be played by the bot.",
@@ -440,7 +440,7 @@ messages = {
     },
     "error_title_private": {
         "normal": "Private Video",
-        "kawaii": "Secret Video! (・-・)"
+        "kawaii": "Secret Video! (ãƒ»-ãƒ»)"
     },
     "error_desc_private": {
         "normal": "This video is marked as private and cannot be accessed.",
@@ -456,7 +456,7 @@ messages = {
     },
     "error_title_generic": {
         "normal": "Access Denied",
-        "kawaii": "Access Denied! (壁)"
+        "kawaii": "Access Denied! (å£)"
     },
     "error_desc_generic": {
         "normal": "The bot was blocked from accessing this video. This can happen with certain live streams or premieres.",
@@ -468,150 +468,150 @@ messages = {
     },
         "error_field_what_to_do": {
         "normal": "What to do?",
-        "kawaii": "What can we do? (・_・?)"
+        "kawaii": "What can we do? (ãƒ»_ãƒ»?)"
     },
     "error_what_to_do_content": {
         "normal": "Some videos have restrictions that prevent bots from playing them.\n\nIf you believe this is a different bug, please [open an issue on GitHub]({github_link}).",
-        "kawaii": "Some videos have super strong shields that stop me! ( >д<)\n\nIf you think something is really, really broken, you can [tell the super smart developers here]({github_link})!~"
+        "kawaii": "Some videos have super strong shields that stop me! ( >Ð´<)\n\nIf you think something is really, really broken, you can [tell the super smart developers here]({github_link})!~"
     },
     "discord_command_title": {
-        "normal": "🔗 Join Our Discord!",
+        "normal": "ðŸ”— Join Our Discord!",
         "kawaii": "Come hang out with us!"
     },
     "discord_command_description": {
         "normal": "Click the button below to join the official Playify support and community server.",
-        "kawaii": "Join our super cute community! Just click the button below~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "Join our super cute community! Just click the button below~ (ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§"
     },
     "discord_command_button": {
         "normal": "Join Server",
-        "kawaii": "Join Us! ♡"
+        "kawaii": "Join Us! â™¡"
     },
     "24_7_on_title": {
-        "normal": "📻 24/7 Radio ON",
-        "kawaii": "📻 24/7 Radio ON ✧"
+        "normal": "ðŸ“» 24/7 Radio ON",
+        "kawaii": "ðŸ“» 24/7 Radio ON âœ§"
     },
     "24_7_on_desc": {
-        "normal": "Queue will loop indefinitely – bot stays & auto-resumes when you re-join.",
-        "kawaii": "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Radio forever! Bot never sleeps, just pauses when alone~"
+        "normal": "Queue will loop indefinitely â€“ bot stays & auto-resumes when you re-join.",
+        "kawaii": "(ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§ Radio forever! Bot never sleeps, just pauses when alone~"
     },
     "24_7_off_title": {
-        "normal": "📴 24/7 Radio OFF",
-        "kawaii": "📴 24/7 Radio OFF (；一_一)"
+        "normal": "ðŸ“´ 24/7 Radio OFF",
+        "kawaii": "ðŸ“´ 24/7 Radio OFF (ï¼›ä¸€_ä¸€)"
     },
     "24_7_off_desc": {
-        "normal": "Queue cleared – bot will disconnect after 60 s if left alone.",
+        "normal": "Queue cleared â€“ bot will disconnect after 60 s if left alone.",
         "kawaii": "Bye-bye radio! Queue wiped, bot will nap soon~"
     },
         "24_7_auto_title": {
-        "normal": "🔄 24/7 Auto Mode",
-        "kawaii": "🔄 24/7 Auto Mode ✨"
+        "normal": "ðŸ”„ 24/7 Auto Mode",
+        "kawaii": "ðŸ”„ 24/7 Auto Mode âœ¨"
     },
     "24_7_auto_desc": {
         "normal": "Autoplay enabled - will add similar songs when playlist ends!",
-        "kawaii": "Autoplay on! New similar songs will appear magically~ ✨"
+        "kawaii": "Autoplay on! New similar songs will appear magically~ âœ¨"
     },
     "24_7_normal_title": {
-        "normal": "🔁 24/7 Loop Mode",
-        "kawaii": "🔁 24/7 Loop Mode ♾️"
+        "normal": "ðŸ” 24/7 Loop Mode",
+        "kawaii": "ðŸ” 24/7 Loop Mode â™¾ï¸"
     },
     "24_7_normal_desc": {
         "normal": "Playlist will loop indefinitely without adding new songs.",
-        "kawaii": "Playlist looping forever~ No new songs added! ♾️"
+        "kawaii": "Playlist looping forever~ No new songs added! â™¾ï¸"
     },
     "24_7_invalid_mode": {
         "normal": "Invalid mode! Use `/24_7 auto` or `/24_7 normal`",
-        "kawaii": "Oops! Use `/24_7 auto` or `/24_7 normal` (◕‿◕)"
+        "kawaii": "Oops! Use `/24_7 auto` or `/24_7 normal` (â—•â€¿â—•)"
     },
         # --- NEW --- Messages for the instant /queue
     "queue_page_footer": {
         "normal": "Page {current_page}/{total_pages}",
-        "kawaii": "Page {current_page}/{total_pages}  (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "Page {current_page}/{total_pages}  (ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§"
     },
     "previous_button": {
-        "normal": "⬅️ Previous",
-        "kawaii": "⬅️ Back"
+        "normal": "â¬…ï¸ Previous",
+        "kawaii": "â¬…ï¸ Back"
     },
     "next_button": {
-        "normal": "Next ➡️",
-        "kawaii": "Next! ➡️"
+        "normal": "Next âž¡ï¸",
+        "kawaii": "Next! âž¡ï¸"
     },
     "queue_status_title": {
         "normal": "Current Status",
-        "kawaii": "Status! (o･ω･)ﾉ"
+        "kawaii": "Status! (oï½¥Ï‰ï½¥)ï¾‰"
     },
     "queue_status_none": {
         "normal": "No special modes active.",
         "kawaii": "Just chillin' normally~"
     },
     "queue_status_loop": {
-        "normal": "🔁 **Loop (Song)**: Enabled",
-        "kawaii": "🔁 **Loop (Song)**: On! 💖"
+        "normal": "ðŸ” **Loop (Song)**: Enabled",
+        "kawaii": "ðŸ” **Loop (Song)**: On! ðŸ’–"
     },
     "queue_status_24_7": {
-        "normal": "📻 **24/7 ({mode})**: Enabled",
-        "kawaii": "📻 **24/7 ({mode})**: Let's go! ✨"
+        "normal": "ðŸ“» **24/7 ({mode})**: Enabled",
+        "kawaii": "ðŸ“» **24/7 ({mode})**: Let's go! âœ¨"
     },
     "queue_status_autoplay": {
-        "normal": "➡️ **Autoplay**: Enabled",
-        "kawaii": "➡️ **Autoplay**: On! ♫"
+        "normal": "âž¡ï¸ **Autoplay**: Enabled",
+        "kawaii": "âž¡ï¸ **Autoplay**: On! â™«"
     },
     "now_playing_in_queue": {
-        "normal": "▶️ Now Playing",
-        "kawaii": "▶️ Now Playing!~"
+        "normal": "â–¶ï¸ Now Playing",
+        "kawaii": "â–¶ï¸ Now Playing!~"
     },
     "reconnect_start": {
-        "normal": "🔃 Reconnecting to the voice channel to improve stability...",
-        "kawaii": "🔃 Reconnecting to make things smooooth~ (o･ω･)ﾉ"
+        "normal": "ðŸ”ƒ Reconnecting to the voice channel to improve stability...",
+        "kawaii": "ðŸ”ƒ Reconnecting to make things smooooth~ (oï½¥Ï‰ï½¥)ï¾‰"
     },
     "reconnect_success": {
-        "normal": "✅ Reconnected! Resuming playback from where you left off.",
-        "kawaii": "✅ Reconnected! Let's continue the party~ ヽ(o^ ^o)ﾉ"
+        "normal": "âœ… Reconnected! Resuming playback from where you left off.",
+        "kawaii": "âœ… Reconnected! Let's continue the party~ ãƒ½(o^ ^o)ï¾‰"
     },
     "reconnect_not_playing": {
         "normal": "I can only reconnect during active playback.",
-        "kawaii": "I can only do my magic reconnect trick when a song is playing! (´• ω •`)"
+        "kawaii": "I can only do my magic reconnect trick when a song is playing! (Â´â€¢ Ï‰ â€¢`)"
     },
     "autoplay_file_notice": {
-        "normal": "💿 The last track was a local file, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
-        "kawaii": "💿 The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+        "normal": "ðŸ’¿ The last track was a local file, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
+        "kawaii": "ðŸ’¿ The last song was a file! I can't find similar songs for that one... (Â´â€¢ Ï‰ â€¢`) Looking through our playlist for another song to use!~"
     },
     # --- NEW --- Messages for /skip with kaomoji
     "skip_confirmation": {
-        "normal": "⏭️ Song Skipped!",
-        "kawaii": "⏭️ Skipped!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "normal": "â­ï¸ Song Skipped!",
+        "kawaii": "â­ï¸ Skipped!~ (ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§"
     },
     "skip_queue_empty": {
         "normal": "The queue is now empty.",
-        "kawaii": "The queue is empty now... (´･ω･`)"
+        "kawaii": "The queue is empty now... (Â´ï½¥Ï‰ï½¥`)"
     },
     # --- NEW --- Messages for /remove with kaomoji
     "remove_title": {
-        "normal": "🗑️ Remove Songs",
-        "kawaii": "🗑️ Remove Songs! (o･ω･)ﾉ"
+        "normal": "ðŸ—‘ï¸ Remove Songs",
+        "kawaii": "ðŸ—‘ï¸ Remove Songs! (oï½¥Ï‰ï½¥)ï¾‰"
     },
     "remove_description": {
         "normal": "Use the dropdown menu to select one or more songs to remove.\nUse the buttons to navigate if you have more than 25 songs.",
-        "kawaii": "Pick the songs to say bye-bye to!~ ☆\nUse the buttons if you have lots and lots of songs!"
+        "kawaii": "Pick the songs to say bye-bye to!~ â˜†\nUse the buttons if you have lots and lots of songs!"
     },
     "remove_placeholder": {
         "normal": "Select one or more songs to remove...",
-        "kawaii": "Which songs should go?~ ♡"
+        "kawaii": "Which songs should go?~ â™¡"
     },
     "remove_success_title": {
-        "normal": "✅ {count} Song(s) Removed",
-        "kawaii": "✅ Poof! {count} song(s) are gone!~"
+        "normal": "âœ… {count} Song(s) Removed",
+        "kawaii": "âœ… Poof! {count} song(s) are gone!~"
     },
     "remove_processed": {
         "normal": "*Selection has been processed.*",
-        "kawaii": "*All done!~ (´• ω •`)*"
+        "kawaii": "*All done!~ (Â´â€¢ Ï‰ â€¢`)*"
     },
     "replay_success_title": {
-        "normal": "🎵 Song Replayed",
-        "kawaii": "🎵 Playing it again!~"
+        "normal": "ðŸŽµ Song Replayed",
+        "kawaii": "ðŸŽµ Playing it again!~"
     },
     "replay_success_desc": {
         "normal": "Restarting [{title}]({url}) from the beginning.",
-        "kawaii": "Let's listen to [{title}]({url}) one more time!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "Let's listen to [{title}]({url}) one more time!~ (ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§"
     },
 }
 
@@ -675,6 +675,9 @@ class MusicPlayer:
         self.suppress_next_now_playing = False
 
         self.is_auto_promoting = False
+        self.is_cleaning = False
+        self.is_resuming_after_clean = False
+        self.resume_info = None
 
 # --- Discord UI Classes (Views & Modals) ---
 
@@ -690,7 +693,7 @@ class LyricsView(View):
         self.original_embed.set_footer(text=f"Page {self.current_page + 1}/{len(self.pages)}")
         return self.original_embed
 
-    @discord.ui.button(label="⬅️ Previous", style=discord.ButtonStyle.grey, row=0)
+    @discord.ui.button(label="â¬…ï¸ Previous", style=discord.ButtonStyle.grey, row=0)
     async def previous_button(self, interaction: discord.Interaction, button: Button):
         if self.current_page > 0:
             self.current_page -= 1
@@ -700,7 +703,7 @@ class LyricsView(View):
 
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="Next ➡️", style=discord.ButtonStyle.grey, row=0)
+    @discord.ui.button(label="Next âž¡ï¸", style=discord.ButtonStyle.grey, row=0)
     async def next_button(self, interaction: discord.Interaction, button: Button):
         if self.current_page < len(self.pages) - 1:
             self.current_page += 1
@@ -710,7 +713,7 @@ class LyricsView(View):
 
         await interaction.response.edit_message(embed=self.update_embed(), view=self)
 
-    @discord.ui.button(label="Refine", emoji="✏️", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="Refine", emoji="âœï¸", style=discord.ButtonStyle.secondary, row=0)
     async def refine_button(self, interaction: discord.Interaction, button: Button):
         modal = RefineLyricsModal(message_to_edit=interaction.message)
         await interaction.response.send_modal(modal)
@@ -764,7 +767,7 @@ class LyricsRetryModal(discord.ui.Modal, title="Refine Lyrics Search"):
             if current_page_content.strip():
                 pages.append(f"```{current_page_content.strip()}```")
 
-            base_embed = Embed(title=f"📜 Lyrics for {song.title}", url=song.url, color=discord.Color.green())
+            base_embed = Embed(title=f"ðŸ“œ Lyrics for {song.title}", url=song.url, color=discord.Color.green())
 
             view = LyricsView(pages=pages, original_embed=base_embed)
             initial_embed = view.update_embed()
@@ -855,7 +858,7 @@ class KaraokeRetryModal(discord.ui.Modal, title="Refine Karaoke Search"):
 
         clean_title, _ = get_cleaned_song_info(self.music_player.current_info)
         embed = Embed(
-            title=f"🎤 Karaoke for {clean_title}",
+            title=f"ðŸŽ¤ Karaoke for {clean_title}",
             description="Starting karaoke...",
             color=0xC7CEEA if self.is_kawaii else discord.Color.blue()
         )
@@ -917,7 +920,7 @@ class RefineLyricsModal(discord.ui.Modal, title="Refine Lyrics Search"):
                 pages.append(f"```{current_page_content.strip()}```")
 
             new_embed = Embed(
-                title=f"📜 Lyrics for {song.title}",
+                title=f"ðŸ“œ Lyrics for {song.title}",
                 url=song.url,
                 color=0xB5EAD7 if self.is_kawaii else discord.Color.green()
             )
@@ -1055,6 +1058,7 @@ class FilterView(View):
             music_player.voice_client.stop()
 
 # --- NEW --- View for the paginated /queue command
+
 class QueueView(View):
     """
     A View that handles pagination for the /queue command.
@@ -1082,7 +1086,6 @@ class QueueView(View):
         self.add_item(self.next_button)
 
     async def create_queue_embed(self) -> Embed:
-        """Creates the embed for the current page, handling local file display."""
         status_lines = []
         if self.music_player.loop_current:
             status_lines.append(get_messages("queue_status_loop", self.guild_id))
@@ -1104,7 +1107,7 @@ class QueueView(View):
             title = self.music_player.current_info.get("title", "Unknown Title")
             now_playing_text = ""
             if self.music_player.current_info.get('source_type') == 'file':
-                now_playing_text = f"💿 `{title}`"
+                now_playing_text = f"ðŸ’¿ `{title}`"
             else:
                 url = self.music_player.current_info.get("webpage_url", self.music_player.current_url)
                 now_playing_text = f"[{title}]({url})"
@@ -1127,16 +1130,15 @@ class QueueView(View):
                         track['title'] = new_data.get('title', 'Unknown Title')
                         track['webpage_url'] = new_data.get('webpage_url', track['url'])
 
-            # --- START: NEW LENGTH CHECK LOGIC ---
             next_songs_list = []
             current_length = 0
-            limit = 1000 # Safety limit slightly below Discord's 1024
+            limit = 1000
             
             for i, item in enumerate(tracks_on_page, start=start_index):
                 title = item.get('title', 'Title not available')
                 display_line = ""
                 if item.get('source_type') == 'file':
-                    display_line = f"💿 `{title}`"
+                    display_line = f"ðŸ’¿ `{title}`"
                 else:
                     url = item.get('webpage_url', '#')
                     display_line = f"[{title}]({url})"
@@ -1150,7 +1152,6 @@ class QueueView(View):
                 
                 next_songs_list.append(full_line)
                 current_length += len(full_line)
-            # --- END: NEW LENGTH CHECK LOGIC ---
             
             if next_songs_list:
                 embed.add_field(name=get_messages("queue_next", self.guild_id), value="".join(next_songs_list), inline=False)
@@ -1159,7 +1160,6 @@ class QueueView(View):
         return embed
     
     def update_button_states(self):
-        """Disables/enables buttons based on the current page."""
         self.previous_button.disabled = self.current_page == 0
         self.next_button.disabled = self.current_page >= self.total_pages - 1
 
@@ -1169,7 +1169,11 @@ class QueueView(View):
             self.current_page -= 1
         self.update_button_states()
         new_embed = await self.create_queue_embed()
-        await interaction.edit_original_response(embed=new_embed, view=self)
+        
+        try:
+            await interaction.edit_original_response(embed=new_embed, view=self)
+        except discord.errors.DiscordServerError as e:
+            logger.warning(f"Failed to edit queue message (previous button) due to Discord API error: {e}")
 
     async def next_button_callback(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -1177,7 +1181,11 @@ class QueueView(View):
             self.current_page += 1
         self.update_button_states()
         new_embed = await self.create_queue_embed()
-        await interaction.edit_original_response(embed=new_embed, view=self)
+        
+        try:
+            await interaction.edit_original_response(embed=new_embed, view=self)
+        except discord.errors.DiscordServerError as e:
+            logger.warning(f"Failed to edit queue message (next button) due to Discord API error: {e}")
 
 class RemoveSelect(discord.ui.Select):
     """ The dropdown menu component, now with multi-select enabled. """
@@ -1223,7 +1231,7 @@ class RemoveSelect(discord.ui.Select):
 
         embed = Embed(
             title=get_messages("remove_success_title", guild_id).format(count=len(removed_titles)),
-            description="\n".join([f"• `{title}`" for title in removed_titles]),
+            description="\n".join([f"â€¢ `{title}`" for title in removed_titles]),
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
         )
         await interaction.channel.send(embed=embed, silent=SILENT_MESSAGES)
@@ -1261,8 +1269,8 @@ class RemoveView(View):
         self.add_item(RemoveSelect(tracks_on_page, page_offset=start_index, guild_id=self.guild_id))
 
         if self.total_pages > 1:
-            prev_button = Button(label="⬅️ Previous", style=ButtonStyle.secondary, disabled=(self.current_page == 0))
-            next_button = Button(label="Next ➡️", style=ButtonStyle.secondary, disabled=(self.current_page >= self.total_pages - 1))
+            prev_button = Button(label="â¬…ï¸ Previous", style=ButtonStyle.secondary, disabled=(self.current_page == 0))
+            next_button = Button(label="Next âž¡ï¸", style=ButtonStyle.secondary, disabled=(self.current_page >= self.total_pages - 1))
             
             prev_button.callback = self.prev_page
             next_button.callback = self.next_page
@@ -1296,19 +1304,17 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
     """
     Checks and ensures that the bot is connected to the user's voice channel.
     Manages connection, reconnection, and promotion by intervening on scenes.
-    Returns the voice client on success, None on failure.    
+    This version includes a robust self-healing mechanism for zombie connections
+    that preserves the entire player state, including queue and current track progress.
+    Returns the voice client on success, None on failure.
     """
     guild_id = interaction.guild.id
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
 
-    # 1. Check if the user is in a voice channel
     member = interaction.guild.get_member(interaction.user.id)
     if not member or not member.voice or not member.voice.channel:
-        embed = Embed(
-            description=get_messages("no_voice_channel", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.red()
-        )
+        embed = Embed(description=get_messages("no_voice_channel", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
         if interaction.response.is_done():
             await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         else:
@@ -1318,48 +1324,83 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
     voice_channel = member.voice.channel
     vc = music_player.voice_client
 
-    # --- START OF THE ROBUSTNESS FIX ---
-    # 2. Check if the existing voice client is still valid or a "zombie"
+    # If the client exists but is no longer connected, clear it to force a reconnect.
     if vc and not vc.is_connected():
-        logger.warning(f"[{guild_id}] Found a stale/disconnected voice client. Attempting a forced cleanup.")
-        try:
-            # Force disconnect and wait for the state to be cleaned up by on_voice_state_update
-            await vc.disconnect(force=True)
-            await asyncio.sleep(1) # Give a moment for events to propagate
-        except Exception as e:
-            logger.error(f"[{guild_id}] Error during stale client cleanup, proceeding anyway: {e}")
-        # After a cleanup, the vc is no longer valid
+        logger.warning(f"[{guild_id}] Found a stale/disconnected voice client. It will be cleaned up.")
         music_player.voice_client = None
 
-    # 3. Connect if not connected, or move if in the wrong channel
+    # If we don't have a voice client, it's time to connect.
     if not music_player.voice_client:
         try:
             music_player.voice_client = await voice_channel.connect()
             logger.info(f"[{guild_id}] Successfully connected to voice channel: {voice_channel.name}")
+
+            # --- RESUME LOGIC ---
+            # If we just reconnected after a clean self-repair, resume playback.
+            if music_player.is_resuming_after_clean and music_player.resume_info:
+                logger.info(f"[{guild_id}] Resuming playback after clean reconnect.")
+                
+                # Restore the state of the song that was playing
+                url_to_resume = music_player.resume_info['url']
+                time_to_resume = music_player.resume_info['time']
+                info_to_resume = music_player.resume_info['info']
+                
+                music_player.current_url = url_to_resume
+                music_player.current_info = info_to_resume
+
+                # Start playback from the saved timestamp
+                bot.loop.create_task(play_audio(guild_id, seek_time=time_to_resume))
+
+                # Clear the resume flags
+                music_player.is_resuming_after_clean = False
+                music_player.resume_info = None
+            # --- END RESUME LOGIC ---
+
         except discord.errors.ClientException as e:
-             # This handles the "Already connected" race condition if cleanup failed
-            logger.error(f"[{guild_id}] Caught ClientException during connect: {e}. Forcing disconnect and retrying.")
+            # This is the "zombie" state. The bot thinks it's connected when it's not.
+            logger.error(f"[{guild_id}] Caught ClientException: '{e}'. Forcing disconnect and attempting to recover state.")
             if interaction.guild.voice_client:
-                await interaction.guild.voice_client.disconnect(force=True)
-                await asyncio.sleep(1)
-                music_player.voice_client = await voice_channel.connect()
+                try:
+                    # --- SAVE STATE LOGIC ---
+                    # Before disconnecting, save the current song's progress if it's playing.
+                    if music_player.voice_client.is_playing() and music_player.current_info:
+                        elapsed_time = time.time() - music_player.playback_started_at
+                        current_timestamp = music_player.start_time + (elapsed_time * music_player.playback_speed)
+                        
+                        music_player.resume_info = {
+                            'url': music_player.current_url,
+                            'time': current_timestamp,
+                            'info': music_player.current_info.copy()
+                        }
+                        music_player.is_resuming_after_clean = True
+                        logger.info(f"[{guild_id}] Stored resume state at {current_timestamp:.2f}s before cleaning.")
+                    # --- END SAVE STATE LOGIC ---
+
+                    music_player.is_cleaning = True # Flag on_voice_state_update to not perform a full reset
+                    await interaction.guild.voice_client.disconnect(force=True)
+                    await asyncio.sleep(1) # Allow Discord time to process the disconnect
+                finally:
+                    music_player.is_cleaning = False # Always unset the flag
+
+            # Recursively call this function to attempt the connection again.
+            # This time, it will succeed and trigger the resume logic above.
+            return await ensure_voice_connection(interaction)
+            
         except Exception as e:
-            embed = Embed(
-                description=get_messages("connection_error", guild_id),
-                color=0xFF9AA2 if is_kawaii else discord.Color.red()
-            )
+            embed = Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             logger.error(f"Connection error: {e}")
             return None
+            
+    # If connected to a different channel, move.
     elif music_player.voice_client.channel != voice_channel:
         logger.info(f"[{guild_id}] Moving to a new voice channel: {voice_channel.name}")
         await music_player.voice_client.move_to(voice_channel)
-    # --- END OF THE ROBUSTNESS FIX ---
 
-    # 4. Handle Stage Channel specifics (unchanged but still important)
+    # Handle Stage Channel specifics
     if isinstance(voice_channel, discord.StageChannel):
         if voice_channel.guild.me.voice and voice_channel.guild.me.voice.suppress:
             logger.info(f"[{guild_id}] On stage. Attempting to become a speaker.")
@@ -1371,7 +1412,6 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
             except Exception as e:
                 logger.error(f"[{guild_id}] Unexpected error becoming a speaker: {e}")
 
-    # 5. Update text channel and return the client
     music_player.text_channel = interaction.channel
     return music_player.voice_client
     
@@ -1643,7 +1683,7 @@ async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fall
             return await interaction.followup.send("Could not format the lyrics.", silent=SILENT_MESSAGES, ephemeral=True)
 
         base_embed = Embed(
-            title=f"📜 Lyrics for {song.title}",
+            title=f"ðŸ“œ Lyrics for {song.title}",
             color=0xB5EAD7 if is_kawaii else discord.Color.green(),
             url=song.url
         )
@@ -1708,8 +1748,8 @@ def format_lyrics_display(lyrics_lines, current_line_index):
             for index, sub_line in enumerate(sub_lines):
                 if not sub_line.strip(): continue
 
-                # The "»" arrow only appears on the first sub-line of the current block
-                prefix = "**»** " if is_current_line_chunk and index == 0 else ""
+                # The "Â»" arrow only appears on the first sub-line of the current block
+                prefix = "**Â»** " if is_current_line_chunk and index == 0 else ""
 
                 display_parts.append(f"{prefix}`{sub_line}`")
 
@@ -1721,7 +1761,7 @@ def format_lyrics_display(lyrics_lines, current_line_index):
 def create_loading_bar(progress, width=10):
     filled = int(progress * width)
     unfilled = width - filled
-    return '```[' + '█' * filled + '░' * unfilled + '] ' + f'{int(progress * 100)}%```'
+    return '```[' + 'â–ˆ' * filled + 'â–‘' * unfilled + '] ' + f'{int(progress * 100)}%```'
 
 # --- Platform URL Processors ---
 
@@ -2355,13 +2395,13 @@ def parse_yt_dlp_error(error_string: str) -> tuple[str, str, str]:
     """
     error_lower = error_string.lower()
     if "sign in to confirm your age" in error_lower or "age-restricted" in error_lower:
-        return ("🔞", "error_title_age_restricted", "error_desc_age_restricted")
+        return ("ðŸ”ž", "error_title_age_restricted", "error_desc_age_restricted")
     if "private video" in error_lower:
-        return ("🔒", "error_title_private", "error_desc_private")
+        return ("ðŸ”’", "error_title_private", "error_desc_private")
     if "video is unavailable" in error_lower:
-        return ("❓", "error_title_unavailable", "error_desc_unavailable")
+        return ("â“", "error_title_unavailable", "error_desc_unavailable")
     # Default fallback for other access errors
-    return ("🚫", "error_title_generic", "error_desc_generic")
+    return ("ðŸš«", "error_title_generic", "error_desc_generic")
 
 # ==============================================================================
 # 4. CORE AUDIO & PLAYBACK LOGIC
@@ -2608,7 +2648,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             
             description_text = ""
             if music_player.current_info.get('source_type') == 'file':
-                description_text = f"💿 `{title}`"
+                description_text = f"ðŸ’¿ `{title}`"
             else:
                 webpage_url = music_player.current_info.get("webpage_url", music_player.current_url)
                 description_text = get_messages("now_playing_description", guild_id).format(title=title, url=webpage_url)
@@ -2779,7 +2819,7 @@ async def karaoke(interaction: discord.Interaction):
 
         # If we get here, lyrics_lines is valid. Proceed with karaoke.
         music_player.synced_lyrics = lyrics_lines
-        embed = Embed(title=f"🎤 Karaoke for {clean_title}", description="Starting karaoke...", color=0xC7CEEA if is_kawaii else discord.Color.blue())
+        embed = Embed(title=f"ðŸŽ¤ Karaoke for {clean_title}", description="Starting karaoke...", color=0xC7CEEA if is_kawaii else discord.Color.blue())
 
         lyrics_message = await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, wait=True)
         music_player.lyrics_message = lyrics_message
@@ -2826,7 +2866,7 @@ async def play(interaction: discord.Interaction, query: str):
 
     voice_client = await ensure_voice_connection(interaction)
     if not voice_client:
-        return # La fonction helper a déjà géré l'erreur.
+        return # La fonction helper a dÃ©jÃ  gÃ©rÃ© l'erreur.
     
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
@@ -2976,7 +3016,7 @@ async def play(interaction: discord.Interaction, query: str):
                 if video.get("thumbnail"):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
+                    embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Spotify conversion error for {query}: {e}")
@@ -3117,7 +3157,7 @@ async def play(interaction: discord.Interaction, query: str):
                 if video.get("thumbnail"):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
+                    embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Error converting Deezer track to YouTube for {query}: {e}")
@@ -3250,7 +3290,7 @@ async def play(interaction: discord.Interaction, query: str):
                 if video.get("thumbnail"):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
+                    embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Apple Music conversion error for {query}: {e}")
@@ -3375,7 +3415,7 @@ async def play(interaction: discord.Interaction, query: str):
                 if video.get("thumbnail"):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
+                    embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Tidal conversion error for {query}: {e}")
@@ -3502,7 +3542,7 @@ async def play(interaction: discord.Interaction, query: str):
                 if video.get("thumbnail"):
                     embed.set_thumbnail(url=video["thumbnail"])
                 if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
+                    embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
             except Exception as e:
                 logger.error(f"Amazon Music conversion error for {query}: {e}")
@@ -3723,13 +3763,13 @@ async def play(interaction: discord.Interaction, query: str):
             
             github_url = "https://github.com/alan7383/playify/issues"
             embed.add_field(
-                name=f'🤔 {get_messages("error_field_what_to_do", guild_id)}',
+                name=f'ðŸ¤” {get_messages("error_field_what_to_do", guild_id)}',
                 value=get_messages("error_what_to_do_content", guild_id).format(github_link=github_url),
                 inline=False
             )
 
             embed.add_field(
-                name=f'📋 {get_messages("error_field_full_error", guild_id)}',
+                name=f'ðŸ“‹ {get_messages("error_field_full_error", guild_id)}',
                 value=f"```\n{str(e)}\n```",
                 inline=False
             )
@@ -3786,7 +3826,7 @@ async def play(interaction: discord.Interaction, query: str):
             if video.get("thumbnail"):
                 embed.set_thumbnail(url=video["thumbnail"])
             if is_kawaii:
-                embed.set_footer(text="☆⌒(≧▽° )")
+                embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
             await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
@@ -3799,13 +3839,13 @@ async def play(interaction: discord.Interaction, query: str):
             
             github_url = "https://github.com/alan7383/playify/issues"
             embed.add_field(
-                name=f'🤔 {get_messages("error_field_what_to_do", guild_id)}',
+                name=f'ðŸ¤” {get_messages("error_field_what_to_do", guild_id)}',
                 value=get_messages("error_what_to_do_content", guild_id).format(github_link=github_url),
                 inline=False
             )
 
             embed.add_field(
-                name=f'📋 {get_messages("error_field_full_error", guild_id)}',
+                name=f'ðŸ“‹ {get_messages("error_field_full_error", guild_id)}',
                 value=f"```\n{str(e)}\n```",
                 inline=False
             )
@@ -3906,7 +3946,7 @@ async def play_files(
         await interaction.followup.send(embed=Embed(description="No valid audio/video files were added.", color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES)
         return
 
-    description = f"**{len(added_files)} file(s) added to the queue:**\n" + "\n".join([f"• `{name}`" for name in added_files[:10]])
+    description = f"**{len(added_files)} file(s) added to the queue:**\n" + "\n".join([f"â€¢ `{name}`" for name in added_files[:10]])
     if len(added_files) > 10:
         description += f"\n... and {len(added_files) - 10} more."
     if failed_files:
@@ -4071,7 +4111,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
 
         description_text = ""
         if queue_item.get('source_type') == 'file':
-            description_text = f"💿 `{queue_item['title']}`"
+            description_text = f"ðŸ’¿ `{queue_item['title']}`"
         else:
             description_text = f"[{queue_item['title']}]({queue_item['webpage_url']})"
 
@@ -4083,7 +4123,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
         if queue_item.get("thumbnail"):
             embed.set_thumbnail(url=queue_item["thumbnail"])
         if is_kawaii:
-            embed.set_footer(text="☆⌒(≧▽° )")
+            embed.set_footer(text="â˜†âŒ’(â‰§â–½Â° )")
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
         if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
@@ -4101,7 +4141,7 @@ async def now_playing(interaction: discord.Interaction):
         
         description_text = ""
         if music_player.current_info.get('source_type') == 'file':
-            description_text = f"💿 `{title}`"
+            description_text = f"ðŸ’¿ `{title}`"
         else:
             url = music_player.current_info.get("webpage_url", music_player.current_url)
             description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
@@ -4220,10 +4260,10 @@ async def skip(interaction: discord.Interaction):
         # We check if the current track is a local file
         if music_player.current_info.get('source_type') == 'file':
             # If it is, we format the song name with a disc emoji and code block
-            formatted_song = f"💿 `{title}`"
+            formatted_song = f"ðŸ’¿ `{title}`"
             # We now need to manually build the description as the message dict expects a URL
             if is_kawaii:
-                description_text = f"Let's listen to {formatted_song} one more time!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+                description_text = f"Let's listen to {formatted_song} one more time!~ (ï¾‰â—•ãƒ®â—•)ï¾‰*:ï½¥ï¾Ÿâœ§"
             else:
                 description_text = f"Restarting {formatted_song} from the beginning."
         else:
@@ -4271,7 +4311,7 @@ async def skip(interaction: discord.Interaction):
             
             description_text = ""
             if next_song_info.get('source_type') == 'file':
-                description_text = f"💿 `{title}`"
+                description_text = f"ðŸ’¿ `{title}`"
             else:
                 url = next_song_info.get("webpage_url", next_song_info.get("url", "#"))
                 description_text = f"[{title}]({url})"
@@ -4459,7 +4499,7 @@ async def status(interaction: discord.Interaction):
     embed.set_thumbnail(url=bot.user.avatar.url)
 
     embed.add_field(
-        name="📊 Bot",
+        name="ðŸ“Š Bot",
         value=f"**Discord Latency:** {latency} ms\n"
               f"**Servers:** {server_count}\n"
               f"**Users:** {user_count}\n"
@@ -4468,7 +4508,7 @@ async def status(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="🎧 Music Player",
+        name="ðŸŽ§ Music Player",
         value=f"**Active Players:** {active_players}\n"
               f"**Queued Songs:** {total_queued_songs}\n"
               f"**FFmpeg Processes:** `{ffmpeg_processes}`\n"
@@ -4479,7 +4519,7 @@ async def status(interaction: discord.Interaction):
     embed.add_field(name="\u200b", value="\u200b", inline=False) # Spacer
 
     embed.add_field(
-        name="💻 Host System",
+        name="ðŸ’» Host System",
         value=f"**OS:** {os_info}\n"
               f"**CPU:** {cpu_load}% @ {cpu_freq.current:.0f}MHz\n"
               f"**RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
@@ -4488,7 +4528,7 @@ async def status(interaction: discord.Interaction):
     )
 
     embed.add_field(
-        name="⚙️ Environment",
+        name="âš™ï¸ Environment",
         value=f"**Python:** v{python_version}\n"
               f"**Discord.py:** v{discord_py_version}\n"
               f"**yt-dlp:** v{yt_dlp_version}\n"
@@ -4742,8 +4782,6 @@ async def remove(interaction: discord.Interaction):
 # 6. DISCORD EVENTS
 # ==============================================================================
 
-# In playify.py
-
 @bot.event
 async def on_voice_state_update(member, before, after):
     """
@@ -4756,7 +4794,6 @@ async def on_voice_state_update(member, before, after):
     guild = member.guild
     vc = guild.voice_client
 
-    # Ignore if the bot is not in a voice channel in this guild
     if not vc:
         return
 
@@ -4764,9 +4801,7 @@ async def on_voice_state_update(member, before, after):
 
     # Proactively check if the bot itself was suppressed on a stage
     if member.id == bot.user.id and isinstance(vc.channel, discord.StageChannel):
-        # We only act on the CHANGE from speaker to audience
         if after.suppress and not before.suppress:
-            # If we are already handling a promotion, ignore subsequent events
             if music_player.is_auto_promoting:
                 return
 
@@ -4783,8 +4818,10 @@ async def on_voice_state_update(member, before, after):
     # Bot was disconnected (either manually or by an event)
     if member.id == bot.user.id and after.channel is None:
         guild_id = guild.id
-        if music_player.is_reconnecting:
-            logger.info(f"Bot is reconnecting in guild {guild_id}. Skipping state reset.")
+        
+        # If this is a controlled disconnect for reconnecting or cleaning, do not reset the player.
+        if music_player.is_reconnecting or music_player.is_cleaning:
+            logger.info(f"Bot is performing a controlled disconnect in guild {guild_id}. Skipping state reset.")
             return
 
         logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
@@ -4798,12 +4835,10 @@ async def on_voice_state_update(member, before, after):
         logger.info(f"Player for guild {guild_id} has been reset.")
         return
 
-    # From here, we only care about events related to the bot's current voice channel
     bot_channel = vc.channel
 
     # A user leaves the bot's channel
     if before.channel == bot_channel and after.channel != bot_channel:
-        # Check if the bot is now the only one in the channel (excluding other bots)
         if len([m for m in bot_channel.members if not m.bot]) == 0:
             logger.info(f"Bot is now alone in channel for guild {guild.id}.")
             if vc.is_playing():
@@ -4812,7 +4847,6 @@ async def on_voice_state_update(member, before, after):
             
             if not _24_7_active.get(guild.id, False):
                 await asyncio.sleep(60)
-                # Re-check in case someone rejoined during the 60s
                 if vc.is_connected() and len([m for m in vc.channel.members if not m.bot]) == 0:
                     logger.info(f"Disconnecting from guild {guild.id} after 60s of inactivity.")
                     await vc.disconnect()
@@ -4821,7 +4855,6 @@ async def on_voice_state_update(member, before, after):
 
     # A user joins the bot's channel
     elif after.channel == bot_channel and before.channel != bot_channel:
-        # Check if the bot is paused AND if there are now actual users in the channel
         if vc.is_paused() and len([m for m in bot_channel.members if not m.bot]) > 0:
             if music_player.is_current_live:
                 logger.info(f"Resuming a live stream for guild {guild.id}. Re-fetching to sync with live time.")
