@@ -2757,6 +2757,10 @@ async def update_karaoke_task(guild_id: int):
 
 @bot.tree.command(name="lyrics", description="Get song lyrics from Genius.")
 async def lyrics(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     music_player = get_player(guild_id)
 
@@ -2769,6 +2773,10 @@ async def lyrics(interaction: discord.Interaction):
 
 @bot.tree.command(name="karaoke", description="Start a synced karaoke-style lyrics display.")
 async def karaoke(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
@@ -2864,6 +2872,10 @@ async def karaoke(interaction: discord.Interaction):
 @bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
 @app_commands.default_permissions(administrator=True)
 async def toggle_kawaii(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     kawaii_mode[guild_id] = not get_mode(guild_id)
     state = get_messages("kawaii_state_enabled", guild_id) if kawaii_mode[guild_id] else get_messages("kawaii_state_disabled", guild_id)
@@ -2877,6 +2889,10 @@ async def toggle_kawaii(interaction: discord.Interaction):
 @bot.tree.command(name="play", description="Play a link or search for a song")
 @app_commands.describe(query="Link or title of the song/video to play")
 async def play(interaction: discord.Interaction, query: str):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -3911,6 +3927,11 @@ async def play_files(
     """
     Downloads, saves, and queues one or more user-uploaded audio/video files.
     """
+
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -3980,6 +4001,10 @@ async def play_files(
 # /queue command
 @bot.tree.command(name="queue", description="Show the current song queue and status with pages.")
 async def queue(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     await interaction.response.defer()
     guild_id = interaction.guild_id
     music_player = get_player(guild_id)
@@ -4004,6 +4029,10 @@ async def queue(interaction: discord.Interaction):
 
 @bot.tree.command(name="clearqueue", description="Clear the current queue")
 async def clear_queue(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4026,6 +4055,10 @@ async def clear_queue(interaction: discord.Interaction):
     file="The local audio/video file to play next."
 )
 async def play_next(interaction: discord.Interaction, query: str = None, file: discord.Attachment = None):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4150,6 +4183,10 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
 
 @bot.tree.command(name="nowplaying", description="Show the current song playing")
 async def now_playing(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4183,6 +4220,10 @@ async def now_playing(interaction: discord.Interaction):
 
 @bot.tree.command(name="filter", description="Applies or removes audio filters in real time.")
 async def filter_command(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild.id
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
@@ -4209,6 +4250,10 @@ async def filter_command(interaction: discord.Interaction):
 # /pause command
 @bot.tree.command(name="pause", description="Pause the current playback")
 async def pause(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4230,6 +4275,10 @@ async def pause(interaction: discord.Interaction):
 # /resume command
 @bot.tree.command(name="resume", description="Resume the playback")
 async def resume(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4251,6 +4300,10 @@ async def resume(interaction: discord.Interaction):
 # /skip command
 @bot.tree.command(name="skip", description="Skip to the next song")
 async def skip(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4352,6 +4405,10 @@ async def skip(interaction: discord.Interaction):
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
 async def loop(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     # 1. Defer the interaction immediately
     await interaction.response.defer()
 
@@ -4373,6 +4430,10 @@ async def loop(interaction: discord.Interaction):
 # /stop command
 @bot.tree.command(name="stop", description="Stop playback and disconnect the bot")
 async def stop(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4403,6 +4464,10 @@ async def stop(interaction: discord.Interaction):
 # /shuffle command
 @bot.tree.command(name="shuffle", description="Shuffle the current queue")
 async def shuffle(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4433,6 +4498,10 @@ async def shuffle(interaction: discord.Interaction):
 # /autoplay command
 @bot.tree.command(name="autoplay", description="Enable/disable autoplay of similar songs")
 async def toggle_autoplay(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4597,6 +4666,10 @@ async def discord_command(interaction: discord.Interaction):
     Choice(name="Off (Disable 24/7 mode)", value="off")
 ])
 async def radio_24_7(interaction: discord.Interaction, mode: str):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4675,6 +4748,10 @@ async def reconnect(interaction: discord.Interaction):
     Disconnects and reconnects the bot to the voice channel,
     resuming playback at the precise timestamp.
     """
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4776,6 +4853,11 @@ async def remove(interaction: discord.Interaction):
     """
     Shows an interactive, paginated, multi-select view for removing songs.
     """
+    
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
