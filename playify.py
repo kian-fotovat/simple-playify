@@ -674,6 +674,8 @@ class MusicPlayer:
         # --- ADD THIS LINE ---
         self.suppress_next_now_playing = False
 
+        self.is_auto_promoting = False
+
 # --- Discord UI Classes (Views & Modals) ---
 
 class LyricsView(View):
@@ -1288,24 +1290,25 @@ class RemoveView(View):
 
 # --- General & State Helpers ---
 
+# In playify.py
+
 async def ensure_voice_connection(interaction: discord.Interaction) -> discord.VoiceClient | None:
     """
     Checks and ensures that the bot is connected to the user's voice channel.
     Manages connection, reconnection, and promotion by intervening on scenes.
     Returns the voice client on success, None on failure.    
     """
-    guild_id = interaction.guild_id
+    guild_id = interaction.guild.id
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
 
-    #1. Check if the user is in a voice chat room
+    # 1. Check if the user is in a voice channel
     member = interaction.guild.get_member(interaction.user.id)
     if not member or not member.voice or not member.voice.channel:
         embed = Embed(
             description=get_messages("no_voice_channel", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        # Use followup.send if the interaction is already deferred
         if interaction.response.is_done():
             await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         else:
@@ -1313,15 +1316,33 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
         return None
 
     voice_channel = member.voice.channel
+    vc = music_player.voice_client
 
-    #2. If the bot is already connected, make sure it is in the correct channel
-    if music_player.voice_client and music_player.voice_client.is_connected():
-        if music_player.voice_client.channel != voice_channel:
-            await music_player.voice_client.move_to(voice_channel)
-    #3. If the bot is not connected, connect it
-    else:
+    # --- START OF THE ROBUSTNESS FIX ---
+    # 2. Check if the existing voice client is still valid or a "zombie"
+    if vc and not vc.is_connected():
+        logger.warning(f"[{guild_id}] Found a stale/disconnected voice client. Attempting a forced cleanup.")
+        try:
+            # Force disconnect and wait for the state to be cleaned up by on_voice_state_update
+            await vc.disconnect(force=True)
+            await asyncio.sleep(1) # Give a moment for events to propagate
+        except Exception as e:
+            logger.error(f"[{guild_id}] Error during stale client cleanup, proceeding anyway: {e}")
+        # After a cleanup, the vc is no longer valid
+        music_player.voice_client = None
+
+    # 3. Connect if not connected, or move if in the wrong channel
+    if not music_player.voice_client:
         try:
             music_player.voice_client = await voice_channel.connect()
+            logger.info(f"[{guild_id}] Successfully connected to voice channel: {voice_channel.name}")
+        except discord.errors.ClientException as e:
+             # This handles the "Already connected" race condition if cleanup failed
+            logger.error(f"[{guild_id}] Caught ClientException during connect: {e}. Forcing disconnect and retrying.")
+            if interaction.guild.voice_client:
+                await interaction.guild.voice_client.disconnect(force=True)
+                await asyncio.sleep(1)
+                music_player.voice_client = await voice_channel.connect()
         except Exception as e:
             embed = Embed(
                 description=get_messages("connection_error", guild_id),
@@ -1331,27 +1352,29 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
                 await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-            logger.error(f"Erreur de connexion : {e}")
+            logger.error(f"Connection error: {e}")
             return None
+    elif music_player.voice_client.channel != voice_channel:
+        logger.info(f"[{guild_id}] Moving to a new voice channel: {voice_channel.name}")
+        await music_player.voice_client.move_to(voice_channel)
+    # --- END OF THE ROBUSTNESS FIX ---
 
-    #4. Managing the Stage Salons case (the crucial correction)
+    # 4. Handle Stage Channel specifics (unchanged but still important)
     if isinstance(voice_channel, discord.StageChannel):
-        # We only try to become a speaker if we are not already one
-        if voice_channel.guild.me.voice.suppress:
-            logger.info(f"[{guild_id}] The room is a stage. Attempt to become a speaker.")
+        if voice_channel.guild.me.voice and voice_channel.guild.me.voice.suppress:
+            logger.info(f"[{guild_id}] On stage. Attempting to become a speaker.")
             try:
                 await interaction.guild.me.edit(suppress=False)
-                await asyncio.sleep(0.5) # Small delay to give time to the Discord API
+                await asyncio.sleep(0.5)
             except discord.Forbidden:
-                logger.warning(f"[{guild_id}] Failed to become a logger: 'Mute Members' permission is missing.")
-                # Optionally, the user can be warned
+                logger.warning(f"[{guild_id}] Failed to become speaker: 'Mute Members' permission missing.")
             except Exception as e:
-                logger.error(f"[{guild_id}] Unexpected error becoming a commenter: {e}")
+                logger.error(f"[{guild_id}] Unexpected error becoming a speaker: {e}")
 
-    #5. Update the reader's text channel and return the client
+    # 5. Update text channel and return the client
     music_player.text_channel = interaction.channel
     return music_player.voice_client
-
+    
 def clear_audio_cache(guild_id: int):
     """Deletes the audio cache directory for a specific guild."""
     guild_cache_path = os.path.join("audio_cache", str(guild_id))
@@ -2344,7 +2367,6 @@ def parse_yt_dlp_error(error_string: str) -> tuple[str, str, str]:
 # 4. CORE AUDIO & PLAYBACK LOGIC
 # ==============================================================================
 
-# --- NEW --- Global error handler
 async def handle_playback_error(guild_id: int, error: Exception):
     """
     Handles unexpected errors during playback, informs the user,
@@ -2355,11 +2377,9 @@ async def handle_playback_error(guild_id: int, error: Exception):
         logger.error(f"Cannot report error in guild {guild_id}, no text channel available.")
         return
 
-    # Log the full error with traceback
     tb_str = ''.join(traceback.format_exception(type(error), value=error, tb=error.__traceback__))
     logger.error(f"Unhandled playback error in guild {guild_id}:\n{tb_str}")
 
-    # Prepare user-facing embed
     is_kawaii = get_mode(guild_id)
     embed = Embed(
         title=get_messages("critical_error_title", guild_id),
@@ -2371,7 +2391,6 @@ async def handle_playback_error(guild_id: int, error: Exception):
         value=get_messages("critical_error_report_value", guild_id),
         inline=False
     )
-    # Format a concise error message for the user to copy
     error_details = f"URL: {music_player.current_url}\nError: {str(error)[:500]}"
     embed.add_field(
         name=get_messages("critical_error_details_field", guild_id),
@@ -2382,56 +2401,75 @@ async def handle_playback_error(guild_id: int, error: Exception):
 
     try:
         await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+    except discord.Forbidden:
+        logger.warning(f"Failed to send error report to guild {guild_id}: Missing Permissions.")
     except Exception as e:
         logger.error(f"Failed to send error report embed to guild {guild_id}: {e}")
 
-    # Reset player state to prevent getting stuck
     music_player.current_task = None
     music_player.current_info = None
     music_player.current_url = None
-    # Optionally, clear the queue
     while not music_player.queue.empty():
         music_player.queue.get_nowait()
 
-    # Disconnect the bot
     if music_player.voice_client:
         await music_player.voice_client.disconnect()
-        # Full reset
         music_players[guild_id] = MusicPlayer()
         logger.info(f"Player for guild {guild_id} has been reset and disconnected due to a critical error.")
-
 
 # ==============================================================================
 # 4. CORE AUDIO & PLAYBACK LOGIC
 # ==============================================================================
 
 async def play_audio(guild_id, seek_time=0, is_a_loop=False):
-    """
-    Handles audio playback for a guild.
-    Plays a track, applies filters, and intelligently handles auto-queuing.
-    """
     music_player = get_player(guild_id)
 
     if music_player.voice_client and music_player.voice_client.is_playing() and not seek_time > 0:
-        logger.warning(f"[{guild_id}] Warning: play_audio was called while playback was already in progress. Call ignored.")
         return
 
+    async def after_playing(error, song_info):
+        if error:
+            logger.error(f'Error after playing in guild {guild_id}: {error}')
+        if music_player.is_reconnecting:
+            return
+
+        if music_player.seek_info is not None:
+            new_seek_time = music_player.seek_info
+            music_player.seek_info = None
+            await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=False)
+            return
+
+        if not song_info:
+             await play_audio(guild_id, is_a_loop=False)
+             return
+             
+        track_to_requeue = create_queue_item_from_info(song_info)
+        next_is_loop_replay = False
+
+        if music_player.loop_current:
+            items = list(music_player.queue._queue)
+            music_player.queue = asyncio.Queue()
+            await music_player.queue.put(track_to_requeue)
+            for item in items:
+                await music_player.queue.put(item)
+            next_is_loop_replay = True
+        elif _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
+            await music_player.queue.put(track_to_requeue)
+            logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
+        
+        await play_audio(guild_id, is_a_loop=next_is_loop_replay)
+
     try:
-        # Cancel lyrics task only for new songs, not for loops or seeks
         if seek_time == 0 and not is_a_loop:
-             if music_player.lyrics_task and not music_player.lyrics_task.done():
+            if music_player.lyrics_task and not music_player.lyrics_task.done():
                 music_player.lyrics_task.cancel()
 
         music_player.is_seeking = False
         skip_now_playing = False
 
         if seek_time > 0:
-            logger.info(f"[{guild_id}] Seek operation: Re-playing current track from {seek_time:.2f}s.")
-            if not music_player.current_url:
-                logger.error(f"[{guild_id}] Seek failed: No current URL to replay. Stopping.")
-                return
+            if not music_player.current_url: return
             skip_now_playing = True
-
         else:
             music_player.is_current_live = False
             
@@ -2440,7 +2478,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                 is_24_7_on = _24_7_active.get(guild_id, False)
 
                 if is_24_7_on and not music_player.autoplay_enabled and music_player.radio_playlist:
-                    logger.info(f"[{guild_id}] 24/7 Normal: Queue empty. Re-queuing {len(music_player.radio_playlist)} tracks.")
                     for track_info_radio in music_player.radio_playlist:
                         await music_player.queue.put(track_info_radio)
                 
@@ -2451,22 +2488,19 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                         seed_url = music_player.current_url
                     else:
                         if music_player.text_channel:
-                            await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_file_notice", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
+                            try:
+                                await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_file_notice", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
+                            except discord.Forbidden: pass
                         source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
                         for track in reversed(source_list):
                             if track.get('url') and not track.get('source_type') == 'file':
                                 seed_url = track.get('url')
-                                logger.info(f"Autoplay fallback found. Using seed: {seed_url}")
                                 break
                     if seed_url:
                         if music_player.text_channel:
-                            # We get the kawaii mode for the embed color
-                            is_kawaii = get_mode(guild_id)
-                            embed = Embed(
-                                description=get_messages("autoplay_added", guild_id),
-                                color=0xC7CEEA if is_kawaii else discord.Color.blue()
-                            )
-                            await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                            try:
+                                await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
+                            except discord.Forbidden: pass
                         if "youtube.com" in seed_url or "youtu.be" in seed_url:
                             mix_playlist_url = get_mix_playlist_url(seed_url)
                             if mix_playlist_url:
@@ -2477,8 +2511,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                                         for entry in info["entries"]:
                                             if entry and get_video_id(entry.get("url", "")) != current_video_id:
                                                 await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
-                                except Exception as e:
-                                    logger.error(f"YouTube Mix Error for autoplay: {e}")
+                                except Exception as e: logger.error(f"YouTube Mix Error for autoplay: {e}")
                         elif "soundcloud.com" in seed_url:
                             track_id = get_soundcloud_track_id(seed_url)
                             station_url = get_soundcloud_station_url(track_id)
@@ -2488,8 +2521,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                                     if info.get("entries") and len(info.get("entries")) > 1:
                                         for entry in info["entries"][1:]:
                                             if entry: await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
-                                except Exception as e:
-                                    logger.error(f"SoundCloud Station Error for autoplay: {e}")
+                                except Exception as e: logger.error(f"SoundCloud Station Error for autoplay: {e}")
 
                 if music_player.queue.empty():
                     music_player.current_info = None
@@ -2511,7 +2543,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             music_player.current_info = track_info
 
         if not music_player.voice_client or not music_player.voice_client.is_connected():
-            logger.warning(f"Voice client not available for guild {guild_id}. Stopping playback.")
             return
 
         active_filters = server_filters.get(guild_id, set())
@@ -2526,25 +2557,21 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
             try:
                 info = await extract_info_async(ydl_opts_play, music_player.current_url)
-                
                 source_type = music_player.current_info.get('source_type')
                 music_player.current_info = info
                 if source_type:
                     music_player.current_info['source_type'] = source_type
-
                 audio_url = info["url"]
-                is_live = info.get('is_live', False) or info.get('live_status') == 'is_live'
-                music_player.is_current_live = is_live
-                if is_live:
-                    logger.info(f"[{guild_id}] Detected a live stream.")
-
+                music_player.is_current_live = info.get('is_live', False) or info.get('live_status') == 'is_live'
             except yt_dlp.utils.DownloadError as e:
                 if music_player.text_channel:
-                    is_kawaii = get_mode(guild_id)
-                    emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
-                    embed = Embed(title=f'{emoji} Playback Failed', description=get_messages(desc_key, guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
-                    embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
-                    await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                    try:
+                        is_kawaii = get_mode(guild_id)
+                        emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
+                        embed = Embed(title=f'{emoji} Playback Failed', description=get_messages(desc_key, guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
+                        embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
+                        await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                    except discord.Forbidden: pass
                 music_player.current_task = bot.loop.create_task(play_audio(guild_id))
                 return
         
@@ -2556,7 +2583,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         if music_player.current_info.get('source_type') == 'file':
             ffmpeg_options = {"options": "-vn"}
         else:
-            ffmpeg_options = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -reconnect_on_network_error 1 -reconnect_on_http_error 4xx,5xx", "options": "-vn"}
+            ffmpeg_options = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 
         if seek_time > 0:
             ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}"
@@ -2565,59 +2592,16 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             ffmpeg_options["options"] = f"{ffmpeg_options.get('options', '')} -af \"{music_player.active_filter}\""
 
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
+        
+        info_for_after = music_player.current_info.copy()
+        callback = lambda e: bot.loop.create_task(after_playing(e, info_for_after))
+        music_player.voice_client.play(source, after=callback)
 
-        def after_playing(error):
-            if error:
-                logger.error(f'Error after playing in guild {guild_id}: {error}')
-            if music_player.is_reconnecting:
-                logger.info(f"[{guild_id}] after_playing: Reconnect in progress. Next song scheduling suppressed.")
-                return 
-
-            async def schedule_next():
-                # This flag determines if the "Now Playing" message should be suppressed
-                is_loop_replay = False
-
-                if music_player.seek_info is not None:
-                    new_seek_time = music_player.seek_info
-                    music_player.seek_info = None
-                    # A seek is not a loop, so we pass False (or nothing)
-                    await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=False)
-                    return
-
-                # Create a standardized item from the song that just finished
-                track_to_requeue = create_queue_item_from_info(music_player.current_info)
-
-                if music_player.loop_current:
-                    # If single-song loop is on, put the track back at the front
-                    items = list(music_player.queue._queue)
-                    music_player.queue = asyncio.Queue()
-                    await music_player.queue.put(track_to_requeue)
-                    for item in items:
-                        await music_player.queue.put(item)
-                    # Set the flag to True to suppress the "Now Playing" message
-                    is_loop_replay = True
-                
-                elif _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
-                    # If 24/7 normal mode is on, add the track to the end of the queue
-                    await music_player.queue.put(track_to_requeue)
-                    logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
-                    # This is a queue loop, not a single-song loop, so the flag remains False
-                
-                # Pass the flag to the next play_audio call
-                await play_audio(guild_id, is_a_loop=is_loop_replay)
-
-            music_player.current_task = bot.loop.create_task(schedule_next())
-
-        music_player.voice_client.play(source, after=after_playing)
         music_player.start_time = seek_time
         music_player.playback_started_at = time.time()
-
-        # Suppress "Now Playing" if explicitly told to (e.g., by /skip)
+        
         if music_player.suppress_next_now_playing:
             music_player.suppress_next_now_playing = False
-        
-        # *** THIS IS THE KEY CHANGE ***
-        # Send "Now Playing" only if it's not a seek, not a loop, and not suppressed
         elif not skip_now_playing and seek_time == 0 and not is_a_loop:
             is_kawaii = get_mode(guild_id)
             title = music_player.current_info.get("title", "Unknown Title")
@@ -2637,8 +2621,14 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
 
             if music_player.current_info.get("thumbnail"):
                 embed.set_thumbnail(url=music_player.current_info["thumbnail"])
+            
             if music_player.text_channel:
-                await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                try:
+                    await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                except discord.Forbidden:
+                    logger.warning(f"Failed to send 'Now Playing' message to guild {guild_id}: Missing Permissions.")
+                except Exception as e:
+                    logger.error(f"Failed to send 'Now Playing' message to guild {guild_id}: {e}")
 
     except Exception as e:
         await handle_playback_error(guild_id, e)
@@ -4752,6 +4742,8 @@ async def remove(interaction: discord.Interaction):
 # 6. DISCORD EVENTS
 # ==============================================================================
 
+# In playify.py
+
 @bot.event
 async def on_voice_state_update(member, before, after):
     """
@@ -4759,48 +4751,54 @@ async def on_voice_state_update(member, before, after):
     - Pauses/resumes music if the channel empties/re-populates.
     - Handles automatic disconnection (except in 24/7 mode).
     - Cleans up and resets the player when the bot is disconnected.
+    - Automatically re-promotes to speaker on Stage Channels with a lock to prevent duplicates.
     """
     guild = member.guild
+    vc = guild.voice_client
 
-    # Ignore if the event is not related to a channel the bot is in
-    if not guild.voice_client and after.channel is None:
+    # Ignore if the bot is not in a voice channel in this guild
+    if not vc:
         return
 
-    # Check if the event is for the bot itself
-    if member.id == bot.user.id:
-        # Bot was disconnected (either manually or by an event)
-        if before.channel is not None and after.channel is None:
-            guild_id = guild.id
-            music_player = get_player(guild_id)
+    music_player = get_player(guild.id)
 
-            # This is a controlled reconnect (e.g., /reconnect command), so we don't reset anything.
-            if music_player.is_reconnecting:
-                logger.info(f"Bot is reconnecting in guild {guild_id}. Skipping state reset.")
+    # Proactively check if the bot itself was suppressed on a stage
+    if member.id == bot.user.id and isinstance(vc.channel, discord.StageChannel):
+        # We only act on the CHANGE from speaker to audience
+        if after.suppress and not before.suppress:
+            # If we are already handling a promotion, ignore subsequent events
+            if music_player.is_auto_promoting:
                 return
 
-            # This is a full disconnect, so we perform a full cleanup.
-            logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
-            
-            clear_audio_cache(guild_id) # Clean up files if bot is kicked/disconnected
+            try:
+                music_player.is_auto_promoting = True 
+                logger.warning(f"[{guild.id}] Bot was suppressed on stage. Attempting to auto-promote back to speaker.")
+                await asyncio.sleep(1)
+                await member.edit(suppress=False)
+            except Exception as e:
+                logger.error(f"[{guild.id}] Failed to auto-promote back to speaker: {e}")
+            finally:
+                music_player.is_auto_promoting = False
 
-            if music_player.current_task and not music_player.current_task.done():
-                music_player.current_task.cancel()
-            
-            # Reset the player state for the guild
-            music_players[guild_id] = MusicPlayer()
-            if guild_id in server_filters:
-                del server_filters[guild_id]
-            if guild_id in _24_7_active:
-                del _24_7_active[guild_id]
-            
-            logger.info(f"Player for guild {guild_id} has been reset.")
+    # Bot was disconnected (either manually or by an event)
+    if member.id == bot.user.id and after.channel is None:
+        guild_id = guild.id
+        if music_player.is_reconnecting:
+            logger.info(f"Bot is reconnecting in guild {guild_id}. Skipping state reset.")
+            return
+
+        logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
+        clear_audio_cache(guild_id)
+        if music_player.current_task and not music_player.current_task.done():
+            music_player.current_task.cancel()
+        
+        music_players[guild_id] = MusicPlayer()
+        if guild_id in server_filters: del server_filters[guild_id]
+        if guild_id in _24_7_active: del _24_7_active[guild_id]
+        logger.info(f"Player for guild {guild_id} has been reset.")
         return
 
     # From here, we only care about events related to the bot's current voice channel
-    vc = guild.voice_client
-    if not vc: 
-        return
-        
     bot_channel = vc.channel
 
     # A user leaves the bot's channel
@@ -4812,8 +4810,6 @@ async def on_voice_state_update(member, before, after):
                 vc.pause()
                 logger.info(f"Playback paused for guild {guild.id}.")
             
-            # --- THIS IS THE CRITICAL FIX ---
-            # The bot will only schedule a disconnect if 24/7 mode is NOT active.
             if not _24_7_active.get(guild.id, False):
                 await asyncio.sleep(60)
                 # Re-check in case someone rejoined during the 60s
@@ -4821,24 +4817,18 @@ async def on_voice_state_update(member, before, after):
                     logger.info(f"Disconnecting from guild {guild.id} after 60s of inactivity.")
                     await vc.disconnect()
             else:
-                # If 24/7 is on, we do nothing and let the bot wait patiently.
                 logger.info(f"24/7 mode is active for guild {guild.id}. Bot will remain in the channel.")
 
     # A user joins the bot's channel
     elif after.channel == bot_channel and before.channel != bot_channel:
         # Check if the bot is paused AND if there are now actual users in the channel
         if vc.is_paused() and len([m for m in bot_channel.members if not m.bot]) > 0:
-            music_player = get_player(guild.id)
-            
-            # If the paused track is a live stream, we need to restart it to re-sync
             if music_player.is_current_live:
                 logger.info(f"Resuming a live stream for guild {guild.id}. Re-fetching to sync with live time.")
-                # Instead of resuming, we stop and restart the playback from the beginning of the stream
                 music_player.is_seeking = True
-                music_player.seek_info = 0.1 # <-- THIS IS THE ONLY CHANGE! From 0 to 0.1
-                vc.stop() # This will trigger the 'after' callback which will replay the current track
+                music_player.seek_info = 0.1
+                vc.stop()
             else:
-                # Standard behavior for regular tracks
                 logger.info(f"A user joined in guild {guild.id}. Resuming playback.")
                 vc.resume()
 
