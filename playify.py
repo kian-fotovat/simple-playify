@@ -146,6 +146,14 @@ messages = {
         "normal": "Error processing the Spotify link. It may be private, region-locked, or invalid.",
         "kawaii": "(´；ω；`) Oh no! Problem with the Spotify link... maybe it’s shy or hidden?"
     },
+    "spotify_error_title": {
+        "normal": "🚨 Spotify Error",
+        "kawaii": "(´；ω；`) Spotify Error!"
+    },
+    "spotify_error_description_detailed": {
+        "normal": "Could not process this Spotify link.\n\n**Probable reason:** The playlist might be private, deleted, or unavailable in the bot's region.\n\n*The fallback method also failed, which can happen if Spotify recently updated its website.*",
+        "kawaii": "(´；ω；`) Oh no! I couldn't get the songs from this Spotify link...\n\n**Maybe...** it's a secret playlist, or it ran away! My backup magic didn't work either; Spotify might have changed its clothes, and I don't recognize it anymore..."
+    },
     "spotify_playlist_added": {
         "normal": "🎶 Spotify Playlist Added",
         "kawaii": "☆*:.｡.o(≧▽≦)o.｡.:*☆ SPOTIFY PLAYLIST"
@@ -1772,7 +1780,8 @@ async def process_spotify_url(url, interaction):
     1. Tries with the official API (spotipy) for speed and completeness.
     2. On failure (e.g., editorial playlist), falls back to the scraper (spotifyscraper).
     """
-    guild_id = interaction.guild_id
+    guild_id = interaction.guild.id
+    is_kawaii = get_mode(guild_id)
     clean_url = url.split('?')[0]
 
     # --- METHOD 1: OFFICIAL API (SPOTIPY) ---
@@ -1780,7 +1789,6 @@ async def process_spotify_url(url, interaction):
         try:
             logger.info(f"Attempt 1: Official API (Spotipy) for {clean_url}")
             tracks_to_return = []
-
             loop = asyncio.get_event_loop()
 
             if 'playlist' in clean_url:
@@ -1850,18 +1858,29 @@ async def process_spotify_url(url, interaction):
             logger.info(f"Success with SpotifyScraper: {len(tracks_to_return)} tracks retrieved (potentially limited).")
             return tracks_to_return
 
-        except Exception as e:
-            logger.error(f"Both methods (API and Scraper) failed. Final SpotifyScraper error: {e}", exc_info=True)
-            embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red())
+        # --- THIS IS THE CORRECTED ERROR HANDLING BLOCK ---
+        except (SpotifyScraperError, spotipy.exceptions.SpotifyException) as e:
+            logger.error(f"Both methods (API and Scraper) failed. Final error: {e}", exc_info=True)
+            
+            embed = Embed(
+                title=get_messages("spotify_error_title", guild_id),
+                description=get_messages("spotify_error_description_detailed", guild_id),
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            return None
+        # --- END OF CORRECTION ---
+        except Exception as e: # General fallback for any other unexpected errors
+            logger.error(f"An unexpected error occurred in the Spotify fallback: {e}", exc_info=True)
+            embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             return None
 
     logger.critical("No client (Spotipy or SpotifyScraper) is functional.")
-    # Optional: send an error message if no client is available
     embed = Embed(description="Critical error: Spotify services are unreachable.", color=discord.Color.dark_red())
     await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
     return None
-
+    
 # Process Deezer URLs
 async def process_deezer_url(url, interaction):
     guild_id = interaction.guild_id
@@ -4660,7 +4679,6 @@ async def reconnect(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    # --- 1. Initial Checks ---
     if not music_player.voice_client or not music_player.voice_client.is_connected():
         embed = Embed(
             description=get_messages("not_connected", guild_id),
@@ -4679,7 +4697,6 @@ async def reconnect(interaction: discord.Interaction):
 
     await interaction.response.defer()
 
-    # --- 2. Save State & Set Flag ---
     current_voice_channel = music_player.voice_client.channel
     current_timestamp = 0
     if music_player.playback_started_at:
@@ -4688,27 +4705,32 @@ async def reconnect(interaction: discord.Interaction):
     
     logger.info(f"[{guild_id}] Reconnect: Storing timestamp at {current_timestamp:.2f}s.")
 
-    # This block ensures the flag is always reset
     try:
-        # SET THE FLAG to prevent player reset
         music_player.is_reconnecting = True
 
-        # --- 3. Disconnect and Reconnect ---
         if music_player.voice_client.is_playing():
             music_player.voice_client.stop()
         
         await music_player.voice_client.disconnect(force=True)
-        await asyncio.sleep(0.75) # A short, stable delay
+        await asyncio.sleep(0.75)
         new_vc = await current_voice_channel.connect()
         music_player.voice_client = new_vc
         
-        # --- 4. Manually Resume Playback ---
-        # The disconnect breaks the original `after` callback chain, so we must restart it.
-        # `play_audio` will use the existing `current_info` and seek to the stored time.
+        # --- START OF FIX ---
+        # If we reconnected to a Stage Channel, we must promote ourselves to speaker.
+        if isinstance(current_voice_channel, discord.StageChannel):
+            logger.info(f"[{guild_id}] Reconnected to a Stage Channel. Promoting to speaker.")
+            try:
+                # Wait a moment for the bot's voice state to be fully available
+                await asyncio.sleep(0.5) 
+                await interaction.guild.me.edit(suppress=False)
+            except Exception as e:
+                logger.error(f"[{guild_id}] Failed to promote to speaker after reconnect: {e}")
+        # --- END OF FIX ---
+
         logger.info(f"[{guild_id}] Reconnect: Restarting playback.")
         music_player.current_task = bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp))
         
-        # --- 5. Confirmation ---
         embed = Embed(
             description=get_messages("reconnect_success", guild_id),
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
@@ -4719,10 +4741,9 @@ async def reconnect(interaction: discord.Interaction):
         logger.error(f"An error occurred during reconnect for guild {guild_id}: {e}", exc_info=True)
         await interaction.followup.send("An error occurred during the reconnect process.", silent=SILENT_MESSAGES, ephemeral=True)
     finally:
-        # UNSET THE FLAG so that normal disconnects work again
         music_player.is_reconnecting = False
         logger.info(f"[{guild_id}] Reconnect: Process finished, flag reset.")
-
+        
 # This is the autocomplete function. It's called by Discord as the user types.
 async def song_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
     guild_id = interaction.guild.id
