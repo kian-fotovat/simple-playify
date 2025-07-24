@@ -2470,6 +2470,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     if music_player.voice_client and music_player.voice_client.is_playing() and not is_a_loop and not seek_time > 0:
         return
 
+    # --- THIS IS THE CORRECTED FUNCTION ---
     async def after_playing(error, song_info):
         if error:
             logger.error(f'Error after playing in guild {guild_id}: {error}')
@@ -2486,21 +2487,20 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             await play_audio(guild_id, is_a_loop=False)
             return
 
-        track_to_requeue = create_queue_item_from_info(song_info)
-        next_is_loop_replay = False
-
+        # If loop is on for the current song, just replay it without touching the queue.
+        # This is the core of the fix.
         if music_player.loop_current:
-            items = list(music_player.queue._queue)
-            music_player.queue = asyncio.Queue()
-            await music_player.queue.put(track_to_requeue)
-            for item in items:
-                await music_player.queue.put(item)
-            next_is_loop_replay = True
-        elif _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
-            await music_player.queue.put(track_to_requeue)
-            logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
-        
-        await play_audio(guild_id, is_a_loop=next_is_loop_replay)
+            await play_audio(guild_id, is_a_loop=True)
+        else:
+            # Otherwise, proceed with the normal "next song" logic.
+            # This includes the 24/7 mode where the song is added to the end.
+            track_to_requeue = create_queue_item_from_info(song_info)
+            if _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
+                await music_player.queue.put(track_to_requeue)
+                logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
+            
+            # Call for the next track in the queue (or trigger autoplay if empty).
+            await play_audio(guild_id, is_a_loop=False)
 
     try:
         # HYPER-ROBUST ENTRY GATE
