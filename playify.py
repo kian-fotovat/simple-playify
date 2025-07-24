@@ -1306,8 +1306,6 @@ class RemoveView(View):
 
 # --- General & State Helpers ---
 
-# In playify.py
-
 async def ensure_voice_connection(interaction: discord.Interaction) -> discord.VoiceClient | None:
     """
     Checks and ensures that the bot is connected to the user's voice channel.
@@ -1330,51 +1328,39 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
         return None
 
     voice_channel = member.voice.channel
-    vc = music_player.voice_client
+    vc = interaction.guild.voice_client
 
-    # If the client exists but is no longer connected, clear it to force a reconnect.
     if vc and not vc.is_connected():
         logger.warning(f"[{guild_id}] Found a stale/disconnected voice client. It will be cleaned up.")
         music_player.voice_client = None
+        vc = None
 
-    # If we don't have a voice client, it's time to connect.
-    if not music_player.voice_client:
+    if not vc:
         try:
-            music_player.voice_client = await voice_channel.connect()
+            new_vc = await voice_channel.connect()
+            music_player.voice_client = new_vc
+            vc = new_vc 
             logger.info(f"[{guild_id}] Successfully connected to voice channel: {voice_channel.name}")
 
-            # --- RESUME LOGIC ---
-            # If we just reconnected after a clean self-repair, resume playback.
             if music_player.is_resuming_after_clean and music_player.resume_info:
                 logger.info(f"[{guild_id}] Resuming playback after clean reconnect.")
-                
-                # Restore the state of the song that was playing
                 url_to_resume = music_player.resume_info['url']
                 time_to_resume = music_player.resume_info['time']
                 info_to_resume = music_player.resume_info['info']
-                
                 music_player.current_url = url_to_resume
                 music_player.current_info = info_to_resume
-
-                # Start playback from the saved timestamp
                 bot.loop.create_task(play_audio(guild_id, seek_time=time_to_resume))
-
-                # Clear the resume flags
                 music_player.is_resuming_after_clean = False
                 music_player.resume_info = None
-            # --- END RESUME LOGIC ---
 
         except discord.errors.ClientException as e:
-            # This is the "zombie" state. The bot thinks it's connected when it's not.
             logger.error(f"[{guild_id}] Caught ClientException: '{e}'. Forcing disconnect and attempting to recover state.")
-            if interaction.guild.voice_client:
+            guild_vc = interaction.guild.voice_client
+            if guild_vc:
                 try:
-                    # --- SAVE STATE LOGIC ---
-                    # Before disconnecting, save the current song's progress if it's playing.
-                    if music_player.voice_client.is_playing() and music_player.current_info:
+                    if guild_vc.is_playing() and music_player.current_info:
                         elapsed_time = time.time() - music_player.playback_started_at
                         current_timestamp = music_player.start_time + (elapsed_time * music_player.playback_speed)
-                        
                         music_player.resume_info = {
                             'url': music_player.current_url,
                             'time': current_timestamp,
@@ -1382,36 +1368,32 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
                         }
                         music_player.is_resuming_after_clean = True
                         logger.info(f"[{guild_id}] Stored resume state at {current_timestamp:.2f}s before cleaning.")
-                    # --- END SAVE STATE LOGIC ---
 
-                    music_player.is_cleaning = True # Flag on_voice_state_update to not perform a full reset
-                    await interaction.guild.voice_client.disconnect(force=True)
-                    await asyncio.sleep(1) # Allow Discord time to process the disconnect
+                    music_player.is_cleaning = True
+                    await guild_vc.disconnect(force=True)
+                    await asyncio.sleep(1)
                 finally:
-                    music_player.is_cleaning = False # Always unset the flag
+                    music_player.is_cleaning = False
 
-            # Recursively call this function to attempt the connection again.
-            # This time, it will succeed and trigger the resume logic above.
             return await ensure_voice_connection(interaction)
-            
+
         except Exception as e:
             embed = Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-            logger.error(f"Connection error: {e}")
+            logger.error(f"Connection error: {e}", exc_info=True)
             return None
-            
-    # If connected to a different channel, move.
-    elif music_player.voice_client.channel != voice_channel:
-        logger.info(f"[{guild_id}] Moving to a new voice channel: {voice_channel.name}")
-        await music_player.voice_client.move_to(voice_channel)
 
-    # Handle Stage Channel specifics
-    if isinstance(voice_channel, discord.StageChannel):
-        if voice_channel.guild.me.voice and voice_channel.guild.me.voice.suppress:
-            logger.info(f"[{guild_id}] On stage. Attempting to become a speaker.")
+    elif vc.channel != voice_channel:
+        logger.info(f"[{guild_id}] Moving to a new voice channel: {voice_channel.name}")
+        await vc.move_to(voice_channel)
+        await asyncio.sleep(0.5)
+
+    if isinstance(vc.channel, discord.StageChannel):
+        if interaction.guild.me.voice and interaction.guild.me.voice.suppress:
+            logger.info(f"[{guild_id}] Bot is in Stage as Audience. Attempting to become a speaker.")
             try:
                 await interaction.guild.me.edit(suppress=False)
                 await asyncio.sleep(0.5)
@@ -1421,7 +1403,8 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
                 logger.error(f"[{guild_id}] Unexpected error becoming a speaker: {e}")
 
     music_player.text_channel = interaction.channel
-    return music_player.voice_client
+    music_player.voice_client = vc
+    return vc
     
 def clear_audio_cache(guild_id: int):
     """Deletes the audio cache directory for a specific guild."""
@@ -2483,7 +2466,7 @@ async def handle_playback_error(guild_id: int, error: Exception):
 async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     music_player = get_player(guild_id)
 
-    if music_player.voice_client and music_player.voice_client.is_playing() and not seek_time > 0:
+    if music_player.voice_client and music_player.voice_client.is_playing() and not seek_time > 0 and not is_a_loop:
         return
 
     async def after_playing(error, song_info):
@@ -2495,7 +2478,8 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         if music_player.seek_info is not None:
             new_seek_time = music_player.seek_info
             music_player.seek_info = None
-            await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=False)
+            # The loop flag is set to True to bypass the "now playing" message on seek
+            await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=True)
             return
 
         if not song_info:
@@ -2654,7 +2638,23 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         
         info_for_after = music_player.current_info.copy()
         callback = lambda e: bot.loop.create_task(after_playing(e, info_for_after))
-        music_player.voice_client.play(source, after=callback)
+
+        try:
+            # Final check to prevent race condition
+            if music_player.voice_client and not music_player.voice_client.is_playing():
+                 music_player.voice_client.play(source, after=callback)
+            else:
+                logger.warning(f"[{guild_id}] Race condition detected in play_audio. Ignored redundant play call.")
+                source.cleanup() # Important to prevent resource leaks
+                return
+        except discord.errors.ClientException as e:
+            if "Already playing audio" in str(e):
+                logger.warning(f"[{guild_id}] Gracefully handled 'Already playing audio' exception.")
+                source.cleanup()
+                return # Exit gracefully
+            else:
+                await handle_playback_error(guild_id, e) # Handle other client exceptions as critical
+                return
 
         music_player.start_time = seek_time
         music_player.playback_started_at = time.time()
@@ -2690,6 +2690,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                     logger.error(f"Failed to send 'Now Playing' message to guild {guild_id}: {e}")
 
     except Exception as e:
+        # Catch any other unexpected error during playback setup
         await handle_playback_error(guild_id, e)
 
 async def update_karaoke_task(guild_id: int):
@@ -4892,11 +4893,14 @@ async def on_voice_state_update(member, before, after):
     - Pauses/resumes music if the channel empties/re-populates.
     - Handles automatic disconnection (except in 24/7 mode).
     - Cleans up and resets the player when the bot is disconnected.
-    - Automatically re-promotes to speaker on Stage Channels with a lock to prevent duplicates.
+    - Automatically re-promotes to speaker on Stage Channels.
+    - Handles expired stream links (e.g., SoundCloud) on resume.
     """
     guild = member.guild
+    # Use guild.voice_client as the reliable source of truth for the connection object
     vc = guild.voice_client
 
+    # If the bot is not in a voice channel in this guild, do nothing.
     if not vc:
         return
 
@@ -4905,28 +4909,29 @@ async def on_voice_state_update(member, before, after):
     # Proactively check if the bot itself was suppressed on a stage
     if member.id == bot.user.id and isinstance(vc.channel, discord.StageChannel):
         if after.suppress and not before.suppress:
-            if music_player.is_auto_promoting:
-                return
-
+            logger.warning(f"[{guild.id}] Bot was suppressed on stage. Attempting to auto-promote back to speaker.")
             try:
-                music_player.is_auto_promoting = True 
-                logger.warning(f"[{guild.id}] Bot was suppressed on stage. Attempting to auto-promote back to speaker.")
-                await asyncio.sleep(1)
+                await asyncio.sleep(1) # Wait to avoid API rate limits or state inconsistencies
                 await member.edit(suppress=False)
+                logger.info(f"[{guild.id}] Successfully re-promoted to speaker.")
             except Exception as e:
                 logger.error(f"[{guild.id}] Failed to auto-promote back to speaker: {e}")
-            finally:
-                music_player.is_auto_promoting = False
 
     # Bot was disconnected (either manually or by an event)
     if member.id == bot.user.id and after.channel is None:
         guild_id = guild.id
         
-        # If this is a controlled disconnect for reconnecting or cleaning, do not reset the player.
         if music_player.is_reconnecting or music_player.is_cleaning:
             logger.info(f"Bot is performing a controlled disconnect in guild {guild_id}. Skipping state reset.")
             return
 
+        if _24_7_active.get(guild_id, False):
+            logger.warning(f"Bot was disconnected from guild {guild_id}, but 24/7 mode is active. Preserving player state.")
+            music_player.voice_client = None
+            if music_player.current_task and not music_player.current_task.done():
+                music_player.current_task.cancel()
+            return
+        
         logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
         clear_audio_cache(guild_id)
         if music_player.current_task and not music_player.current_task.done():
@@ -4939,10 +4944,12 @@ async def on_voice_state_update(member, before, after):
         return
 
     bot_channel = vc.channel
+    human_members = [m for m in bot_channel.members if not m.bot]
 
     # A user leaves the bot's channel
     if before.channel == bot_channel and after.channel != bot_channel:
-        if len([m for m in bot_channel.members if not m.bot]) == 0:
+        # Check if the channel is now empty of human users
+        if len(human_members) == 0:
             logger.info(f"Bot is now alone in channel for guild {guild.id}.")
             if vc.is_playing():
                 vc.pause()
@@ -4950,24 +4957,38 @@ async def on_voice_state_update(member, before, after):
             
             if not _24_7_active.get(guild.id, False):
                 await asyncio.sleep(60)
+                # After 60s, if the bot is still connected and alone, disconnect it
                 if vc.is_connected() and len([m for m in vc.channel.members if not m.bot]) == 0:
                     logger.info(f"Disconnecting from guild {guild.id} after 60s of inactivity.")
                     await vc.disconnect()
-            else:
-                logger.info(f"24/7 mode is active for guild {guild.id}. Bot will remain in the channel.")
 
     # A user joins the bot's channel
     elif after.channel == bot_channel and before.channel != bot_channel:
-        if vc.is_paused() and len([m for m in bot_channel.members if not m.bot]) > 0:
-            if music_player.is_current_live:
-                logger.info(f"Resuming a live stream for guild {guild.id}. Re-fetching to sync with live time.")
+        # Check if the player was paused and there's at least one human now
+        if vc.is_paused() and len(human_members) > 0:
+            is_soundcloud_track = music_player.current_url and "soundcloud.com" in music_player.current_url
+
+            # For live streams or SoundCloud tracks, the stream URL might have expired.
+            # A simple resume would fail. We need to re-fetch the stream.
+            if music_player.is_current_live or is_soundcloud_track:
+                logger.info(f"Resuming an expiring stream (Live/SoundCloud) for guild {guild.id}. Re-fetching URL to prevent expiry.")
+                
+                # Save the current position
+                current_timestamp = 0
+                if music_player.playback_started_at:
+                    real_elapsed_time = time.time() - music_player.playback_started_at
+                    current_timestamp = music_player.start_time + (real_elapsed_time * music_player.playback_speed)
+                
+                # Stop the player. The after_playing callback will re-trigger play_audio.
+                # We restart from the saved timestamp.
                 music_player.is_seeking = True
-                music_player.seek_info = 0.1
+                music_player.seek_info = current_timestamp
                 vc.stop()
             else:
+                # For stable sources like YouTube VODs or local files, a simple resume is safe.
                 logger.info(f"A user joined in guild {guild.id}. Resuming playback.")
                 vc.resume()
-
+                
 @bot.event
 async def on_ready():
     logger.info(f"{bot.user.name} is online.")
