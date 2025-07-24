@@ -686,6 +686,7 @@ class MusicPlayer:
         self.is_cleaning = False
         self.is_resuming_after_clean = False
         self.resume_info = None
+        self.is_resuming_live = False
 
 # --- Discord UI Classes (Views & Modals) ---
 
@@ -2466,7 +2467,7 @@ async def handle_playback_error(guild_id: int, error: Exception):
 async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     music_player = get_player(guild_id)
 
-    if music_player.voice_client and music_player.voice_client.is_playing() and not seek_time > 0 and not is_a_loop:
+    if music_player.voice_client and music_player.voice_client.is_playing() and not is_a_loop and not seek_time > 0:
         return
 
     async def after_playing(error, song_info):
@@ -2478,14 +2479,13 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         if music_player.seek_info is not None:
             new_seek_time = music_player.seek_info
             music_player.seek_info = None
-            # The loop flag is set to True to bypass the "now playing" message on seek
             await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=True)
             return
 
         if not song_info:
-             await play_audio(guild_id, is_a_loop=False)
-             return
-             
+            await play_audio(guild_id, is_a_loop=False)
+            return
+
         track_to_requeue = create_queue_item_from_info(song_info)
         next_is_loop_replay = False
 
@@ -2503,17 +2503,28 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         await play_audio(guild_id, is_a_loop=next_is_loop_replay)
 
     try:
-        if seek_time == 0 and not is_a_loop:
+        # HYPER-ROBUST ENTRY GATE
+        # We determine the mission of this function call before doing anything else.
+
+        # MISSION 1 (Highest Priority): Resuming a live stream.
+        if music_player.is_resuming_live:
+            logger.info(f"[{guild_id}] Executing live stream resync mission.")
+            music_player.is_resuming_live = False # Consume the flag
+            seek_time = 0.1 # Use a non-zero value to force a full ffmpeg restart
+            is_a_loop = True # Treat as a replay to suppress the "Now Playing" message
+        
+        # MISSION 2: Replaying the current track (looping, seeking, filters).
+        elif is_a_loop or seek_time > 0:
+            logger.info(f"[{guild_id}] Executing replay mission (loop or seek).")
+            # We don't need to do anything here; we just bypass the queue logic.
+            pass
+
+        # MISSION 3 (Default): Playing the next song from the queue.
+        else:
+            logger.info(f"[{guild_id}] Executing 'play next' mission.")
             if music_player.lyrics_task and not music_player.lyrics_task.done():
                 music_player.lyrics_task.cancel()
-
-        music_player.is_seeking = False
-        skip_now_playing = False
-
-        if seek_time > 0:
-            if not music_player.current_url: return
-            skip_now_playing = True
-        else:
+            
             music_player.is_current_live = False
             
             if music_player.queue.empty():
@@ -2576,16 +2587,17 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                     return
             
             track_info = await music_player.queue.get()
-            
+            if track_info.pop('skip_now_playing', False):
+                music_player.suppress_next_now_playing = True
             if not music_player.loop_current:
                  music_player.history.append(track_info)
-
             music_player.current_url = track_info['url']
             music_player.last_was_single = track_info.get('is_single', True)
-            skip_now_playing = track_info.get('skip_now_playing', False)
             music_player.current_info = track_info
+        # END OF ENTRY GATE
 
-        if not music_player.voice_client or not music_player.voice_client.is_connected():
+        if not music_player.voice_client or not music_player.voice_client.is_connected() or not music_player.current_info:
+            logger.warning(f"[{guild_id}] Play audio called but a condition was not met (no vc or no current_info). Aborting.")
             return
 
         active_filters = server_filters.get(guild_id, set())
@@ -2602,8 +2614,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                 info = await extract_info_async(ydl_opts_play, music_player.current_url)
                 source_type = music_player.current_info.get('source_type')
                 music_player.current_info = info
-                if source_type:
-                    music_player.current_info['source_type'] = source_type
+                if source_type: music_player.current_info['source_type'] = source_type
                 audio_url = info["url"]
                 music_player.is_current_live = info.get('is_live', False) or info.get('live_status') == 'is_live'
             except yt_dlp.utils.DownloadError as e:
@@ -2638,30 +2649,30 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         
         info_for_after = music_player.current_info.copy()
         callback = lambda e: bot.loop.create_task(after_playing(e, info_for_after))
-
+        
         try:
-            # Final check to prevent race condition
             if music_player.voice_client and not music_player.voice_client.is_playing():
                  music_player.voice_client.play(source, after=callback)
             else:
                 logger.warning(f"[{guild_id}] Race condition detected in play_audio. Ignored redundant play call.")
-                source.cleanup() # Important to prevent resource leaks
+                source.cleanup()
                 return
         except discord.errors.ClientException as e:
             if "Already playing audio" in str(e):
                 logger.warning(f"[{guild_id}] Gracefully handled 'Already playing audio' exception.")
                 source.cleanup()
-                return # Exit gracefully
+                return
             else:
-                await handle_playback_error(guild_id, e) # Handle other client exceptions as critical
+                await handle_playback_error(guild_id, e)
                 return
 
         music_player.start_time = seek_time
         music_player.playback_started_at = time.time()
         
         if music_player.suppress_next_now_playing:
-            music_player.suppress_next_now_playing = False
-        elif not skip_now_playing and seek_time == 0 and not is_a_loop:
+            music_player.suppress_next_now_playing = False  
+        
+        elif not is_a_loop and seek_time == 0:
             is_kawaii = get_mode(guild_id)
             title = music_player.current_info.get("title", "Unknown Title")
             
@@ -2690,7 +2701,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                     logger.error(f"Failed to send 'Now Playing' message to guild {guild_id}: {e}")
 
     except Exception as e:
-        # Catch any other unexpected error during playback setup
         await handle_playback_error(guild_id, e)
 
 async def update_karaoke_task(guild_id: int):
@@ -3778,6 +3788,7 @@ async def play(interaction: discord.Interaction, query: str):
                     'is_single': True,
                     'skip_now_playing': True
                 }
+
                 await music_player.queue.put(queue_item)
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
@@ -3852,8 +3863,8 @@ async def play(interaction: discord.Interaction, query: str):
                 'is_single': True,
                 'skip_now_playing': True
             }
+
             await music_player.queue.put(queue_item)
-            
             embed = Embed(
                 title=get_messages("song_added", guild_id),
                 description=f"[{video.get('title', 'Unknown Title')}]({video_url})",
@@ -3864,6 +3875,10 @@ async def play(interaction: discord.Interaction, query: str):
             if is_kawaii:
                 embed.set_footer(text="☆⌒(≧▽° )")
             await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
+
+            if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
+                music_player.suppress_next_now_playing = True
+
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
             
@@ -4260,6 +4275,16 @@ async def pause(interaction: discord.Interaction):
     music_player = get_player(guild_id)
 
     if music_player.voice_client and music_player.voice_client.is_playing():
+        # --- TIMER MANAGEMENT ---
+        # Before pausing, calculate the elapsed time for the current segment
+        if music_player.playback_started_at:
+            elapsed_since_play = time.time() - music_player.playback_started_at
+            # Add this progress to the total start_time (which now acts as accumulated progress)
+            music_player.start_time += elapsed_since_play * music_player.playback_speed
+            # Invalidate the timer until resume is called
+            music_player.playback_started_at = None
+        # --- END TIMER MANAGEMENT ---
+            
         music_player.voice_client.pause()
         embed = Embed(
             description=get_messages("pause", guild_id),
@@ -4285,6 +4310,12 @@ async def resume(interaction: discord.Interaction):
     music_player = get_player(guild_id)
 
     if music_player.voice_client and music_player.voice_client.is_paused():
+        # --- TIMER MANAGEMENT ---
+        # Before resuming, restart the timer for the new playback segment
+        if music_player.playback_started_at is None:
+            music_player.playback_started_at = time.time()
+        # --- END TIMER MANAGEMENT ---
+
         music_player.voice_client.resume()
         embed = Embed(
             description=get_messages("resume", guild_id),
@@ -4322,44 +4353,35 @@ async def skip(interaction: discord.Interaction):
 
     await interaction.response.defer()
 
-    # --- START OF THE MODIFIED LOGIC ---
+    # --- Replay Logic for when loop is enabled ---
     if music_player.loop_current:
-        # Get common info for the embed
         title = music_player.current_info.get("title", "Unknown Title")
-        thumbnail = music_player.current_info.get("thumbnail") # Will be None for local files
+        thumbnail = music_player.current_info.get("thumbnail")
         
         description_text = ""
-        # *** THIS IS THE KEY CHANGE ***
-        # We check if the current track is a local file
         if music_player.current_info.get('source_type') == 'file':
-            # If it is, we format the song name with a disc emoji and code block
             formatted_song = f"💿 `{title}`"
-            # We now need to manually build the description as the message dict expects a URL
             if is_kawaii:
                 description_text = f"Let's listen to {formatted_song} one more time!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
             else:
                 description_text = f"Restarting {formatted_song} from the beginning."
         else:
-            # If it's an online track, we use the original logic with the link
             url = music_player.current_info.get("webpage_url", music_player.current_url)
             description_text = get_messages("replay_success_desc", guild_id).format(title=title, url=url)
 
         embed = Embed(
             title=get_messages("replay_success_title", guild_id),
-            description=description_text, # Use our dynamically created description
+            description=description_text,
             color=0xC7CEEA if is_kawaii else discord.Color.blue()
         )
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
         
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
-        
-        # Stopping the player will trigger the `after` callback which restarts the looped song
         music_player.voice_client.stop()
 
-    # --- END OF THE MODIFIED LOGIC ---
+    # --- Standard Skip Logic ---
     else:
-        # This part for a normal skip (loop off) remains unchanged.
         queue_snapshot = list(music_player.queue._queue)
         
         if not queue_snapshot:
@@ -4400,9 +4422,10 @@ async def skip(interaction: discord.Interaction):
 
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         
+        # THIS IS THE FIX: Tell play_audio not to send a redundant message.
         music_player.suppress_next_now_playing = True
         music_player.voice_client.stop()
-            
+
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
 async def loop(interaction: discord.Interaction):
@@ -4889,54 +4912,47 @@ async def remove(interaction: discord.Interaction):
 @bot.event
 async def on_voice_state_update(member, before, after):
     """
-    Comprehensive voice state event handler.
-    - Pauses/resumes music if the channel empties/re-populates.
-    - Handles automatic disconnection (except in 24/7 mode).
-    - Cleans up and resets the player when the bot is disconnected.
+    Hyper-robust voice state event handler.
+    - Manages pause/resume with accurate timing.
+    - Explicitly handles live stream resyncs separately from other media.
+    - Handles 24/7 mode and auto-disconnection correctly.
     - Automatically re-promotes to speaker on Stage Channels.
-    - Handles expired stream links (e.g., SoundCloud) on resume.
     """
     guild = member.guild
-    # Use guild.voice_client as the reliable source of truth for the connection object
     vc = guild.voice_client
 
-    # If the bot is not in a voice channel in this guild, do nothing.
     if not vc:
         return
 
     music_player = get_player(guild.id)
 
-    # Proactively check if the bot itself was suppressed on a stage
+    # --- Stage Channel Auto-Promotion Logic ---
     if member.id == bot.user.id and isinstance(vc.channel, discord.StageChannel):
         if after.suppress and not before.suppress:
             logger.warning(f"[{guild.id}] Bot was suppressed on stage. Attempting to auto-promote back to speaker.")
             try:
-                await asyncio.sleep(1) # Wait to avoid API rate limits or state inconsistencies
+                await asyncio.sleep(1)
                 await member.edit(suppress=False)
                 logger.info(f"[{guild.id}] Successfully re-promoted to speaker.")
             except Exception as e:
                 logger.error(f"[{guild.id}] Failed to auto-promote back to speaker: {e}")
 
-    # Bot was disconnected (either manually or by an event)
+    # --- Bot Disconnection Logic ---
     if member.id == bot.user.id and after.channel is None:
         guild_id = guild.id
-        
         if music_player.is_reconnecting or music_player.is_cleaning:
             logger.info(f"Bot is performing a controlled disconnect in guild {guild_id}. Skipping state reset.")
             return
-
         if _24_7_active.get(guild_id, False):
             logger.warning(f"Bot was disconnected from guild {guild_id}, but 24/7 mode is active. Preserving player state.")
             music_player.voice_client = None
             if music_player.current_task and not music_player.current_task.done():
                 music_player.current_task.cancel()
             return
-        
         logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
         clear_audio_cache(guild_id)
         if music_player.current_task and not music_player.current_task.done():
             music_player.current_task.cancel()
-        
         music_players[guild_id] = MusicPlayer()
         if guild_id in server_filters: del server_filters[guild_id]
         if guild_id in _24_7_active: del _24_7_active[guild_id]
@@ -4946,49 +4962,52 @@ async def on_voice_state_update(member, before, after):
     bot_channel = vc.channel
     human_members = [m for m in bot_channel.members if not m.bot]
 
-    # A user leaves the bot's channel
+    # --- Auto-Pause Logic ---
     if before.channel == bot_channel and after.channel != bot_channel:
-        # Check if the channel is now empty of human users
         if len(human_members) == 0:
             logger.info(f"Bot is now alone in channel for guild {guild.id}.")
             if vc.is_playing():
+                # Accurately save progress before pausing
+                if music_player.playback_started_at:
+                    elapsed_since_play = time.time() - music_player.playback_started_at
+                    music_player.start_time += elapsed_since_play * music_player.playback_speed
+                    music_player.playback_started_at = None
                 vc.pause()
                 logger.info(f"Playback paused for guild {guild.id}.")
             
             if not _24_7_active.get(guild.id, False):
                 await asyncio.sleep(60)
-                # After 60s, if the bot is still connected and alone, disconnect it
                 if vc.is_connected() and len([m for m in vc.channel.members if not m.bot]) == 0:
-                    logger.info(f"Disconnecting from guild {guild.id} after 60s of inactivity.")
                     await vc.disconnect()
 
-    # A user joins the bot's channel
+    # --- Auto-Resume Logic ---
     elif after.channel == bot_channel and before.channel != bot_channel:
-        # Check if the player was paused and there's at least one human now
         if vc.is_paused() and len(human_members) > 0:
             is_soundcloud_track = music_player.current_url and "soundcloud.com" in music_player.current_url
 
-            # For live streams or SoundCloud tracks, the stream URL might have expired.
-            # A simple resume would fail. We need to re-fetch the stream.
-            if music_player.is_current_live or is_soundcloud_track:
-                logger.info(f"Resuming an expiring stream (Live/SoundCloud) for guild {guild.id}. Re-fetching URL to prevent expiry.")
-                
-                # Save the current position
-                current_timestamp = 0
-                if music_player.playback_started_at:
-                    real_elapsed_time = time.time() - music_player.playback_started_at
-                    current_timestamp = music_player.start_time + (real_elapsed_time * music_player.playback_speed)
-                
-                # Stop the player. The after_playing callback will re-trigger play_audio.
-                # We restart from the saved timestamp.
+            # Restart the timer immediately for accurate calculations
+            if music_player.playback_started_at is None:
+                music_player.playback_started_at = time.time()
+
+            # MISSION 1: Handle live streams by resyncing
+            if music_player.is_current_live:
+                logger.info(f"Resuming a live stream for guild {guild.id}. Setting resync flag.")
+                music_player.is_resuming_live = True # Set the dedicated flag
+                vc.stop() # Triggers the callback, which leads to play_audio
+
+            # MISSION 2: Handle SoundCloud by seeking
+            elif is_soundcloud_track:
+                logger.info(f"Resuming a SoundCloud track for guild {guild.id}. Seeking to previous position.")
+                current_timestamp = music_player.start_time
                 music_player.is_seeking = True
                 music_player.seek_info = current_timestamp
-                vc.stop()
-            else:
-                # For stable sources like YouTube VODs or local files, a simple resume is safe.
-                logger.info(f"A user joined in guild {guild.id}. Resuming playback.")
-                vc.resume()
+                vc.stop() # Triggers the callback
                 
+            # MISSION 3: Handle all other stable media
+            else:
+                logger.info(f"A user joined in guild {guild.id}. Resuming standard playback.")
+                vc.resume()
+
 @bot.event
 async def on_ready():
     logger.info(f"{bot.user.name} is online.")
