@@ -1331,6 +1331,7 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
     voice_channel = member.voice.channel
     vc = interaction.guild.voice_client
 
+    # --- DÉTECTION DE CLIENT ZOMBIE ---
     if vc and not vc.is_connected():
         logger.warning(f"[{guild_id}] Found a stale/disconnected voice client. It will be cleaned up.")
         music_player.voice_client = None
@@ -4950,15 +4951,24 @@ async def on_voice_state_update(member, before, after):
     # --- Bot Disconnection Logic ---
     if member.id == bot.user.id and after.channel is None:
         guild_id = guild.id
+        
+        # --- NOUVEAU GARDE-FOU ---
+        # Si le bot est en train de se reconnecter (via /reconnect) ou de se nettoyer (via l'auto-guérison),
+        # on ignore cet événement pour ne pas interférer.
         if music_player.is_reconnecting or music_player.is_cleaning:
             logger.info(f"Bot is performing a controlled disconnect in guild {guild_id}. Skipping state reset.")
             return
+
+        # Si le mode 24/7 est actif, on préserve l'état mais on ne nettoie pas tout
         if _24_7_active.get(guild_id, False):
             logger.warning(f"Bot was disconnected from guild {guild_id}, but 24/7 mode is active. Preserving player state.")
             music_player.voice_client = None
             if music_player.current_task and not music_player.current_task.done():
                 music_player.current_task.cancel()
             return
+
+        # Si aucune des conditions ci-dessus n'est remplie, c'est une VRAIE déconnexion (ex: /stop ou kick manuel)
+        # et là, on peut tout nettoyer.
         logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
         clear_audio_cache(guild_id)
         if music_player.current_task and not music_player.current_task.done():
@@ -4968,7 +4978,7 @@ async def on_voice_state_update(member, before, after):
         if guild_id in _24_7_active: del _24_7_active[guild_id]
         logger.info(f"Player for guild {guild_id} has been reset.")
         return
-
+                
     bot_channel = vc.channel
     human_members = [m for m in bot_channel.members if not m.bot]
 
