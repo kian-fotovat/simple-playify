@@ -1406,7 +1406,7 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
     music_player.text_channel = interaction.channel
     music_player.voice_client = vc
     return vc
-    
+
 def clear_audio_cache(guild_id: int):
     """Deletes the audio cache directory for a specific guild."""
     guild_cache_path = os.path.join("audio_cache", str(guild_id))
@@ -2610,13 +2610,23 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             music_player.current_info['webpage_url'] = None
         else:
             ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
+
             try:
-                info = await extract_info_async(ydl_opts_play, music_player.current_url)
-                source_type = music_player.current_info.get('source_type')
-                music_player.current_info = info
-                if source_type: music_player.current_info['source_type'] = source_type
-                audio_url = info["url"]
-                music_player.is_current_live = info.get('is_live', False) or info.get('live_status') == 'is_live'
+                original_track_info = music_player.current_info.copy()
+
+                full_playback_info = await extract_info_async(ydl_opts_play, music_player.current_url)
+
+                final_info = original_track_info
+                final_info.update(full_playback_info)
+
+                new_title = full_playback_info.get("title", "")
+                if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
+                    final_info["title"] = original_track_info["title"]
+
+                music_player.current_info = final_info
+                audio_url = final_info["url"] 
+                music_player.is_current_live = final_info.get('is_live', False) or final_info.get('live_status') == 'is_live'
+
             except yt_dlp.utils.DownloadError as e:
                 if music_player.text_channel:
                     try:
