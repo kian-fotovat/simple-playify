@@ -37,7 +37,7 @@ Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers,
 * **100% free**: All features unlocked for everyone.
 * **Unlimited playback**: Giant playlists, endless queues, eternal tunes!
 
-**Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music, and local files.**
+**Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music, direct audio links, and local files.**
 Type `/play <url or query>` and let the music flow~
 
 <a id="spotify-support"></a>
@@ -52,9 +52,10 @@ Type `/play <url or query>` and let the music flow~
 <a id="key-features"></a>
 ## (≧◡≦) Key Features
 
-* Play from **10+ sources**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music • **Local Files**
+* Play from **10+ sources**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music • **Direct Audio Links** • **Local Files**
 * Slash commands: `/play`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
 * **Play Local Files**: Directly upload and play your own audio/video files.
+* **Direct Audio Links**: Stream music directly from any audio URL (MP3, FLAC, WAV, etc.)
 * **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
 * **Loop** & **shuffle** controls
 * **Kawaii Mode** toggles cute kaomoji responses (`/kaomoji`)
@@ -124,7 +125,7 @@ Type `/play <url or query>` and let the music flow~
 
 | Command | Description |
 | :--- | :--- |
-| `/play <url/query>` | Add a song or playlist from a link or search. |
+| `/play <url/query>` | Add a song or playlist from a link/search. Supports direct audio links! |
 | `/play-files <file1...>` | Play one or more uploaded audio/video files. |
 | `/playnext <query/file>` | Add a song or local file to the front of the queue. |
 | `/pause` | Pause playback. |
@@ -154,6 +155,7 @@ Type `/play <url or query>` and let the music flow~
 * **FFmpeg not found**: Ensure it's installed & in your system's PATH.
 * **Spotify errors**: Verify your API credentials in the `.env` file.
 * **Bot offline/unresponsive**: Check your `DISCORD_TOKEN` and bot permissions in the Developer Portal.
+* **Direct link issues**: Ensure the URL points directly to an audio file and is publicly accessible.
 
 <a id="privacy--data"></a>
 
