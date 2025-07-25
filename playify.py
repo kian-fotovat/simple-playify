@@ -579,6 +579,10 @@ messages = {
         "normal": "I can only reconnect during active playback.",
         "kawaii": "I can only do my magic reconnect trick when a song is playing! (´• ω •`)"
     },
+    "autoplay_direct_link_notice": {
+        "normal": "💿 The last track was a direct link, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
+        "kawaii": "💿 The last song was a direct link! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+    },
     "autoplay_file_notice": {
         "normal": "💿 The last track was a local file, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
         "kawaii": "💿 The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
@@ -687,6 +691,8 @@ class MusicPlayer:
         self.is_resuming_after_clean = False
         self.resume_info = None
         self.is_resuming_live = False
+        self.silence_task = None 
+        self.is_playing_silence = False
 
 # --- Discord UI Classes (Views & Modals) ---
 
@@ -1307,13 +1313,42 @@ class RemoveView(View):
 
 # --- General & State Helpers ---
 
+async def play_silence_loop(guild_id: int):
+    """
+    Plays a silent loop to keep the voice connection active
+    and prevent Discord from timing out.
+    """
+    music_player = get_player(guild_id)
+    vc = music_player.voice_client
+
+    if not vc or not vc.is_connected():
+        return
+
+    logger.info(f"[{guild_id}] Starting silence loop to keep connection alive.")
+    music_player.is_playing_silence = True
+    
+    try:
+        while True:
+            # We check if the bot is not already playing something else
+            if vc.is_connected() and not vc.is_playing():
+                vc.play(discord.Silence())
+            # We expect a short duration. 15 seconds is more than enough.
+            await asyncio.sleep(15)
+    except asyncio.CancelledError:
+        # The task has been canceled, we stop playing silence if it was the case
+        if vc.is_connected() and vc.source and isinstance(vc.source, discord.Silence):
+            vc.stop()
+        logger.info(f"[{guild_id}] Silence loop has been cancelled.")
+    finally:
+        music_player.is_playing_silence = False
+
 async def ensure_voice_connection(interaction: discord.Interaction) -> discord.VoiceClient | None:
     """
-    Checks and ensures that the bot is connected to the user's voice channel.
-    Manages connection, reconnection, and promotion by intervening on scenes.
-    This version includes a robust self-healing mechanism for zombie connections
-    that preserves the entire player state, including queue and current track progress.
-    Returns the voice client on success, None on failure.
+    Verify and guarantee that the bot is connected to the user's vocal salon. 
+    Change the connection, the reconnexion and the promotion on the screens. 
+    This version includes a robust auto gear mechanism for “zombies” connections 
+    If the speaker completes it, it comprises the file attachment and the progression of the file in the course. 
+    Retour the client's vocals in the success box, None in the check box.
     """
     guild_id = interaction.guild.id
     music_player = get_player(guild_id)
@@ -1331,11 +1366,14 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
     voice_channel = member.voice.channel
     vc = interaction.guild.voice_client
 
-    # --- DÉTECTION DE CLIENT ZOMBIE ---
     if vc and not vc.is_connected():
-        logger.warning(f"[{guild_id}] Found a stale/disconnected voice client. It will be cleaned up.")
+        logger.warning(f"[{guild_id}] Outdated/disconnected voice client found. Cleanup.")
         music_player.voice_client = None
         vc = None
+        
+    if vc and music_player.voice_client != vc:
+        logger.info(f"[{guild_id}] Voice client state desynchronization detected. Resynchronizing.")
+        music_player.voice_client = vc
 
     if not vc:
         try:
@@ -1345,7 +1383,7 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
             logger.info(f"[{guild_id}] Successfully connected to voice channel: {voice_channel.name}")
 
             if music_player.is_resuming_after_clean and music_player.resume_info:
-                logger.info(f"[{guild_id}] Resuming playback after clean reconnect.")
+                logger.info(f"[{guild_id}] Resume playback after clean reconnect.")
                 url_to_resume = music_player.resume_info['url']
                 time_to_resume = music_player.resume_info['time']
                 info_to_resume = music_player.resume_info['info']
@@ -1356,7 +1394,7 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
                 music_player.resume_info = None
 
         except discord.errors.ClientException as e:
-            logger.error(f"[{guild_id}] Caught ClientException: '{e}'. Forcing disconnect and attempting to recover state.")
+            logger.error(f"[{guild_id}] Caught ClientException: '{e}'. Forcing a logout and attempting to recover state.")
             guild_vc = interaction.guild.voice_client
             if guild_vc:
                 try:
@@ -1369,11 +1407,11 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
                             'info': music_player.current_info.copy()
                         }
                         music_player.is_resuming_after_clean = True
-                        logger.info(f"[{guild_id}] Stored resume state at {current_timestamp:.2f}s before cleaning.")
+                        logger.info(f"[{guild_id}] Resume state saved at {current_timestamp:.2f}s before cleanup.")
 
                     music_player.is_cleaning = True
                     await guild_vc.disconnect(force=True)
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(1) 
                 finally:
                     music_player.is_cleaning = False
 
@@ -1395,14 +1433,14 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
 
     if isinstance(vc.channel, discord.StageChannel):
         if interaction.guild.me.voice and interaction.guild.me.voice.suppress:
-            logger.info(f"[{guild_id}] Bot is in Stage as Audience. Attempting to become a speaker.")
+            logger.info(f"[{guild_id}] The bot is as a spectator. Attempting to promote.")
             try:
                 await interaction.guild.me.edit(suppress=False)
                 await asyncio.sleep(0.5)
             except discord.Forbidden:
-                logger.warning(f"[{guild_id}] Failed to become speaker: 'Mute Members' permission missing.")
+                logger.warning(f"[{guild_id}] Promotion failed: 'Mute Members' permission missing.")
             except Exception as e:
-                logger.error(f"[{guild_id}] Unexpected error becoming a speaker: {e}")
+                logger.error(f"[{guild_id}] Unexpected error while promoting: {e}")
 
     music_player.text_channel = interaction.channel
     music_player.voice_client = vc
@@ -2471,10 +2509,14 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     if music_player.voice_client and music_player.voice_client.is_playing() and not is_a_loop and not seek_time > 0:
         return
 
-    # --- THIS IS THE CORRECTED FUNCTION ---
     async def after_playing(error, song_info):
         if error:
             logger.error(f'Error after playing in guild {guild_id}: {error}')
+            
+        if not music_player.voice_client or not music_player.voice_client.is_connected():
+            logger.info(f"[{guild_id}] after_playing: Canceling next play_audio call because the voice client is no longer connected.")
+            return
+
         if music_player.is_reconnecting:
             return
 
@@ -2488,39 +2530,27 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             await play_audio(guild_id, is_a_loop=False)
             return
 
-        # If loop is on for the current song, just replay it without touching the queue.
-        # This is the core of the fix.
         if music_player.loop_current:
             await play_audio(guild_id, is_a_loop=True)
         else:
-            # Otherwise, proceed with the normal "next song" logic.
-            # This includes the 24/7 mode where the song is added to the end.
             track_to_requeue = create_queue_item_from_info(song_info)
             if _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
                 await music_player.queue.put(track_to_requeue)
                 logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
             
-            # Call for the next track in the queue (or trigger autoplay if empty).
             await play_audio(guild_id, is_a_loop=False)
 
     try:
-        # HYPER-ROBUST ENTRY GATE
-        # We determine the mission of this function call before doing anything else.
-
-        # MISSION 1 (Highest Priority): Resuming a live stream.
         if music_player.is_resuming_live:
             logger.info(f"[{guild_id}] Executing live stream resync mission.")
-            music_player.is_resuming_live = False # Consume the flag
-            seek_time = 0.1 # Use a non-zero value to force a full ffmpeg restart
-            is_a_loop = True # Treat as a replay to suppress the "Now Playing" message
+            music_player.is_resuming_live = False
+            seek_time = 0.1
+            is_a_loop = True
         
-        # MISSION 2: Replaying the current track (looping, seeking, filters).
         elif is_a_loop or seek_time > 0:
             logger.info(f"[{guild_id}] Executing replay mission (loop or seek).")
-            # We don't need to do anything here; we just bypass the queue logic.
             pass
 
-        # MISSION 3 (Default): Playing the next song from the queue.
         else:
             logger.info(f"[{guild_id}] Executing 'play next' mission.")
             if music_player.lyrics_task and not music_player.lyrics_task.done():
@@ -2539,23 +2569,43 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                 elif (is_24_7_on and music_player.autoplay_enabled) or music_player.autoplay_enabled:
                     music_player.suppress_next_now_playing = False
                     seed_url = None
-                    if music_player.current_info and not music_player.current_info.get('source_type') == 'file':
+                    
+                    # --- START OF THE NEW AND FINAL AUTOPLAY LOGIC ---
+                    is_recommendable = False
+                    if music_player.current_info and music_player.current_url:
+                        if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url or "soundcloud.com" in music_player.current_url:
+                            is_recommendable = True
+
+                    if is_recommendable:
                         seed_url = music_player.current_url
-                    else:
-                        if music_player.text_channel:
-                            try:
-                                await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_file_notice", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
-                            except discord.Forbidden: pass
-                        source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
-                        for track in reversed(source_list):
-                            if track.get('url') and not track.get('source_type') == 'file':
-                                seed_url = track.get('url')
-                                break
-                    if seed_url:
+                        # Send the "Adding songs" message ONLY when we can act immediately
                         if music_player.text_channel:
                             try:
                                 await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
                             except discord.Forbidden: pass
+                    else:
+                        # Logic for when the source is a file or a direct link
+                        if music_player.text_channel and music_player.current_info:
+                            try:
+                                # Determine which notice to show
+                                if music_player.current_info.get('source_type') == 'file':
+                                    notice_key = "autoplay_file_notice"
+                                else:
+                                    notice_key = "autoplay_direct_link_notice" # Use the new key
+                                
+                                await music_player.text_channel.send(embed=Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
+                            except discord.Forbidden: pass
+                        
+                        source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
+                        for track in reversed(source_list):
+                            track_url = track.get('url')
+                            if track_url and ("youtube.com" in track_url or "youtu.be" in track_url or "soundcloud.com" in track_url):
+                                seed_url = track_url
+                                break
+                    # --- END OF THE NEW AND FINAL AUTOPLAY LOGIC ---
+                    
+                    if seed_url:
+                        # The "adding songs" message has been moved, so we proceed directly
                         if "youtube.com" in seed_url or "youtu.be" in seed_url:
                             mix_playlist_url = get_mix_playlist_url(seed_url)
                             if mix_playlist_url:
@@ -2595,7 +2645,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             music_player.current_url = track_info['url']
             music_player.last_was_single = track_info.get('is_single', True)
             music_player.current_info = track_info
-        # END OF ENTRY GATE
 
         if not music_player.voice_client or not music_player.voice_client.is_connected() or not music_player.current_info:
             logger.warning(f"[{guild_id}] Play audio called but a condition was not met (no vc or no current_info). Aborting.")
@@ -2614,12 +2663,9 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
 
             try:
                 original_track_info = music_player.current_info.copy()
-
                 full_playback_info = await extract_info_async(ydl_opts_play, music_player.current_url)
-
-                final_info = original_track_info
-                final_info.update(full_playback_info)
-
+                final_info = {**original_track_info, **full_playback_info}
+                
                 new_title = full_playback_info.get("title", "")
                 if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
                     final_info["title"] = original_track_info["title"]
@@ -2651,10 +2697,10 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             ffmpeg_options = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 
         if seek_time > 0:
-            ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}"
+            ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}".strip()
 
         if music_player.active_filter:
-            ffmpeg_options["options"] = f"{ffmpeg_options.get('options', '')} -af \"{music_player.active_filter}\""
+            ffmpeg_options["options"] = f"{ffmpeg_options.get('options', '')} -af \"{music_player.active_filter}\"".strip()
 
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
         
@@ -2923,7 +2969,7 @@ async def play(interaction: discord.Interaction, query: str):
 
     voice_client = await ensure_voice_connection(interaction)
     if not voice_client:
-        return # La fonction helper a déjà géré l'erreur.
+        return
     
     spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
     deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
@@ -2934,6 +2980,8 @@ async def play(interaction: discord.Interaction, query: str):
     apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
     tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
     amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
+    direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
+
 
     ydl_opts = {
         "format": "bestaudio/best",
@@ -3845,6 +3893,7 @@ async def play(interaction: discord.Interaction, query: str):
             except discord.errors.NotFound:
                 logger.warning(f"Interaction expired for generic URL error. Sending public message.")
                 await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
+    
     else:
         try:
             ydl_opts_full = {
@@ -3855,22 +3904,42 @@ async def play(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
             }
-            sanitized_query = sanitize_query(query)
-            search_query = f"ytsearch:{sanitized_query}"
-            info = await extract_info_async(ydl_opts_full, search_query)
-            video = info["entries"][0] if "entries" in info and info["entries"] else None
-            if not video:
+            
+            video_info = {}
+            if direct_link_regex.match(query):
+                logger.info(f"Direct link detected: {query}")
+                search_query = query
+                try:
+                    parsed_path = urlparse(query).path
+                    fallback_title = os.path.basename(parsed_path)
+                except:
+                    fallback_title = "Fichier audio externe"
+                
+                info = await extract_info_async(ydl_opts_full, search_query)
+                video_info = info
+                if not video_info.get('title'):
+                    video_info['title'] = fallback_title
+
+            else:
+                logger.info(f"Keyword search detected: {query}")
+                sanitized_query = sanitize_query(query)
+                search_query = f"ytsearch:{sanitized_query}"
+                info = await extract_info_async(ydl_opts_full, search_query)
+                video_info = info["entries"][0] if "entries" in info and info["entries"] else None
+
+            if not video_info:
                 raise Exception("No results found")
-            video_url = video.get("webpage_url", video.get("url"))
+
+            video_url = video_info.get("webpage_url", video_info.get("url"))
             if not video_url:
                 raise KeyError("No valid URL found in video metadata")
 
-            logger.debug(f"Metadata for keyword search: {video}")
+            logger.debug(f"Metadata for resolved query: {video_info}")
             queue_item = {
                 'url': video_url,
-                'title': video.get('title', 'Unknown Title'),
+                'title': video_info.get('title', 'Unknown Title'),
                 'webpage_url': video_url,
-                'thumbnail': video.get('thumbnail'),
+                'thumbnail': video_info.get('thumbnail'),
                 'is_single': True,
                 'skip_now_playing': True
             }
@@ -3878,11 +3947,11 @@ async def play(interaction: discord.Interaction, query: str):
             await music_player.queue.put(queue_item)
             embed = Embed(
                 title=get_messages("song_added", guild_id),
-                description=f"[{video.get('title', 'Unknown Title')}]({video_url})",
+                description=f"[{video_info.get('title', 'Unknown Title')}]({video_url})",
                 color=0xB5EAD7 if is_kawaii else discord.Color.blue()
             )
-            if video.get("thumbnail"):
-                embed.set_thumbnail(url=video["thumbnail"])
+            if video_info.get("thumbnail"):
+                embed.set_thumbnail(url=video_info["thumbnail"])
             if is_kawaii:
                 embed.set_footer(text="☆⌒(≧▽° )")
             await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
@@ -4090,8 +4159,6 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    # --- NEW VALIDATION LOGIC ---
-    # Ensure the user provided exactly one argument, not both or none.
     if (query and file) or (not query and not file):
         embed = Embed(
             description="Please provide either a link/search term OR a file, but not both.",
@@ -4099,7 +4166,6 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
         )
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
-    # --- END VALIDATION ---
 
     await interaction.response.defer()
     
@@ -4109,49 +4175,68 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
 
     queue_item = None
 
-    # --- BRANCH 1: User provided a link or search query ---
+    # --- BRANCHE 1 : L'utilisateur a fourni un lien ou une recherche ---
     if query:
+        # On définit la regex ici aussi pour la détection
+        direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
         try:
-            spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
-            deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
-            apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
-            tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
-            amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
+            info = {}
+            # --- NOUVELLE LOGIQUE DE DÉTECTION ---
+            # Cas A : C'est un lien direct vers un fichier
+            if direct_link_regex.match(query):
+                logger.info(f"/playnext detected a direct link: {query}")
+                ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
+                info = await extract_info_async(ydl_opts, query)
+                if not info.get('title'):
+                    info['title'] = os.path.basename(urlparse(query).path)
 
-            tracks = None
-            if spotify_regex.match(query): tracks = await process_spotify_url(query, interaction)
-            elif deezer_regex.match(query): tracks = await process_deezer_url(query, interaction)
-            elif apple_music_regex.match(query): tracks = await process_apple_music_url(query, interaction)
-            elif tidal_regex.match(query): tracks = await process_tidal_url(query, interaction)
-            elif amazon_music_regex.match(query): tracks = await process_amazon_music_url(query, interaction)
+            # Cas B : C'est un lien de plateforme (Spotify, Deezer...)
+            else:
+                spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+                deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
+                apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
+                tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
+                amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
 
-            search_query_for_yt = query
-            if tracks:
-                if len(tracks) != 1:
-                    raise Exception("Only single tracks are supported for /playnext, not playlists or albums.")
-                track_name, artist_name = tracks[0]
-                search_query_for_yt = f"{track_name} {artist_name}"
+                tracks = None
+                if spotify_regex.match(query): tracks = await process_spotify_url(query, interaction)
+                elif deezer_regex.match(query): tracks = await process_deezer_url(query, interaction)
+                elif apple_music_regex.match(query): tracks = await process_apple_music_url(query, interaction)
+                elif tidal_regex.match(query): tracks = await process_tidal_url(query, interaction)
+                elif amazon_music_regex.match(query): tracks = await process_amazon_music_url(query, interaction)
 
-            ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True, "no_color": True, "socket_timeout": 10}
-            yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
-            info = await extract_info_async(ydl_opts, yt_search_term)
-            video = info["entries"][0] if "entries" in info and info["entries"] else info
-            
+                search_query_for_yt = query
+                if tracks:
+                    if len(tracks) > 1:
+                        raise Exception("Playlists and albums are not supported for /playnext.")
+                    track_name, artist_name = tracks[0]
+                    search_query_for_yt = f"{track_name} {artist_name}"
+
+                ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
+                yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
+                search_results = await extract_info_async(ydl_opts, yt_search_term)
+                info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
+
+            # --- FIN DE LA NOUVELLE LOGIQUE ---
+
+            if not info:
+                raise Exception("Could not find any video or track information.")
+
             queue_item = {
-                'url': video.get("webpage_url", video.get("url")),
-                'title': video.get('title', 'Unknown Title'),
-                'webpage_url': video.get("webpage_url", video.get("url")),
-                'thumbnail': video.get('thumbnail'),
+                'url': info.get("webpage_url", info.get("url")),
+                'title': info.get('title', 'Unknown Title'),
+                'webpage_url': info.get("webpage_url", info.get("url")),
+                'thumbnail': info.get('thumbnail'),
                 'is_single': True
             }
 
         except Exception as e:
             embed = Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-            logger.error(f"Error processing /playnext for query '{query}': {e}")
+            logger.error(f"Error processing /playnext for query '{query}': {e}", exc_info=True)
             return
             
-    # --- BRANCH 2: User provided a local file ---
+    # --- BRANCHE 2 : L'utilisateur a fourni un fichier local (inchangée) ---
     elif file:
         try:
             if not file.content_type or not (file.content_type.startswith("audio/") or file.content_type.startswith("video/")):
@@ -4179,7 +4264,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
             logger.error(f"Error processing file in /playnext for guild {guild_id}: {e}")
             return
 
-    # --- COMMON LOGIC: Add to queue and confirm ---
+    # --- LOGIQUE COMMUNE : Ajout à la file et confirmation (inchangée) ---
     if queue_item:
         new_queue = asyncio.Queue()
         await new_queue.put(queue_item)
@@ -4285,18 +4370,17 @@ async def pause(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    if music_player.voice_client and music_player.voice_client.is_playing():
+    voice_client = await ensure_voice_connection(interaction)
+
+    if voice_client and voice_client.is_playing():
         # --- TIMER MANAGEMENT ---
-        # Before pausing, calculate the elapsed time for the current segment
         if music_player.playback_started_at:
             elapsed_since_play = time.time() - music_player.playback_started_at
-            # Add this progress to the total start_time (which now acts as accumulated progress)
             music_player.start_time += elapsed_since_play * music_player.playback_speed
-            # Invalidate the timer until resume is called
             music_player.playback_started_at = None
         # --- END TIMER MANAGEMENT ---
             
-        music_player.voice_client.pause()
+        voice_client.pause()
         embed = Embed(
             description=get_messages("pause", guild_id),
             color=0xFFB7B2 if is_kawaii else discord.Color.orange()
@@ -4320,14 +4404,15 @@ async def resume(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    if music_player.voice_client and music_player.voice_client.is_paused():
+    voice_client = await ensure_voice_connection(interaction)
+
+    if voice_client and voice_client.is_paused():
         # --- TIMER MANAGEMENT ---
-        # Before resuming, restart the timer for the new playback segment
         if music_player.playback_started_at is None:
             music_player.playback_started_at = time.time()
         # --- END TIMER MANAGEMENT ---
 
-        music_player.voice_client.resume()
+        voice_client.resume()
         embed = Embed(
             description=get_messages("resume", guild_id),
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
@@ -4351,18 +4436,24 @@ async def skip(interaction: discord.Interaction):
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
-    if not music_player.voice_client or not music_player.voice_client.is_playing():
+    voice_client = await ensure_voice_connection(interaction)
+
+    if not voice_client or not voice_client.is_playing():
         embed = Embed(
             description=get_messages("no_song", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        else:
+            await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
 
     if music_player.lyrics_task and not music_player.lyrics_task.done():
         music_player.lyrics_task.cancel()
 
-    await interaction.response.defer()
+    if not interaction.response.is_done():
+        await interaction.response.defer()
 
     # --- Replay Logic for when loop is enabled ---
     if music_player.loop_current:
@@ -4389,7 +4480,7 @@ async def skip(interaction: discord.Interaction):
             embed.set_thumbnail(url=thumbnail)
         
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
-        music_player.voice_client.stop()
+        voice_client.stop()
 
     # --- Standard Skip Logic ---
     else:
@@ -4433,9 +4524,8 @@ async def skip(interaction: discord.Interaction):
 
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         
-        # THIS IS THE FIX: Tell play_audio not to send a redundant message.
         music_player.suppress_next_now_playing = True
-        music_player.voice_client.stop()
+        voice_client.stop() 
 
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
@@ -4923,52 +5013,33 @@ async def remove(interaction: discord.Interaction):
 @bot.event
 async def on_voice_state_update(member, before, after):
     """
-    Hyper-robust voice state event handler.
-    - Manages pause/resume with accurate timing.
-    - Explicitly handles live stream resyncs separately from other media.
-    - Handles 24/7 mode and auto-disconnection correctly.
-    - Automatically re-promotes to speaker on Stage Channels.
+    Gestionnaire d'état vocal hyper-robuste qui inclut une boucle de silence
+    pour le mode 24/7 afin d'empêcher la déconnexion par inactivité de Discord.
     """
     guild = member.guild
     vc = guild.voice_client
 
-    if not vc:
+    if not vc or not vc.channel:
         return
 
     music_player = get_player(guild.id)
+    guild_id = guild.id
 
-    # --- Stage Channel Auto-Promotion Logic ---
-    if member.id == bot.user.id and isinstance(vc.channel, discord.StageChannel):
-        if after.suppress and not before.suppress:
-            logger.warning(f"[{guild.id}] Bot was suppressed on stage. Attempting to auto-promote back to speaker.")
-            try:
-                await asyncio.sleep(1)
-                await member.edit(suppress=False)
-                logger.info(f"[{guild.id}] Successfully re-promoted to speaker.")
-            except Exception as e:
-                logger.error(f"[{guild.id}] Failed to auto-promote back to speaker: {e}")
-
-    # --- Bot Disconnection Logic ---
     if member.id == bot.user.id and after.channel is None:
-        guild_id = guild.id
-        
-        # --- NOUVEAU GARDE-FOU ---
-        # Si le bot est en train de se reconnecter (via /reconnect) ou de se nettoyer (via l'auto-guérison),
-        # on ignore cet événement pour ne pas interférer.
         if music_player.is_reconnecting or music_player.is_cleaning:
             logger.info(f"Bot is performing a controlled disconnect in guild {guild_id}. Skipping state reset.")
             return
 
-        # Si le mode 24/7 est actif, on préserve l'état mais on ne nettoie pas tout
+        if music_player.silence_task and not music_player.silence_task.done():
+            music_player.silence_task.cancel()
+
         if _24_7_active.get(guild_id, False):
             logger.warning(f"Bot was disconnected from guild {guild_id}, but 24/7 mode is active. Preserving player state.")
             music_player.voice_client = None
             if music_player.current_task and not music_player.current_task.done():
                 music_player.current_task.cancel()
             return
-
-        # Si aucune des conditions ci-dessus n'est remplie, c'est une VRAIE déconnexion (ex: /stop ou kick manuel)
-        # et là, on peut tout nettoyer.
+        
         logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
         clear_audio_cache(guild_id)
         if music_player.current_task and not music_player.current_task.done():
@@ -4978,54 +5049,51 @@ async def on_voice_state_update(member, before, after):
         if guild_id in _24_7_active: del _24_7_active[guild_id]
         logger.info(f"Player for guild {guild_id} has been reset.")
         return
-                
+
     bot_channel = vc.channel
     human_members = [m for m in bot_channel.members if not m.bot]
 
-    # --- Auto-Pause Logic ---
-    if before.channel == bot_channel and after.channel != bot_channel:
+    if not member.bot and before.channel == bot_channel and after.channel != bot_channel:
         if len(human_members) == 0:
-            logger.info(f"Bot is now alone in channel for guild {guild.id}.")
+            logger.info(f"Bot is now alone in channel for guild {guild_id}.")
             if vc.is_playing():
-                # Accurately save progress before pausing
                 if music_player.playback_started_at:
                     elapsed_since_play = time.time() - music_player.playback_started_at
                     music_player.start_time += elapsed_since_play * music_player.playback_speed
                     music_player.playback_started_at = None
                 vc.pause()
-                logger.info(f"Playback paused for guild {guild.id}.")
-            
-            if not _24_7_active.get(guild.id, False):
+                logger.info(f"Playback paused for guild {guild_id}.")
+
+            if _24_7_active.get(guild_id, False):
+                if music_player.silence_task and not music_player.silence_task.done():
+                    music_player.silence_task.cancel() # Sécurité
+                music_player.silence_task = bot.loop.create_task(play_silence_loop(guild_id))
+            else:
                 await asyncio.sleep(60)
                 if vc.is_connected() and len([m for m in vc.channel.members if not m.bot]) == 0:
                     await vc.disconnect()
 
-    # --- Auto-Resume Logic ---
-    elif after.channel == bot_channel and before.channel != bot_channel:
-        if vc.is_paused() and len(human_members) > 0:
-            is_soundcloud_track = music_player.current_url and "soundcloud.com" in music_player.current_url
+    elif not member.bot and after.channel == bot_channel and before.channel != bot_channel:
+        if music_player.silence_task and not music_player.silence_task.done():
+            logger.info(f"[{guild_id}] A user has returned. Stopping the silence loop.")
+            music_player.silence_task.cancel()
 
-            # Restart the timer immediately for accurate calculations
+        if vc.is_paused() and len(human_members) > 0:
             if music_player.playback_started_at is None:
                 music_player.playback_started_at = time.time()
-
-            # MISSION 1: Handle live streams by resyncing
+            
             if music_player.is_current_live:
-                logger.info(f"Resuming a live stream for guild {guild.id}. Setting resync flag.")
-                music_player.is_resuming_live = True # Set the dedicated flag
-                vc.stop() # Triggers the callback, which leads to play_audio
-
-            # MISSION 2: Handle SoundCloud by seeking
-            elif is_soundcloud_track:
-                logger.info(f"Resuming a SoundCloud track for guild {guild.id}. Seeking to previous position.")
+                logger.info(f"Resuming a live stream for guild {guild_id}. Triggering resync.")
+                music_player.is_resuming_live = True
+                vc.stop()
+            elif "soundcloud.com" in music_player.current_url:
+                logger.info(f"Resuming a SoundCloud track for guild {guild_id}. Seeking to previous position.")
                 current_timestamp = music_player.start_time
                 music_player.is_seeking = True
                 music_player.seek_info = current_timestamp
-                vc.stop() # Triggers the callback
-                
-            # MISSION 3: Handle all other stable media
+                vc.stop()
             else:
-                logger.info(f"A user joined in guild {guild.id}. Resuming standard playback.")
+                logger.info(f"A user joined in guild {guild_id}. Resuming standard playback.")
                 vc.resume()
 
 @bot.event
