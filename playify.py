@@ -2040,11 +2040,11 @@ async def process_deezer_url(url, interaction):
 
 # Process Apple Music URLs
 async def process_apple_music_url(url, interaction):
-    guild_id = interaction.guild_id
+    guild_id = interaction.guild.id
     logger.info(f"Starting processing for Apple Music URL: {url}")
 
     clean_url = url.split('?')[0]
-    browser = None  # Initialize the browser to None
+    browser = None
 
     try:
         async with async_playwright() as p:
@@ -2054,6 +2054,7 @@ async def process_apple_music_url(url, interaction):
             )
             page = await context.new_page()
 
+            # Bloquer les ressources inutiles pour accélérer le chargement
             await page.route("**/*.{png,jpg,jpeg,svg,woff,woff2}", lambda route: route.abort())
             logger.info("Optimization: Disabled loading of images and fonts.")
 
@@ -2062,17 +2063,27 @@ async def process_apple_music_url(url, interaction):
             logger.info("Page loaded. Extracting data...")
 
             tracks = []
-            resource_type = urlparse(clean_url).path.strip('/').split('/')[1]
+            resource_type = 'unknown'
+            path_parts = urlparse(clean_url).path.strip('/').split('/')
+            
+            if len(path_parts) > 1:
+                if path_parts[1] in ['album', 'playlist']:
+                    resource_type = path_parts[1]
+                elif path_parts[1] == 'song':
+                    resource_type = 'song'
+
+            logger.info(f"Detected resource type: {resource_type}")
 
             if resource_type in ['album', 'playlist']:
-                await page.wait_for_selector('div.songs-list-row', timeout=15000)
+                logger.info(f"Processing as {resource_type}, using row scraping method.")
+                await page.wait_for_selector('div.songs-list-row', timeout=20000)
                 main_artist_name = "Unknown Artist"
                 try:
                     main_artist_el = await page.query_selector('.headings__subtitles a')
                     if main_artist_el:
                         main_artist_name = await main_artist_el.inner_text()
                 except Exception:
-                    logger.warning("Unable to determine the main artist.")
+                    logger.warning("Could not determine the main artist for the collection.")
 
                 track_rows = await page.query_selector_all('div.songs-list-row')
                 for row in track_rows:
@@ -2090,47 +2101,69 @@ async def process_apple_music_url(url, interaction):
                         if title != "Unknown Title":
                             tracks.append((title.strip(), artist.strip()))
                     except Exception as e:
-                        logger.warning(f"Unable to extract a line: {e}")
+                        logger.warning(f"Failed to extract a track row: {e}")
 
             elif resource_type == 'song':
+                logger.info("Processing as single song, using JSON-LD method.")
                 try:
-                    title_selector = 'h1.song-header-page__song-header-title'
-                    artist_selector = 'div.song-header-page-details a.click-action'
+                    # Méthode prioritaire et la plus fiable
+                    json_ld_selector = 'script[id="schema:song"]'
+                    await page.wait_for_selector(json_ld_selector, timeout=15000)
+                    
+                    json_ld_content = await page.locator(json_ld_selector).inner_text()
+                    data = json.loads(json_ld_content)
+
+                    # Le titre inclut déjà les "feat."
+                    title = data['audio']['name']
+                    # L'artiste principal est clairement identifié
+                    artist = data['audio']['byArtist'][0]['name']
+
+                    if title and artist:
+                        logger.info(f"Successfully extracted from JSON-LD: '{title}' by '{artist}'")
+                        tracks.append((title.strip(), artist.strip()))
+                    else:
+                        raise ValueError("JSON-LD data is missing name or artist.")
+                except Exception as e:
+                    logger.warning(f"JSON-LD method failed ({e}). Falling back to HTML element scraping.")
+                    # Méthode de secours si le JSON-LD n'est pas trouvé
+                    title_selector = 'h1[data-testid="song-title"]'
+                    artist_selector = 'span[data-testid="song-subtitle-artists"] a'
                     await page.wait_for_selector(title_selector, timeout=10000)
+                    
                     title = await page.locator(title_selector).first.inner_text()
                     artist = await page.locator(artist_selector).first.inner_text()
+                    
                     if title and artist:
+                        logger.info(f"Successfully extracted from HTML fallback: '{title}' by '{artist}'")
                         tracks.append((title.strip(), artist.strip()))
-                except Exception:
-                    page_title = await page.title()
-                    parts = page_title.split(' by ')
-                    title = parts[0].replace("", "").strip()
-                    artist = parts[1].split(' on Apple')[0].strip()
-                    if title and artist:
-                        tracks.append((title, artist))
 
             if not tracks:
-                raise ValueError("No tracks found in Apple Music resource")
+                raise ValueError("No tracks could be extracted from the Apple Music resource.")
 
             logger.info(f"Success! {len(tracks)} track(s) extracted.")
             return tracks
 
     except Exception as e:
         logger.error(f"Error processing Apple Music URL {url}: {e}", exc_info=True)
+        if 'page' in locals() and page and not page.is_closed():
+            await page.screenshot(path="apple_music_scrape_failed.png")
+            logger.info("Screenshot of the error saved.")
+        
         embed = Embed(
             description=get_messages("apple_music_error", guild_id),
             color=0xFFB6C1 if get_mode(guild_id) else discord.Color.red()
         )
         try:
-            await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-        except discord.errors.InteractionResponded:
-            await interaction.edit_original_response(embed=embed)
+            if interaction and not interaction.is_expired():
+                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+        except Exception as send_error:
+            logger.error(f"Unable to send error message: {send_error}")
         return None
     finally:
         if browser:
             await browser.close()
             logger.info("Playwright (Apple Music) browser closed successfully.")
-
+                                                            
 # Process Tidal URLs
 async def process_tidal_url(url, interaction):
     guild_id = interaction.guild_id
