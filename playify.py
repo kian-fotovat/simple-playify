@@ -2054,7 +2054,6 @@ async def process_apple_music_url(url, interaction):
             )
             page = await context.new_page()
 
-            # Bloquer les ressources inutiles pour accélérer le chargement
             await page.route("**/*.{png,jpg,jpeg,svg,woff,woff2}", lambda route: route.abort())
             logger.info("Optimization: Disabled loading of images and fonts.")
 
@@ -2106,16 +2105,13 @@ async def process_apple_music_url(url, interaction):
             elif resource_type == 'song':
                 logger.info("Processing as single song, using JSON-LD method.")
                 try:
-                    # Méthode prioritaire et la plus fiable
                     json_ld_selector = 'script[id="schema:song"]'
                     await page.wait_for_selector(json_ld_selector, timeout=15000)
                     
                     json_ld_content = await page.locator(json_ld_selector).inner_text()
                     data = json.loads(json_ld_content)
 
-                    # Le titre inclut déjà les "feat."
                     title = data['audio']['name']
-                    # L'artiste principal est clairement identifié
                     artist = data['audio']['byArtist'][0]['name']
 
                     if title and artist:
@@ -2125,7 +2121,6 @@ async def process_apple_music_url(url, interaction):
                         raise ValueError("JSON-LD data is missing name or artist.")
                 except Exception as e:
                     logger.warning(f"JSON-LD method failed ({e}). Falling back to HTML element scraping.")
-                    # Méthode de secours si le JSON-LD n'est pas trouvé
                     title_selector = 'h1[data-testid="song-title"]'
                     artist_selector = 'span[data-testid="song-subtitle-artists"] a'
                     await page.wait_for_selector(title_selector, timeout=10000)
@@ -3919,6 +3914,19 @@ async def play(interaction: discord.Interaction, query: str):
             
             await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
             logger.warning(f"A user-facing download error occurred: {str(e).splitlines()[0]}")
+
+        except TypeError as e:
+            if "'NoneType' object is not subscriptable" in str(e):
+                logger.warning(f"Caught a TypeError from yt-dlp, likely an empty/private/unsupported playlist: {query}. Error: {e}")
+                embed = Embed(
+                    description=get_messages("playlist_error", guild_id),
+                    color=0xFF9AA2 if is_kawaii else discord.Color.orange()
+                )
+                await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
+            else:
+                logger.error(f"An unexpected TypeError occurred: {e}", exc_info=True)
+                raise e
+        
         except Exception as e:
             embed = Embed(
                 description=get_messages("video_error", guild_id),
@@ -3930,7 +3938,7 @@ async def play(interaction: discord.Interaction, query: str):
             except discord.errors.NotFound:
                 logger.warning(f"Interaction expired for generic URL error. Sending public message.")
                 await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=embed, silent=SILENT_MESSAGES)
-    
+
     else:
         try:
             ydl_opts_full = {
