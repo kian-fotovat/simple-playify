@@ -5018,7 +5018,7 @@ async def remove(interaction: discord.Interaction):
 async def on_voice_state_update(member, before, after):
     """
     Hyper-robust voice state manager that includes a silence loop
-    for 24/7 mode and explicit and secure playback resume logic.
+    for 24/7 mode and unified, explicit playback resume logic.
     """
     guild = member.guild
     vc = guild.voice_client
@@ -5084,23 +5084,22 @@ async def on_voice_state_update(member, before, after):
             was_in_silence_mode = True
             await asyncio.sleep(0.2) 
 
-        if (vc.is_paused() or was_in_silence_mode) and not vc.is_playing() and len(human_members) > 0:
+        if (vc.is_paused() or was_in_silence_mode) and len(human_members) > 0:
+            if not music_player.current_info:
+                return
+
             if music_player.playback_started_at is None:
                 music_player.playback_started_at = time.time()
             
-            is_soundcloud_track = music_player.current_url and "soundcloud.com" in music_player.current_url
+            current_timestamp = music_player.start_time
 
             if music_player.is_current_live:
                 logger.info(f"Resuming a live stream for guild {guild_id}. Triggering resync.")
                 music_player.is_resuming_live = True
-                bot.loop.create_task(play_audio(guild_id))
-            elif is_soundcloud_track:
-                logger.info(f"Resuming a SoundCloud track for guild {guild_id}. Seeking to previous position.")
-                current_timestamp = music_player.start_time
-                bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
+                bot.loop.create_task(play_audio(guild_id, is_a_loop=True)) 
             else:
-                logger.info(f"A user joined in guild {guild_id}. Resuming standard playback.")
-                vc.resume()
+                logger.info(f"Resuming track '{music_player.current_info.get('title')}' at {current_timestamp:.2f}s.")
+                bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
 
 @bot.event
 async def on_ready():
