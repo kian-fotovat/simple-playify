@@ -5060,43 +5060,67 @@ async def on_voice_state_update(member, before, after):
     """
     Hyper-robust voice state manager that includes a silence loop
     for 24/7 mode and unified, explicit playback resume logic.
+    CORRECTED TO HANDLE BEING MOVED TO AUDIENCE IN A STAGE.
     """
     guild = member.guild
     vc = guild.voice_client
 
+    # If the bot is not connected, there is nothing to do.
     if not vc or not vc.channel:
         return
 
     music_player = get_player(guild.id)
     guild_id = guild.id
 
-    if member.id == bot.user.id and after.channel is None:
-        if music_player.is_reconnecting or music_player.is_cleaning:
-            return
+    # CASE 1: The state change concerns the bot itself.
+    if member.id == bot.user.id:
+        # If the bot has been disconnected (by an admin or /stop command)
+        if after.channel is None:
+            if music_player.is_reconnecting or music_player.is_cleaning:
+                return
 
-        if music_player.silence_task and not music_player.silence_task.done():
-            music_player.silence_task.cancel()
+            if music_player.silence_task and not music_player.silence_task.done():
+                music_player.silence_task.cancel()
 
-        if _24_7_active.get(guild_id, False):
-            logger.warning(f"Bot was disconnected from guild {guild_id}, but 24/7 mode is active. Preserving player state.")
-            music_player.voice_client = None
+            if _24_7_active.get(guild_id, False):
+                logger.warning(f"Bot was disconnected from guild {guild_id}, but 24/7 mode is active. Preserving player state.")
+                music_player.voice_client = None
+                if music_player.current_task and not music_player.current_task.done():
+                    music_player.current_task.cancel()
+                return
+            
+            logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
+            clear_audio_cache(guild_id)
             if music_player.current_task and not music_player.current_task.done():
                 music_player.current_task.cancel()
+            music_players[guild_id] = MusicPlayer()
+            if guild_id in server_filters: del server_filters[guild_id]
+            if guild_id in _24_7_active: del _24_7_active[guild_id]
+            logger.info(f"Player for guild {guild_id} has been reset.")
             return
-        
-        logger.info(f"Bot was disconnected from guild {guild_id}. Triggering full cleanup.")
-        clear_audio_cache(guild_id)
-        if music_player.current_task and not music_player.current_task.done():
-            music_player.current_task.cancel()
-        music_players[guild_id] = MusicPlayer()
-        if guild_id in server_filters: del server_filters[guild_id]
-        if guild_id in _24_7_active: del _24_7_active[guild_id]
-        logger.info(f"Player for guild {guild_id} has been reset.")
-        return
 
+        # --- START OF THE FIX ---
+        # If the bot is MOVED TO THE AUDIENCE by a moderator in a Stage Channel.
+        # `after.suppress` becomes True.
+        if isinstance(vc.channel, discord.StageChannel) and after.suppress:
+            logger.info(f"[{guild_id}] Bot was moved to the audience. Attempting to become a speaker again.")
+            try:
+                await member.edit(suppress=False)
+                await asyncio.sleep(0.5) # A short delay to allow the state to update
+                logger.info(f"[{guild_id}] Bot has requested to be a speaker again.")
+            except discord.Forbidden:
+                logger.warning(f"[{guild_id}] Promotion failed: 'Mute Members' permission missing.")
+            except Exception as e:
+                logger.error(f"[{guild_id}] Unexpected error during re-promotion: {e}")
+        # --- END OF THE FIX ---
+
+        return # End processing if it was the bot that moved
+
+    # CASE 2: The change concerns a human user.
     bot_channel = vc.channel
     human_members = [m for m in bot_channel.members if not m.bot]
 
+    # If a user leaves the bot's channel and the bot is now alone
     if not member.bot and before.channel == bot_channel and after.channel != bot_channel:
         if len(human_members) == 0:
             logger.info(f"Bot is now alone in channel for guild {guild_id}.")
@@ -5117,6 +5141,7 @@ async def on_voice_state_update(member, before, after):
                 if vc.is_connected() and len([m for m in vc.channel.members if not m.bot]) == 0:
                     await vc.disconnect()
 
+    # If a user joins the channel where the bot is alone and paused
     elif not member.bot and after.channel == bot_channel and before.channel != bot_channel:
         was_in_silence_mode = False
         if music_player.silence_task and not music_player.silence_task.done():
