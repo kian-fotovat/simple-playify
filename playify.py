@@ -3179,7 +3179,7 @@ async def play(interaction: discord.Interaction, query: str):
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
+                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
                 video = info["entries"][0] if "entries" in info and info["entries"] else None
                 if not video:
                     raise Exception("No results found")
@@ -3320,7 +3320,7 @@ async def play(interaction: discord.Interaction, query: str):
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
+                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
                 video = info["entries"][0] if "entries" in info and info["entries"] else None
                 if not video:
                     raise Exception(f"No YouTube results found for {sanitized_query}")
@@ -3453,7 +3453,7 @@ async def play(interaction: discord.Interaction, query: str):
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
+                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
                 video = info["entries"][0] if "entries" in info and info["entries"] else None
                 if not video:
                     raise Exception("No results found")
@@ -3578,7 +3578,7 @@ async def play(interaction: discord.Interaction, query: str):
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
+                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
                 video = info["entries"][0] if "entries" in info and info["entries"] else None
                 if not video:
                     raise Exception("No results found")
@@ -3705,7 +3705,7 @@ async def play(interaction: discord.Interaction, query: str):
                 }
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
-                info = await extract_info_async(ydl_opts_full, search_query)
+                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
                 video = info["entries"][0] if "entries" in info and info["entries"] else None
                 if not video:
                     raise Exception("No results found")
@@ -4012,7 +4012,7 @@ async def play(interaction: discord.Interaction, query: str):
                 except:
                     fallback_title = "External audio file"
                 
-                info = await extract_info_async(ydl_opts_full, search_query)
+                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
                 video_info = info
                 if not video_info.get('title'):
                     video_info['title'] = fallback_title
@@ -4594,7 +4594,10 @@ async def skip(interaction: discord.Interaction):
             
             if not next_song_info.get('thumbnail') and not next_song_info.get('source_type') == 'file':
                 try:
-                    full_info = await extract_info_async({"format": "bestaudio/best", "quiet": True}, next_song_info['url'])
+                    # --- THIS IS THE ONLY LINE THAT CHANGES ---
+                    # We replace the blocking call with our non-blocking, low-priority one.
+                    full_info = await run_ydl_with_low_priority({"format": "bestaudio/best", "quiet": True}, next_song_info['url'])
+                    # --- END OF CHANGE ---
                     next_song_info['title'] = full_info.get('title', 'Unknown Title')
                     next_song_info['thumbnail'] = full_info.get('thumbnail')
                 except Exception as e:
@@ -4622,8 +4625,8 @@ async def skip(interaction: discord.Interaction):
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         
         music_player.suppress_next_now_playing = True
-        voice_client.stop() 
-
+        voice_client.stop()
+        
 # /loop command
 @bot.tree.command(name="loop", description="Enable/disable looping")
 async def loop(interaction: discord.Interaction):
