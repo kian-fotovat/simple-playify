@@ -3842,7 +3842,7 @@ async def play(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
             }
-            info = await extract_info_async(ydl_opts_playlist, query)
+            info = await run_ydl_with_low_priority(ydl_opts_playlist, query)
 
             if "entries" in info and info["entries"]:
                 tracks_to_add = []
