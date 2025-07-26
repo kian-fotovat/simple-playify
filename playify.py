@@ -2581,10 +2581,10 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     if music_player.voice_client and music_player.voice_client.is_playing() and not is_a_loop and not seek_time > 0:
         return
 
-    async def after_playing(error, song_info):
-        if hasattr(song_info, 'process') and song_info.process:
+    async def after_playing(error, audio_source, song_info):
+        if hasattr(audio_source, 'process') and audio_source.process:
             try:
-                song_info.process.kill()
+                audio_source.process.kill()
             except Exception as e:
                 logger.warning(f"[{guild_id}] Failed to kill FFmpeg process: {e}")
                 
@@ -2592,7 +2592,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             logger.error(f'Error after playing in guild {guild_id}: {error}')
             
         if not music_player.voice_client or not music_player.voice_client.is_connected():
-            logger.info(f"[{guild_id}] after_playing: Canceling next play_audio call because the voice client is no longer connected.")
+            logger.info(f"[{guild_id}] after_playing: Canceling next play_audio call because voice client is disconnected.")
             return
 
         if music_player.is_reconnecting:
@@ -2603,7 +2603,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             music_player.seek_info = None
             await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=True)
             return
-
+        
         if not song_info:
             await play_audio(guild_id, is_a_loop=False)
             return
@@ -2726,130 +2726,33 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in AUDIO_FILTERS]) if active_filters else ""
         music_player.active_filter = filter_chain if filter_chain else None
         
+        # --- START OF THE METADATA FIX ---
+        # We now fetch full metadata BEFORE sending the "Now Playing" message.
+        # This ensures we always have the correct title and thumbnail.
         audio_url = None
         if music_player.current_info.get('source_type') == 'file':
             audio_url = music_player.current_url
-            music_player.current_info['webpage_url'] = None
         else:
-            ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
-
+            ydl_opts_play = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
             try:
-                original_track_info = music_player.current_info.copy()
+                # Extract full info for the current track
                 full_playback_info = await extract_info_async(ydl_opts_play, music_player.current_url)
-                final_info = {**original_track_info, **full_playback_info}
                 
-                new_title = full_playback_info.get("title", "")
-                if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
-                    final_info["title"] = original_track_info["title"]
-
-                music_player.current_info = final_info
-                audio_url = final_info["url"] 
-                music_player.is_current_live = final_info.get('is_live', False) or final_info.get('live_status') == 'is_live'
-
-            except yt_dlp.utils.DownloadError as e:
-                if music_player.text_channel:
-                    try:
-                        is_kawaii = get_mode(guild_id)
-                        emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
-                        embed = Embed(title=f'{emoji} Playback Failed', description=get_messages(desc_key, guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-                        embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
-                        await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
-                    except discord.Forbidden: pass
-                music_player.current_task = bot.loop.create_task(play_audio(guild_id))
+                # Update the player's current_info with the complete data
+                music_player.current_info.update(full_playback_info)
+                
+                audio_url = full_playback_info.get("url") 
+                music_player.is_current_live = full_playback_info.get('is_live', False) or full_playback_info.get('live_status') == 'is_live'
+            except Exception as e:
+                logger.error(f"[{guild_id}] Critical error extracting direct media URL for {music_player.current_url}: {e}")
+                await after_playing(e, None, music_player.current_info)
                 return
-        
+
         if not audio_url:
-            music_player.current_task = bot.loop.create_task(play_audio(guild_id))
+            await after_playing(Exception("Could not retrieve a valid audio URL."), None, music_player.current_info)
             return
-        
-        # --- START OF DEFINITIVE FFMPEG PROCESS CREATION ---
-        
-        # 1. Base FFmpeg command
-        ffmpeg_command = ['ffmpeg']
-        
-        # 2. Add priority commands for Linux (Ubuntu)
-        if platform.system() == "Linux":
-            # 'nice' is a command that runs another command with a modified priority
-            ffmpeg_command = ['nice', '-n', '-19'] + ffmpeg_command
-
-        # 3. Add input options (before the -i flag)
-        before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" if not music_player.current_info.get('source_type') == 'file' else ""
-        if seek_time > 0:
-            before_options = f"-ss {seek_time} {before_options}".strip()
-        if before_options:
-            ffmpeg_command.extend(shlex.split(before_options))
-
-        # 4. Add the input source
-        ffmpeg_command.extend(['-i', audio_url])
-        
-        # 5. Add output options (after the -i flag)
-        output_options = "-vn"
-        if music_player.active_filter:
-            output_options += f" -af \"{music_player.active_filter}\""
-        ffmpeg_command.extend(shlex.split(output_options))
-        
-        # 6. Add final arguments for piping raw audio to discord.py
-        ffmpeg_command.extend(['-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1'])
-
-        # 7. Create platform-specific Popen arguments
-        popen_kwargs = {}
-        if platform.system() == "Windows":
-            # HIGH_PRIORITY_CLASS is a flag for the process creation function on Windows
-            popen_kwargs['creationflags'] = subprocess.HIGH_PRIORITY_CLASS
-
-        # 8. Create the subprocess manually
-        try:
-            ffmpeg_process = subprocess.Popen(
-                ffmpeg_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                **popen_kwargs
-            )
-            logger.info(f"[{guild_id}] Launched FFmpeg process (PID: {ffmpeg_process.pid}) with command: {' '.join(ffmpeg_command)}")
-        except FileNotFoundError:
-            logger.error("ffmpeg was not found.")
-            await music_player.text_channel.send("Error: FFmpeg executable not found. Please ensure it is installed and in your system's PATH.")
-            return
-        except Exception as e:
-            logger.error(f"Failed to launch FFmpeg: {e}")
-            await handle_playback_error(guild_id, e)
-            return
-
-        # 9. Create a PCMAudio source from the process's standard output
-        source = discord.PCMAudio(ffmpeg_process.stdout)
-        
-        # 10. Attach the process to the source object so we can manage it later
-        source.process = ffmpeg_process
-        
-        # --- END OF DEFINITIVE FFMPEG PROCESS CREATION ---
-
-        info_for_after = source
-        callback = lambda e: bot.loop.create_task(after_playing(e, info_for_after))
-        
-        try:
-            if music_player.voice_client and not music_player.voice_client.is_playing():
-                 music_player.voice_client.play(source, after=callback)
-            else:
-                logger.warning(f"[{guild_id}] Race condition detected in play_audio. Ignored redundant play call.")
-                source.process.kill() # Clean up the process we created
-                return
-        
-        except discord.errors.ClientException as e:
-            if "Already playing audio" in str(e):
-                logger.warning(f"[{guild_id}] Gracefully handled 'Already playing audio' exception.")
-                source.process.kill() # Clean up the process we created
-                return
-            else:
-                await handle_playback_error(guild_id, e)
-                return
-
-        music_player.start_time = seek_time
-        music_player.playback_started_at = time.time()
-        
-        if music_player.suppress_next_now_playing:
-            music_player.suppress_next_now_playing = False  
-        
-        elif not is_a_loop and seek_time == 0:
+            
+        if not is_a_loop and seek_time == 0 and not music_player.suppress_next_now_playing:
             is_kawaii = get_mode(guild_id)
             title = music_player.current_info.get("title", "Unknown Title")
             
@@ -2876,10 +2779,71 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                     logger.warning(f"Failed to send 'Now Playing' message to guild {guild_id}: Missing Permissions.")
                 except Exception as e:
                     logger.error(f"Failed to send 'Now Playing' message to guild {guild_id}: {e}")
+        
+        if music_player.suppress_next_now_playing:
+            music_player.suppress_next_now_playing = False
+        # --- END OF THE METADATA FIX ---
+        
+        command_and_args = ["ffmpeg"]
+        if platform.system() == "Linux":
+            command_and_args = ['nice', '-n', '-19'] + command_and_args
 
+        before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" if not music_player.current_info.get('source_type') == 'file' else ""
+        if seek_time > 0:
+            before_options = f"-ss {seek_time} {before_options}".strip()
+        if before_options:
+            command_and_args.extend(shlex.split(before_options))
+
+        command_and_args.extend(['-i', audio_url])
+        
+        output_options = "-vn"
+        if music_player.active_filter:
+            output_options += f" -af \"{music_player.active_filter}\""
+        command_and_args.extend(shlex.split(output_options))
+
+        command_and_args.extend(['-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1'])
+
+        popen_kwargs = {}
+        if platform.system() == "Windows":
+            popen_kwargs['creationflags'] = subprocess.HIGH_PRIORITY_CLASS
+
+        try:
+            ffmpeg_process = subprocess.Popen(command_and_args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **popen_kwargs)
+            logger.info(f"[{guild_id}] Launched FFmpeg process (PID: {ffmpeg_process.pid})")
+        except Exception as e:
+            logger.error(f"Failed to launch FFmpeg: {e}")
+            await handle_playback_error(guild_id, e)
+            return
+
+        source = discord.PCMAudio(ffmpeg_process.stdout)
+        source.process = ffmpeg_process
+        
+        info_for_after = music_player.current_info.copy()
+        callback = lambda e: bot.loop.create_task(after_playing(e, source, info_for_after))
+        
+        try:
+            if music_player.voice_client and not music_player.voice_client.is_playing():
+                 music_player.voice_client.play(source, after=callback)
+            else:
+                logger.warning(f"[{guild_id}] Race condition detected. Ignored redundant play call.")
+                source.process.kill()
+                return
+        
+        except discord.errors.ClientException as e:
+            if "Already playing audio" in str(e):
+                logger.warning(f"[{guild_id}] Gracefully handled 'Already playing audio' exception.")
+                source.process.kill()
+                return
+            else:
+                await handle_playback_error(guild_id, e)
+                return
+
+        music_player.start_time = seek_time
+        music_player.playback_started_at = time.time()
+        
     except Exception as e:
         await handle_playback_error(guild_id, e)
-
+                                                                        
 async def update_karaoke_task(guild_id: int):
     """Background task for karaoke mode, manages filters and speed."""
     music_player = get_player(guild_id)
