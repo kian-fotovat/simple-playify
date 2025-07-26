@@ -1260,7 +1260,7 @@ class QueueView(View):
             tracks_to_hydrate = [track for track in tracks_on_page if (not track.get('title') or track.get('title') == 'Unknown Title') and not track.get('source_type') == 'file']
             
             if tracks_to_hydrate:
-                tasks = [fetch_meta(track['url'], extract_info_async) for track in tracks_to_hydrate]
+                tasks = [fetch_meta(track['url'], None) for track in tracks_to_hydrate]
                 hydrated_results = await asyncio.gather(*tasks)
                 hydrated_map = {res['url']: res for res in hydrated_results if res}
                 for track in tracks_on_page:
@@ -1398,7 +1398,7 @@ class RemoveView(View):
         
         if tracks_to_hydrate:
             logger.info(f"RemoveView: Hydrating {len(tracks_to_hydrate)} tracks for page {self.current_page + 1}")
-            tasks = [fetch_meta(track['url'], extract_info_async) for track in tracks_to_hydrate]
+            tasks = [fetch_meta(track['url'], None) for track in tracks_to_hydrate]
             hydrated_results = await asyncio.gather(*tasks)
             hydrated_map = {res['url']: res for res in hydrated_results if res}
             for track in tracks_on_page:
@@ -1683,7 +1683,7 @@ async def background_queue_hydrator(guild_id: int):
             # If the title is missing or is the default placeholder, fetch it
             if not item.get('title') or item.get('title') == 'Unknown Title':
                 try:
-                    hydrated_data = await fetch_meta(item['url'], extract_info_async)
+                    hydrated_data = await fetch_meta(item['url'], None)
                     if hydrated_data:
                         # Update the original dictionary object in the queue directly
                         item['title'] = hydrated_data.get('title', 'Unknown Title')
@@ -2591,17 +2591,6 @@ def sanitize_query(query):
     query = re.sub(r'\s+', ' ', query).strip()  # Normalize spaces
     return query
 
-# Async yt-dlp info extraction
-async def extract_info_async(ydl_opts, query, loop=None):
-    if loop is None:
-        loop = asyncio.get_running_loop()
-
-    def extract():
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            return ydl.extract_info(query, download=False)
-
-    return await loop.run_in_executor(None, extract)
-
 # YouTube Mix and SoundCloud Stations utilities
 def get_video_id(url):
     parsed = urlparse(url)
@@ -2819,7 +2808,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                             mix_playlist_url = get_mix_playlist_url(seed_url)
                             if mix_playlist_url:
                                 try:
-                                    info = await extract_info_async({"extract_flat": True, "quiet": True, "noplaylist": False}, mix_playlist_url)
+                                    info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, mix_playlist_url)
                                     if info.get("entries"):
                                         current_video_id = get_video_id(seed_url)
                                         for entry in info["entries"]:
@@ -2831,7 +2820,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                             station_url = get_soundcloud_station_url(track_id)
                             if station_url:
                                 try:
-                                    info = await extract_info_async({"extract_flat": True, "quiet": True, "noplaylist": False}, station_url)
+                                    info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, station_url)
                                     if info.get("entries") and len(info.get("entries")) > 1:
                                         for entry in info["entries"][1:]:
                                             if entry: await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
@@ -2873,7 +2862,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             ydl_opts_play = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
             try:
                 # Extract full info for the current track
-                full_playback_info = await extract_info_async(ydl_opts_play, music_player.current_url)
+                full_playback_info = await run_ydl_with_low_priority(ydl_opts_play, music_player.current_url)
                 
                 # Update the player's current_info with the complete data
                 music_player.current_info.update(full_playback_info)
