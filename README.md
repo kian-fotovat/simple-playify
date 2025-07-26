@@ -53,7 +53,7 @@ Type `/play <url or query>` and let the music flow~
 ## (≧◡≦) Key Features
 
 * Play from **10+ sources**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music • **Direct Audio Links** • **Local Files**
-* Slash commands: `/play`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
+* Slash commands: `/play`, `/search`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
 * **Play Local Files**: Directly upload and play your own audio/video files.
 * **Direct Audio Links**: Stream music directly from any audio URL (MP3, FLAC, WAV, etc.)
 * **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
@@ -126,11 +126,12 @@ Type `/play <url or query>` and let the music flow~
 | Command | Description |
 | :--- | :--- |
 | `/play <url/query>` | Add a song or playlist from a link/search. Supports direct audio links! |
+| `/search <query>` | Searches for a song and lets you choose from the top results. |
 | `/play-files <file1...>` | Play one or more uploaded audio/video files. |
 | `/playnext <query/file>` | Add a song or local file to the front of the queue. |
 | `/pause` | Pause playback. |
 | `/resume` | Resume playback. |
-| `/skip` | Skip the current track. |
+| `/skip` | Skip the current track. Replays the song if loop is enabled. |
 | `/stop` | Stop playback, clear queue, and disconnect. |
 | `/nowplaying` | Display the current track's information. |
 | `/queue` | Show the current song queue with interactive pages. |
