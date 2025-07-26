@@ -633,6 +633,30 @@ messages = {
         "normal": "Restarting [{title}]({url}) from the beginning.",
         "kawaii": "Let's listen to [{title}]({url}) one more time!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
     },
+    "search_results_title": {
+        "normal": "🔎 Search Results",
+        "kawaii": "🔎 I found these for you!~"
+    },
+    "search_results_description": {
+        "normal": "Please select a song from the dropdown menu below to add it to the queue.",
+        "kawaii": "Pick one, pick one! ( ´ ▽ ` )ﾉ"
+    },
+    "search_placeholder": {
+        "normal": "Choose a song to add...",
+        "kawaii": "Which one do you want?~ ♡"
+    },
+    "search_no_results": {
+        "normal": "Sorry, I couldn't find any results for **{query}**.",
+        "kawaii": "Aww, I couldn't find anything for **{query}**... (｡•́︿•̀｡)"
+    },
+    "search_selection_made": {
+        "normal": "*Your selection has been added to the queue.*",
+        "kawaii": "*Okay! I added it!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧*"
+    },
+    "search_song_added": {
+        "normal": "✅ Added to Queue",
+        "kawaii": "✅ Added!~"
+    },
 }
 
 # --- Discord Bot Initialization ---
@@ -703,6 +727,98 @@ class MusicPlayer:
         self.is_playing_silence = False
 
 # --- Discord UI Classes (Views & Modals) ---
+
+class SearchSelect(discord.ui.Select):
+    """ The dropdown menu component for the /search command. """
+    def __init__(self, search_results: list, guild_id: int):
+        self.is_kawaii = get_mode(guild_id)
+        
+        options = []
+        for i, video in enumerate(search_results):
+            options.append(discord.SelectOption(
+                label=video.get('title', 'Unknown Title')[:100],
+                description=f"by {video.get('uploader', 'Unknown Artist')}"[:100],
+                # We store the URL in the value to fetch it later
+                value=video.get('webpage_url', video.get('url')),
+                emoji="🎵"
+            ))
+
+        super().__init__(
+            placeholder=get_messages("search_placeholder", guild_id),
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        """ This is called when the user selects a song. """
+        guild_id = interaction.guild_id
+        is_kawaii = get_mode(guild_id)
+        music_player = get_player(guild_id)
+        
+        selected_url = self.values[0]
+        
+        # --- START OF THE FIX ---
+        
+        # 1. Disable the dropdown immediately to give user feedback.
+        self.disabled = True
+        self.placeholder = get_messages("search_selection_made", guild_id)
+        await interaction.response.edit_message(view=self.view)
+
+        try:
+            # 2. Fetch the FULL metadata for the selected song.
+            ydl_opts_full = {
+                "format": "bestaudio/best",
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+            }
+            video_info = await run_ydl_with_low_priority(ydl_opts_full, selected_url)
+
+            if not video_info:
+                raise Exception("Could not retrieve video information.")
+
+            # 3. Create a COMPLETE queue item with the real title and thumbnail.
+            queue_item = {
+                'url': video_info.get("webpage_url", video_info.get("url")),
+                'title': video_info.get('title', 'Unknown Title'), # The REAL title
+                'webpage_url': video_info.get("webpage_url", video_info.get("url")),
+                'thumbnail': video_info.get('thumbnail'),
+                'is_single': True
+            }
+            await music_player.queue.put(queue_item)
+
+            # 4. Send a much nicer confirmation message.
+            embed = Embed(
+                title=get_messages("song_added", guild_id),
+                description=f"[{video_info.get('title', 'Unknown Title')}]({queue_item['webpage_url']})",
+                color=0xB5EAD7 if is_kawaii else discord.Color.blue()
+            )
+            if video_info.get("thumbnail"):
+                embed.set_thumbnail(url=video_info["thumbnail"])
+            if is_kawaii:
+                embed.set_footer(text="☆⌒(≧▽° )")
+            
+            # Use followup.send because we already responded by editing the message.
+            await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
+
+            # 5. Start the player if it isn't already running.
+            if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
+                music_player.current_task = asyncio.create_task(play_audio(guild_id))
+
+        except Exception as e:
+            logger.error(f"Error adding track from /search selection: {e}")
+            error_embed = Embed(
+                description="Sorry, an error occurred while trying to add that song.",
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            await interaction.followup.send(embed=error_embed, silent=SILENT_MESSAGES, ephemeral=True)
+                    
+class SearchView(View):
+    """ The view that holds the SearchSelect dropdown. """
+    def __init__(self, search_results: list, guild_id: int):
+        super().__init__(timeout=300.0)
+        self.add_item(SearchSelect(search_results, guild_id))
 
 class LyricsView(View):
     def __init__(self, pages: list, original_embed: Embed):
@@ -1325,34 +1441,55 @@ def ydl_worker(ydl_opts, query):
     """
     This function runs in a separate process.
     It changes its own priority and performs the yt-dlp extraction.
+    It now handles exceptions internally to avoid pickling errors.
     """
     # Change the priority of the current process
     p = psutil.Process()
     if platform.system() == "Windows":
         p.nice(psutil.IDLE_PRIORITY_CLASS)
     else:
-        os.nice(19)
+        # A niceness value of 19 is the lowest priority
+        os.nice(19) 
     
-    # Execute the heavy task
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(query, download=False)
+    try:
+        # Execute the heavy task
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            result = ydl.extract_info(query, download=False)
+        # On success, return a dictionary indicating success and the data
+        return {'status': 'success', 'data': result}
+    except Exception as e:
+        # On failure, return a dictionary indicating error and the error message string
+        # This prevents trying to pickle the entire exception object.
+        return {'status': 'error', 'message': str(e)}
 
 async def run_ydl_with_low_priority(ydl_opts, query, loop=None):
     """
-    Sends the yt-dlp task to the process pool for isolated, 
-    low-priority execution.
+    Sends the yt-dlp task to the process pool.
+    It now checks the result from the worker and re-raises exceptions
+    in the main process to be handled by the command's error handlers.
     """
     if loop is None:
         loop = asyncio.get_running_loop()
 
-    # Call our new ydl_worker function in the process pool
-    return await loop.run_in_executor(
+    # Call our modified ydl_worker function
+    result_dict = await loop.run_in_executor(
         process_pool, 
-        ydl_worker, # The function to execute
-        ydl_opts,   # The first argument for ydl_worker
-        query       # The second argument for ydl_worker
+        ydl_worker, 
+        ydl_opts,   
+        query       
     )
 
+    # Check the status returned by the worker
+    if result_dict.get('status') == 'error':
+        # If the worker caught an error, we re-raise it here in the main process.
+        # This allows our command's try/except blocks to catch it properly.
+        error_message = result_dict.get('message', 'Unknown error in subprocess')
+        # We use DownloadError as it's a common yt-dlp exception type.
+        raise yt_dlp.utils.DownloadError(error_message)
+    
+    # If the status is 'success', return the data as before.
+    return result_dict.get('data')
+    
 async def play_silence_loop(guild_id: int):
     """
     Plays a silent looping sound generated by FFmpeg to keep the voice connection active.
@@ -4456,12 +4593,14 @@ async def filter_command(interaction: discord.Interaction):
     # KEY CHANGE: "ephemeral=True" is removed to make the message public
     await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, view=view)
 
-# /pause command
 @bot.tree.command(name="pause", description="Pause the current playback")
 async def pause(interaction: discord.Interaction):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
         return
+
+    # Defer the interaction immediately
+    await interaction.response.defer()
 
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
@@ -4470,25 +4609,25 @@ async def pause(interaction: discord.Interaction):
     voice_client = await ensure_voice_connection(interaction)
 
     if voice_client and voice_client.is_playing():
-        # --- TIMER MANAGEMENT ---
         if music_player.playback_started_at:
             elapsed_since_play = time.time() - music_player.playback_started_at
             music_player.start_time += elapsed_since_play * music_player.playback_speed
             music_player.playback_started_at = None
-        # --- END TIMER MANAGEMENT ---
             
         voice_client.pause()
         embed = Embed(
             description=get_messages("pause", guild_id),
             color=0xFFB7B2 if is_kawaii else discord.Color.orange()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
+        # Use followup.send because we deferred
+        await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_playback", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+        # Use followup.send because we deferred
+        await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
 # /resume command
 @bot.tree.command(name="resume", description="Resume the playback")
@@ -4497,6 +4636,9 @@ async def resume(interaction: discord.Interaction):
         await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
         return
 
+    # Defer the interaction immediately
+    await interaction.response.defer()
+
     guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
@@ -4504,23 +4646,23 @@ async def resume(interaction: discord.Interaction):
     voice_client = await ensure_voice_connection(interaction)
 
     if voice_client and voice_client.is_paused():
-        # --- TIMER MANAGEMENT ---
         if music_player.playback_started_at is None:
             music_player.playback_started_at = time.time()
-        # --- END TIMER MANAGEMENT ---
 
         voice_client.resume()
         embed = Embed(
             description=get_messages("resume", guild_id),
             color=0xB5EAD7 if is_kawaii else discord.Color.green()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
+        # Use followup.send because we deferred
+        await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
     else:
         embed = Embed(
             description=get_messages("no_paused", guild_id),
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
+        # Use followup.send because we deferred
+        await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
 # /skip command
 @bot.tree.command(name="skip", description="Skip to the next song")
@@ -5112,6 +5254,73 @@ async def remove(interaction: discord.Interaction):
     )
     
     await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
+
+# --- ADD THIS NEW SLASH COMMAND TO YOUR 'playify.py' FILE ---
+
+@bot.tree.command(name="search", description="Searches for a song and lets you choose from the top results.")
+@app_commands.describe(query="The name of the song to search for.")
+async def search(interaction: discord.Interaction, query: str):
+    """
+    Searches YouTube for a query and presents the top 5 results in a dropdown
+    for the user to choose from.
+    """
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
+    await interaction.response.defer()
+    
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+
+    voice_client = await ensure_voice_connection(interaction)
+    if not voice_client:
+        return
+
+    try:
+        logger.info(f"[{guild_id}] Executing /search for: '{query}'")
+        
+        # We search for the top 5 results.
+        ydl_opts_search = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": True, # Fast way to get metadata
+            "noplaylist": True,
+            "no_color": True,
+            "socket_timeout": 10,
+        }
+        
+        sanitized_query = sanitize_query(query)
+        search_query = f"ytsearch5:{sanitized_query}" # Search for 5 results
+        info = await run_ydl_with_low_priority(ydl_opts_search, search_query)
+
+        search_results = info.get("entries", [])
+        if not search_results:
+            embed = Embed(
+                description=get_messages("search_no_results", guild_id).format(query=query),
+                color=0xFF9AA2 if is_kawaii else discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES, ephemeral=True)
+            return
+
+        # Create the interactive view and the initial embed.
+        view = SearchView(search_results, guild_id)
+        embed = Embed(
+            title=get_messages("search_results_title", guild_id),
+            description=get_messages("search_results_description", guild_id),
+            color=0xC7CEEA if is_kawaii else discord.Color.blue()
+        )
+        
+        await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
+
+    except Exception as e:
+        logger.error(f"Error during /search for '{query}': {e}", exc_info=True)
+        embed = Embed(
+            description=get_messages("search_error", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
 
 # ==============================================================================
 # 6. DISCORD EVENTS
