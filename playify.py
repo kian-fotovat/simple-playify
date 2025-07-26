@@ -1648,10 +1648,10 @@ def get_full_opts():
         "socket_timeout": 10,
     }
 
-async def fetch_meta(url, extract_info_async):
+async def fetch_meta(url, _):
     """Fetches metadata for a single URL, used for queue hydration."""
     try:
-        data = await extract_info_async(get_full_opts(), url)
+        data = await run_ydl_with_low_priority(get_full_opts(), url)
         # We return a dictionary in the same format as our queue items
         return {
             'url': url,
