@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -386,12 +385,6 @@ transition: opacity 0.6s ease, transform 0.6s ease;
 opacity: 1;
 transform: translateY(0);
 }
-.delay-1 {
-transition-delay: 0.2s;
-}
-.delay-2 {
-transition-delay: 0.4s;
-}
 .particles-js-canvas-el {
 position: absolute;
 top: 0;
@@ -473,32 +466,41 @@ left: 0;
       <p class="command-desc">Resumes the paused song.</p>
     </div>
     <div class="command-row">
-      <div class="command-icon">
-        <i class="fas fa-stop"></i>
+        <div class="command-icon">
+          <i class="fas fa-forward"></i>
+        </div>
+        <div class="command-name">
+          <h3 class="command-title">/skip</h3>
+        </div>
+        <p class="command-desc">Skips to the next song in the queue. Replays the current song if loop is enabled.</p>
       </div>
-      <div class="command-name">
-        <h3 class="command-title">/stop</h3>
+      <div class="command-row">
+        <div class="command-icon">
+          <i class="fas fa-stop"></i>
+        </div>
+        <div class="command-name">
+          <h3 class="command-title">/stop</h3>
+        </div>
+        <p class="command-desc">Stops playback and disconnects the bot.</p>
       </div>
-      <p class="command-desc">Stops playback and disconnects the bot.</p>
-    </div>
-    <div class="command-row">
-      <div class="command-icon">
-        <i class="fas fa-music"></i>
+      <div class="command-row">
+        <div class="command-icon">
+          <i class="fas fa-music"></i>
+        </div>
+        <div class="command-name">
+          <h3 class="command-title">/nowplaying</h3>
+        </div>
+        <p class="command-desc">Shows the currently playing song.</p>
       </div>
-      <div class="command-name">
-        <h3 class="command-title">/nowplaying</h3>
+      <div class="command-row">
+        <div class="command-icon">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="command-name">
+          <h3 class="command-title">/seek</h3>
+        </div>
+        <p class="command-desc">Opens an interactive menu to rewind, fast-forward, or jump to a specific time.</p>
       </div>
-      <p class="command-desc">Shows the currently playing song.</p>
-    </div>
-     <div class="command-row">
-      <div class="command-icon">
-        <i class="fas fa-forward"></i>
-      </div>
-      <div class="command-name">
-        <h3 class="command-title">/skip</h3>
-      </div>
-      <p class="command-desc">Skips to the next song in the queue. Replays the current song if loop is enabled.</p>
-    </div>
   </div>
 </div>
 
