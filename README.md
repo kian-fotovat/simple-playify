@@ -119,6 +119,8 @@ Type `/play <url or query>` and let the music flow~
    * Generate invite link with: Connect, Speak, Send Messages
    * Add the bot and enjoy `/play`!
 
+---
+
 <a id="command-reference"></a>
 
 ## (⊙‿⊙) Command Reference
@@ -134,6 +136,7 @@ Type `/play <url or query>` and let the music flow~
 | `/skip` | Skip the current track. Replays the song if loop is enabled. |
 | `/stop` | Stop playback, clear queue, and disconnect. |
 | `/nowplaying` | Display the current track's information. |
+| `/seek` | Opens an interactive menu to seek, fast-forward, or rewind. |
 | `/queue` | Show the current song queue with interactive pages. |
 | `/remove` | Open a menu to remove specific songs from the queue. |
 | `/shuffle` | Shuffle the queue. |
