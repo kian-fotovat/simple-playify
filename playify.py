@@ -1716,7 +1716,7 @@ def parse_time(time_str: str) -> int | None:
         
     return seconds
 
-def ydl_worker(ydl_opts, query):
+def ydl_worker(ydl_opts, query, cookies_file=None):
     """
     This function runs in a separate process.
     It changes its own priority and performs the yt-dlp extraction.
@@ -1729,6 +1729,9 @@ def ydl_worker(ydl_opts, query):
     else:
         # A niceness value of 19 is the lowest priority
         os.nice(19) 
+
+    if cookies_file and os.path.exists(cookies_file):
+        ydl_opts['cookiefile'] = cookies_file
     
     try:
         # Execute the heavy task
@@ -1741,32 +1744,43 @@ def ydl_worker(ydl_opts, query):
         # This prevents trying to pickle the entire exception object.
         return {'status': 'error', 'message': str(e)}
 
-async def run_ydl_with_low_priority(ydl_opts, query, loop=None):
+async def run_ydl_with_low_priority(ydl_opts, query, loop=None, use_cookies=False):
     """
     Sends the yt-dlp task to the process pool.
-    It now checks the result from the worker and re-raises exceptions
-    in the main process to be handled by the command's error handlers.
+    It can now optionally pick a random cookie file from a pool.
     """
     if loop is None:
         loop = asyncio.get_running_loop()
+    
+    cookies_file_to_use = None
+    if use_cookies:
+        cookie_files = ["cookies_1.txt", "cookies_2.txt", "cookies_3.txt"]
+        
+        chosen_cookie_file = random.choice(cookie_files)
+        
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cookies_file_to_use = os.path.join(script_dir, chosen_cookie_file)
+        
+        logger.info(f"Cookie strategy enabled. Using: {chosen_cookie_file}")
+        
+        # Vérifier que le fichier choisi existe
+        if not os.path.exists(cookies_file_to_use):
+            logger.error(f"Cookie file {cookies_file_to_use} not found! Aborting cookie use for this request.")
+            cookies_file_to_use = None 
 
-    # Call our modified ydl_worker function
+    # On passe le chemin du cookie (ou None) au worker
     result_dict = await loop.run_in_executor(
         process_pool, 
         ydl_worker, 
         ydl_opts,   
-        query       
+        query,
+        cookies_file_to_use
     )
 
-    # Check the status returned by the worker
     if result_dict.get('status') == 'error':
-        # If the worker caught an error, we re-raise it here in the main process.
-        # This allows our command's try/except blocks to catch it properly.
         error_message = result_dict.get('message', 'Unknown error in subprocess')
-        # We use DownloadError as it's a common yt-dlp exception type.
         raise yt_dlp.utils.DownloadError(error_message)
     
-    # If the status is 'success', return the data as before.
     return result_dict.get('data')
     
 async def play_silence_loop(guild_id: int):
@@ -3033,9 +3047,31 @@ async def handle_playback_error(guild_id: int, error: Exception):
         music_players[guild_id] = MusicPlayer()
         logger.info(f"Player for guild {guild_id} has been reset and disconnected due to a critical error.")
 
-# ==============================================================================
-# 4. CORE AUDIO & PLAYBACK LOGIC
-# ==============================================================================
+async def fetch_video_info_with_retry(query, ydl_opts_override=None):
+    """
+    Fetches video info, automatically retrying with cookies if a restriction is detected.
+    This centralizes the "No Cookies by Default" logic.
+    """
+    base_ydl_opts = {
+        "format": "bestaudio/best",
+        "quiet": True,
+        "no_warnings": True,
+        "no_color": True,
+        "socket_timeout": 10,
+    }
+    
+    ydl_opts = {**base_ydl_opts, **(ydl_opts_override or {})}
+
+    try:
+        logger.info(f"Fetching info for '{query}' without cookies...")
+        return await run_ydl_with_low_priority(ydl_opts, query, use_cookies=False)
+    except yt_dlp.utils.DownloadError as e:
+        error_str = str(e).lower()
+        if "sign in" in error_str or "age-restricted" in error_str or "confirm you're not a bot" in error_str:
+            logger.warning(f"Restriction detected for '{query}'. Retrying with cookies.")
+            return await run_ydl_with_low_priority(ydl_opts, query, use_cookies=True)
+        else:
+            raise e
 
 async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     music_player = get_player(guild_id)
@@ -3189,13 +3225,49 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             audio_url = music_player.current_url
             music_player.current_info['webpage_url'] = None
         else:
-            ydl_opts_play = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
-
+            # --- STRATÉGIE N°1 : NO COOKIES BY DEFAULT ---
+            full_playback_info = None
+            try:
+                # --- Tentative n°1 : SANS cookies ---
+                logger.info(f"[{guild_id}] Attempting to fetch URL without cookies...")
+                ydl_opts_nocookies = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
+                # On appelle la fonction avec use_cookies=False (valeur par défaut)
+                full_playback_info = await run_ydl_with_low_priority(ydl_opts_nocookies, music_player.current_url)
+                logger.info(f"[{guild_id}] Success without cookies.")
+                
+            except yt_dlp.utils.DownloadError as e:
+                error_str = str(e).lower()
+                # Si l'erreur est une demande de connexion, on réessaie AVEC les cookies
+                if "sign in" in error_str or "age-restricted" in error_str or "confirm you're not a bot" in error_str:
+                    logger.warning(f"[{guild_id}] Fetch failed, restriction detected. Retrying with cookies...")
+                    try:
+                        # --- Tentative n°2 : AVEC un cookie au hasard ---
+                        ydl_opts_cookies = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
+                        # On appelle la fonction en activant la stratégie du pool de cookies
+                        full_playback_info = await run_ydl_with_low_priority(ydl_opts_cookies, music_player.current_url, use_cookies=True)
+                        logger.info(f"[{guild_id}] Success with cookies.")
+                    except yt_dlp.utils.DownloadError as e2:
+                        # Si même avec les cookies ça échoue, on abandonne et on signale l'erreur
+                        logger.error(f"[{guild_id}] Fetch failed even with cookies: {e2}")
+                        raise e2 # On relance l'exception pour que le reste du code la gère
+                else:
+                    # Si c'était une autre erreur (vidéo privée, indisponible...), on abandonne directement
+                    raise e
+            
+            # Le reste de votre code qui traite full_playback_info ne change pas.
+            # Il doit être dans un try/except pour gérer le cas où full_playback_info est resté None.
             try:
                 original_track_info = music_player.current_info.copy()
-                # Note: Replaced with your optimized function
-                full_playback_info = await run_ydl_with_low_priority(ydl_opts_play, music_player.current_url)
                 final_info = {**original_track_info, **full_playback_info}
+                
+                new_title = full_playback_info.get("title", "")
+                if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
+                    final_info["title"] = original_track_info["title"]
+
+                music_player.current_info = final_info
+                audio_url = final_info["url"] 
+                music_player.is_current_live = final_info.get('is_live', False) or final_info.get('live_status') == 'is_live'
+            # Le bloc 'except yt_dlp.utils.DownloadError as e:' qui suit ne change pas.
                 
                 new_title = full_playback_info.get("title", "")
                 if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
@@ -3537,21 +3609,18 @@ async def play(interaction: discord.Interaction, query: str):
                 logger.info(f"Cache hit for {cache_key}")
                 return cache_key, url_cache[cache_key], track_name, artist_name
 
-            ydl_opts_search = {
-                "format": "bestaudio/best",
-                "quiet": True,
-                "no_warnings": True,
+            # On définit les options spécifiques à la recherche une seule fois
+            ydl_opts_override = {
                 "extract_flat": True,
                 "noplaylist": True,
-                "no_color": True,
-                "socket_timeout": 10,
             }
 
-            search_query = f"ytsearch:{sanitized_query}"
-            info = await run_ydl_with_low_priority(ydl_opts_search, search_query)
+            # Tentative 1 : Recherche avec le nom complet
+            search_query_full = f"ytsearch:{sanitized_query}"
+            info_full = await fetch_video_info_with_retry(search_query_full, ydl_opts_override)
 
-            if "entries" in info and info["entries"]:
-                for entry in info["entries"][:3]:
+            if "entries" in info_full and info_full["entries"]:
+                for entry in info_full["entries"][:3]:
                     try:
                         video_url = entry["url"]
                         video_title = entry.get("title", "Unknown Title")
@@ -3563,16 +3632,18 @@ async def play(interaction: discord.Interaction, query: str):
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_query}")
 
+            # Tentative 2 (Fallback) : Recherche avec le titre seul
             sanitized_track = sanitize_query(track_name)
             logger.info(f"Fallback search: {sanitized_track}")
-            search_query = f"ytsearch:{sanitized_track}"
-            info = await run_ydl_with_low_priority(ydl_opts_search, search_query)
-            if "entries" in info and info["entries"]:
-                for entry in info["entries"][:3]:
+            search_query_track = f"ytsearch:{sanitized_track}"
+            info_track = await fetch_video_info_with_retry(search_query_track, ydl_opts_override)
+
+            if "entries" in info_track and info_track["entries"]:
+                for entry in info_track["entries"][:3]:
                     try:
                         video_url = entry["url"]
                         video_title = entry.get("title", "Unknown Title")
-                        logger.info(f"Found YouTube URL: {video_url} (Title: {video_title})")
+                        logger.info(f"Found YouTube URL via fallback: {video_url} (Title: {video_title})")
                         url_cache[cache_key] = video_url
                         return cache_key, video_url, track_name, artist_name
                     except Exception as e:
@@ -3580,24 +3651,8 @@ async def play(interaction: discord.Interaction, query: str):
                         continue
                 logger.warning(f"No accessible videos in top results for {sanitized_track}")
 
-            sanitized_artist = sanitize_query(artist_name)
-            logger.info(f"Fallback search: {sanitized_artist}")
-            search_query = f"ytsearch:{sanitized_artist}"
-            info = await run_ydl_with_low_priority(ydl_opts_search, search_query)
-            if "entries" in info and info["entries"]:
-                for entry in info["entries"][:3]:
-                    try:
-                        video_url = entry["url"]
-                        video_title = entry.get("title", "Unknown Title")
-                        logger.info(f"Found YouTube URL: {video_url} (Title: {video_title})")
-                        url_cache[cache_key] = video_url
-                        return cache_key, video_url, track_name, artist_name
-                    except Exception as e:
-                        logger.warning(f"Skipping unavailable video for {sanitized_artist}: {e}")
-                        continue
-                logger.warning(f"No accessible videos in top results for {sanitized_artist}")
-
-            logger.warning(f"No YouTube results for {sanitized_query}, {sanitized_track}, or {sanitized_artist}")
+            # Si tout a échoué, on logue et on retourne None
+            logger.warning(f"No YouTube results for any query variation of '{original_query}'")
             url_cache[cache_key] = None
             return cache_key, None, track_name, artist_name
 
@@ -4222,7 +4277,7 @@ async def play(interaction: discord.Interaction, query: str):
                 "no_color": True,
                 "socket_timeout": 10,
             }
-            info = await run_ydl_with_low_priority(ydl_opts_playlist, query)
+            info = await fetch_video_info_with_retry(query, ydl_opts_override={"extract_flat": True, "noplaylist": False})
 
             if "entries" in info and info["entries"]:
                 tracks_to_add = []
@@ -4401,9 +4456,8 @@ async def play(interaction: discord.Interaction, query: str):
                 logger.info(f"Keyword search detected: {query}")
                 sanitized_query = sanitize_query(query)
                 search_query = f"ytsearch:{sanitized_query}"
-                info = await run_ydl_with_low_priority(ydl_opts_full, search_query)
+                info = await fetch_video_info_with_retry(search_query, ydl_opts_override={"noplaylist": True})
                 video_info = info["entries"][0] if "entries" in info and info["entries"] else None
-
             if not video_info:
                 raise Exception("No results found")
 
@@ -4691,12 +4745,10 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
                     track_name, artist_name = tracks[0]
                     search_query_for_yt = f"{track_name} {artist_name}"
 
-                ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
-                yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
-                search_results = await run_ydl_with_low_priority(ydl_opts, yt_search_term)
-                info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
+                    yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
+                    search_results = await fetch_video_info_with_retry(yt_search_term, ydl_opts_override={"noplaylist": True})
+                    info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
 
-            # --- FIN DE LA NOUVELLE LOGIQUE ---
 
             if not info:
                 raise Exception("Could not find any video or track information.")
@@ -4979,16 +5031,16 @@ async def skip(interaction: discord.Interaction):
         else:
             next_song_info = queue_snapshot[0]
             
-            if not next_song_info.get('thumbnail') and not next_song_info.get('source_type') == 'file':
-                try:
-                    # --- THIS IS THE ONLY LINE THAT CHANGES ---
-                    # We replace the blocking call with our non-blocking, low-priority one.
-                    full_info = await run_ydl_with_low_priority({"format": "bestaudio/best", "quiet": True}, next_song_info['url'])
-                    # --- END OF CHANGE ---
-                    next_song_info['title'] = full_info.get('title', 'Unknown Title')
-                    next_song_info['thumbnail'] = full_info.get('thumbnail')
-                except Exception as e:
-                    logger.error(f"Failed to hydrate track during skip: {e}")
+        if not next_song_info.get('thumbnail') and not next_song_info.get('source_type') == 'file':
+            try:
+                logger.info(f"Hydrating track '{next_song_info.get('title')}' during skip...")
+                full_info = await fetch_video_info_with_retry(next_song_info['url'])
+                
+                next_song_info['title'] = full_info.get('title', next_song_info.get('title', 'Unknown Title'))
+                next_song_info['thumbnail'] = full_info.get('thumbnail')
+                logger.info("Hydration successful.")
+            except Exception as e:
+                logger.error(f"Failed to hydrate track during skip: {e}")
 
             title = next_song_info.get("title", "Unknown Title")
             thumbnail = next_song_info.get("thumbnail")
@@ -5602,7 +5654,7 @@ async def search(interaction: discord.Interaction, query: str):
         
         sanitized_query = sanitize_query(query)
         search_query = f"ytsearch5:{sanitized_query}" # Search for 5 results
-        info = await run_ydl_with_low_priority(ydl_opts_search, search_query)
+        info = await fetch_video_info_with_retry(search_query, ydl_opts_override={"extract_flat": True, "noplaylist": True})
 
         search_results = info.get("entries", [])
         if not search_results:
