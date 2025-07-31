@@ -80,6 +80,8 @@
       padding: 0 10px;
       letter-spacing: 1px;
       transition: all 0.3s ease;
+      cursor: default;
+      user-select: none;
     }
     .logo:hover {
       transform: scale(1.05);
@@ -496,8 +498,14 @@
       word-break: break-word;   /* Coupe si besoin */
       line-height: 1.2;
       padding: 0 10px;
-  }
-}
+    }
+    .nav { padding: 15px 20px; }
+    .logo { font-size: 1.5rem; }
+    }
+    @media (max-width: 480px) {
+      .nav { padding: 12px 15px; }
+      .logo { font-size: 1.3rem; }
+    }
   </style>
 </head>
 <body>
