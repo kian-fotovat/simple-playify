@@ -3807,19 +3807,23 @@ async def play(interaction: discord.Interaction, query: str):
                 await message.edit(embed=embed)
 
             else:
+                title = info.get('title', 'Unknown Title')
+                url = info.get("webpage_url", info.get("url", "#")) 
+
                 queue_item = {
-                    'url': info["webpage_url"],
-                    'title': info.get('title', 'Unknown Title'),
-                    'webpage_url': info["webpage_url"],
+                    'url': url,
+                    'title': title,
+                    'webpage_url': url,
                     'thumbnail': info.get('thumbnail'),
                     'is_single': True,
                     'skip_now_playing': True
                 }
 
                 await music_player.queue.put(queue_item)
+                
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
-                    description=f"[{info['title']}]({info['webpage_url']})",
+                    description=f"[{title}]({url})",
                     color=0xFFDAC1 if is_kawaii else discord.Color.blue()
                 )
                 if info.get("thumbnail"):
@@ -4457,8 +4461,9 @@ async def skip(interaction: discord.Interaction):
     embed = None 
 
     if next_song_info:
-        hydrated_next_info = next_song_info
-        if (not hydrated_next_info.get('title') or hydrated_next_info.get('title') == 'Unknown Title') and not hydrated_next_info.get('source_type') == 'file':
+        hydrated_next_info = next_song_info.copy()
+
+        if (not hydrated_next_info.get('title') or hydrated_next_info.get('title') == 'Unknown Title' or not hydrated_next_info.get('thumbnail')) and not hydrated_next_info.get('source_type') == 'file':
             try:
                 logger.info(f"[{guild_id}] Skip: Hydrating next track on-the-fly: {hydrated_next_info['url']}")
                 full_info = await fetch_video_info_with_retry(hydrated_next_info['url'])
