@@ -19,11 +19,11 @@
 * [What is Playify?](#what-is-playify)
 * [Spotify Support](#spotify-support)
 * [Key Features](#key-features)
-* [Installation & Self-Hosting](#installation--self-hosting)
+* [Installation](#installation)
 * [Command Reference](#command-reference)
 * [Troubleshooting](#troubleshooting)
 * [Privacy & Data](#privacy--data)
-* [Contribute & Support](#contribute--support)
+* [Contributing & Support](#contributing--support)
 * [License](#license)
 
 ---
@@ -62,99 +62,76 @@ Type `/play <url or query>` and let the music flow~
 * Audio **filters**: slowed, reverb, bass boost, nightcore, and more
 * Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
-<a id="installation--self-hosting"></a>
-## (＾∀＾) Installation & Self-Hosting
+<a id="installation"></a>
+## (＾∀＾) Installation
 
-*For a more detailed step-by-step guide, see the [Wiki](https://github.com/alan7383/playify/wiki).*
+You can run Playify in two ways. The Docker method is recommended for most users as it's simpler and manages all dependencies for you.
+
+### (🐳) Method 1: Docker Setup (Recommended)
+
+This is the easiest way to get the bot running.
+
+1.  **Clone the repository and enter it:**
+    ```bash
+    git clone https://github.com/alan7383/playify.git
+    cd playify
+    ```
+2.  **Create your secret file:**
+    Copy the example file to create your own configuration.
+    ```bash
+    cp .env.example .env
+    ```
+    Now, **edit the `.env` file** and fill in your tokens.
+    ```ini
+    DISCORD_TOKEN=your_discord_bot_token
+    SPOTIFY_CLIENT_ID=your_spotify_client_id
+    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+    GENIUS_TOKEN=your_genius_api_token
+    ```
+3.  **Fire it up!**
+    This command will build the container and run the bot in the background.
+    ```bash
+    docker compose up -d --build
+    ```
+    To view the bot's logs, use `docker compose logs -f`.
+
+### (🛠️) Method 2: Manual Setup
 
 **Requirements:**
+*   Python 3.9+
+*   FFmpeg installed & in your system's PATH
+*   Git
 
-* Python 3.9+
-* FFmpeg installed & in PATH
-* Git
-* Discord Bot Token
-* (Optional) Spotify API credentials
-* (Optional) Genius API token for lyrics
-
-**Setup Steps:**
-
-1. Clone the repo:
-
-   ```bash
-   git clone https://github.com/alan7383/playify.git
-   cd playify
+**Steps:**
+1.  Clone the repo:
+    ```bash
+    git clone https://github.com/alan7383/playify.git
+    cd playify
+    ```
+2.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    playwright install
+    ```
+3.  Copy & configure environment:
+    ```bash
+    cp .env.example .env
+    ```
+    **Edit the `.env` file** with your tokens as shown in the Docker method.
+4.  Run the bot:
+    ```bash
+    python playify.py
     ```
 
-2. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   playwright install
-   ```
-
-3. Copy & configure environment:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   *Edit `.env`:*
-
-   ```ini
-   DISCORD_TOKEN=your_discord_bot_token
-   SPOTIFY_CLIENT_ID=your_spotify_client_id
-   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-   GENIUS_TOKEN=your_genius_api_token
-   ```
-
-4. Run the bot:
-
-   ```bash
-   python playify.py
-   ```
-
-5. Invite to Discord:
-
-   * Enable **Guilds** & **Voice States** intents in the Developer Portal
-   * Generate invite link with: Connect, Speak, Send Messages
-   * Add the bot and enjoy `/play`!
-
----
-## Installation with Docker
-
-To install the application with docker:
-
-1. create an .env file with the necessary tokens
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   *Edit `.env`:*
-
-   ```ini
-   DISCORD_TOKEN=your_discord_bot_token
-   SPOTIFY_CLIENT_ID=your_spotify_client_id
-   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-   GENIUS_TOKEN=your_genius_api_token
-   ```
-2. Then build and run the application in Docker
-   ``` bash
-   docker compose up -d --build
-   # or if already build just
-   docker compose up -d
-   ```
-
-3. Invite to Discord:
-
-   * Enable **Guilds** & **Voice States** intents in the Developer Portal
-   * Generate invite link with: Connect, Speak, Send Messages
-   * Add the bot and enjoy `/play`!
+### Inviting the Bot to Discord (for both methods)
+*   Go to your Discord Developer Portal.
+*   Enable the **Guilds**, **Voice States**, and **Message Content** intents for your bot.
+*   Generate an invite link with the `Connect`, `Speak`, and `Send Messages` permissions.
+*   Add the bot to your server and enjoy `/play`!
 
 ---
 
 <a id="command-reference"></a>
-
 ## (⊙‿⊙) Command Reference
 
 | Command | Description |
@@ -185,35 +162,31 @@ To install the application with docker:
 | `/discord` | Get an invite to the official support server. |
 
 <a id="troubleshooting"></a>
-
 ## (｀・ω・´) Troubleshooting
 
-* **FFmpeg not found**: Ensure it's installed & in your system's PATH.
-* **Spotify errors**: Verify your API credentials in the `.env` file.
-* **Bot offline/unresponsive**: Check your `DISCORD_TOKEN` and bot permissions in the Developer Portal.
-* **Direct link issues**: Ensure the URL points directly to an audio file and is publicly accessible.
+*   **FFmpeg not found**: Ensure it's installed & in your system's PATH. (Docker setup handles this for you!)
+*   **Spotify errors**: Verify your API credentials in the `.env` file.
+*   **Bot offline/unresponsive**: Check your `DISCORD_TOKEN` and bot permissions in the Developer Portal.
+*   **Direct link issues**: Ensure the URL points directly to an audio file and is publicly accessible.
 
 <a id="privacy--data"></a>
-
 ## (ﾉ◕ヮ◕)ﾉ Privacy & Data
 
-* **Self-hosted**: All logs are local to your machine. No telemetry is sent.
-* **Public bot**: Minimal error logs are stored for debugging purposes only. No user data or analytics are collected.
+*   **Self-hosted**: All logs are local to your machine. No telemetry is sent.
+*   **Public bot**: Minimal error logs are stored for debugging purposes only. No user data or analytics are collected.
 
-<a id="contribute--support"></a>
+<a id="contributing--support"></a>
+## (ง＾◡＾)ง Contributing & Support
 
-## (ง＾◡＾)ง Contribute & Support
-
-* Fork the repo, open an issue or pull request—all contributions are welcome!
-* Star the repository if you enjoy using Playify!
-* Join our Discord server for help and community discussions:
-  [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server&logo=discord)](https://discord.gg/JeH8g6g3cG)
-* Support the project to help cover hosting costs and encourage development:
-  * Become a Patron on [Patreon](https://patreon.com/Playify) for special perks and to show your ongoing support!
-  * [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1) for a one-time contribution.
+*   Fork the repo, open an issue or pull request—all contributions are welcome!
+*   Star the repository if you enjoy using Playify!
+*   Join our Discord server for help and community discussions:
+    [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server&logo=discord)](https://discord.gg/JeH8g6g3cG)
+*   Support the project to help cover hosting costs and encourage development:
+    *   Become a Patron on [Patreon](https://patreon.com/Playify) for special perks and to show your ongoing support!
+    *   [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1) for a one-time contribution.
 
 <a id="license"></a>
-
 ## (＾ω＾) License
 
 MIT License — do what you want with the code, just be kind!
