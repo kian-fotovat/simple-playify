@@ -120,6 +120,38 @@ Type `/play <url or query>` and let the music flow~
    * Add the bot and enjoy `/play`!
 
 ---
+## Installation with Docker
+
+To install the application with docker:
+
+1. create an .env file with the necessary tokens
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   *Edit `.env`:*
+
+   ```ini
+   DISCORD_TOKEN=your_discord_bot_token
+   SPOTIFY_CLIENT_ID=your_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+   GENIUS_TOKEN=your_genius_api_token
+   ```
+2. Then build and run the application in Docker
+   ``` bash
+   docker compose up -d --build
+   # or if already build just
+   docker compose up -d
+   ```
+
+3. Invite to Discord:
+
+   * Enable **Guilds** & **Voice States** intents in the Developer Portal
+   * Generate invite link with: Connect, Speak, Send Messages
+   * Add the bot and enjoy `/play`!
+
+---
 
 <a id="command-reference"></a>
 
