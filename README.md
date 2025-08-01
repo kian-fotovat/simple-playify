@@ -20,6 +20,7 @@
 * [Spotify Support](#spotify-support)
 * [Key Features](#key-features)
 * [Installation](#installation)
+* [Use the Public Bot](#public-bot)
 * [Command Reference](#command-reference)
 * [Troubleshooting](#troubleshooting)
 * [Privacy & Data](#privacy--data)
@@ -128,6 +129,17 @@ This is the easiest way to get the bot running.
 *   Enable the **Guilds**, **Voice States**, and **Message Content** intents for your bot.
 *   Generate an invite link with the `Connect`, `Speak`, and `Send Messages` permissions.
 *   Add the bot to your server and enjoy `/play`!
+
+---
+
+
+<a id="public-bot"></a>
+## (＾▽＾) Use the Public Bot (No setup needed!)
+
+If you don’t want to self-host Playify, you can invite the **public Playify bot** hosted by me directly to your server!  
+Check it out and add it easily here: [https://alan7383.github.io/playify/](https://alan7383.github.io/playify/)
+
+This way, you get all the great Playify features without any installation or configuration hassle!
 
 ---
 
