@@ -138,7 +138,7 @@ messages = {
     },
     "critical_error_report_field": {
         "normal": "Report on GitHub",
-        "kawaii": "Report the boo-boo! 🩹"
+        "kawaii": "Report the boo-boo! o(>_<)o"
     },
     "critical_error_report_value": {
         "normal": "You can create an issue here:\n**https://github.com/alan7383/playify/issues**\n\nPlease include the error details below.",
@@ -226,7 +226,7 @@ messages = {
     },
     "song_added": {
         "normal": "🎵 Added to Queue",
-        "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
+        "kawaii": "(っ◕‿◕)っ Added to Queue"
     },
     "playlist_added": {
         "normal": "🎶 Playlist Added",
@@ -254,7 +254,7 @@ messages = {
     },
     "now_playing_title": {
         "normal": "🎵 Now Playing",
-        "kawaii": "♫♬ NOW PLAYING ♬♫"
+        "kawaii": "｡ﾟ･ Now Playing ･ﾟ｡"
     },
     "now_playing_description": {
         "normal": "[{title}]({url})",
@@ -286,7 +286,7 @@ messages = {
     },
     "loop": {
         "normal": "🔁 Looping for the current song {state}.",
-        "kawaii": "🔁 Looping for the current song {state}."
+        "kawaii": "Looping for the current song is {state}. <(￣︶￣)>"
     },
     "loop_state_enabled": {
         "normal": "enabled",
@@ -326,7 +326,7 @@ messages = {
     },
     "autoplay_toggle": {
         "normal": "Autoplay {state}.",
-        "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
+        "kawaii": "Autoplay is {state} (◕‿◕✿)"
     },
     "autoplay_state_enabled": {
         "normal": "enabled",
@@ -342,7 +342,7 @@ messages = {
     },
     "queue_title": {
         "normal": "🎶 Queue",
-        "kawaii": "🎶 Queue (◕‿◕✿)"
+        "kawaii": "Queue (◕‿◕✿)"
     },
     "queue_description": {
         "normal": "There are **{count} songs** in the queue.",
@@ -350,11 +350,11 @@ messages = {
     },
     "queue_next": {
         "normal": "Next songs:",
-        "kawaii": "Next songs: ♫"
+        "kawaii": "Next songs are:"
     },
     "queue_song": {
         "normal": "- [{title}]({url})",
-        "kawaii": "- ♪ [{title}]({url})"
+        "kawaii": "- [{title}]({url})~"
     },
     "clear_queue_success": {
         "normal": "✅ Queue cleared.",
@@ -362,7 +362,7 @@ messages = {
     },
     "play_next_added": {
         "normal": "🎵 Added as next song",
-        "kawaii": "(っ◕‿◕)っ ♫ Added as next song ♫"
+        "kawaii": "(っ◕‿◕)っ Added as next song"
     },
     "no_song_playing": {
         "normal": "No song is currently playing.",
@@ -378,11 +378,11 @@ messages = {
     },
     "filter_title": {
         "normal": "🎧 Audio Filters",
-        "kawaii": "🎧 Filters! ヾ(≧▽≦*)o"
+        "kawaii": "Audio Filters! ヾ(≧▽≦*)o"
     },
     "filter_description": {
         "normal": "Click on the buttons to enable or disable a filter in real time!",
-        "kawaii": "Clicky clicky to change the sound! ~☆"
+        "kawaii": "Clicky clicky to change the sound! (b ᵔ▽ᵔ)b"
     },
     "no_filter_playback": {
         "normal": "Nothing is currently playing to apply a filter on.",
@@ -394,15 +394,15 @@ messages = {
     },
     "karaoke_disclaimer": {
         "normal": "Please note: The timing of the arrow (») and lyric accuracy are matched automatically and can vary based on the song version or active filters.",
-        "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ ♡ The arrow (») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
+        "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ The arrow (») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
     },
     "karaoke_warning_title": {
         "normal": "🎤 Karaoke - Important Notice",
-        "kawaii": "🎤 Karaoke Time! Just a little note~ (´• ω •`)"
+        "kawaii": "Karaoke Time! Just a little note~ (´• ω •`)"
     },
     "karaoke_warning_description": {
         "normal": "Please note that the timing of the lyrics (») is matched automatically and can vary.\n\n**💡 Pro Tip:** For the best results, try adding `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).\n\nPress **Continue** to start.",
-        "kawaii": "The timing of the lyrics (») does its best to be perfect, but sometimes it's a little shy! ପ(๑•ᴗ•๑)ଓ ♡\n\n**💡 Pro Tip:** For the bestest results, try adding `topic` or `audio` to your search, like `party addict kets4eki topic`!\n\nSmash that **Continue** button to begin~ 💖"
+        "kawaii": "The timing of the lyrics (») does its best to be perfect, but sometimes it's a little shy! ପ(๑•ᴗ•๑)ଓ\n\n**Pro Tip:** For the bestest results, try adding `topic` or `audio` to your search, like `party addict kets4eki topic`!\n\nSmash that **Continue** button to begin~ <3"
     },
     "karaoke_warning_button": {
         "normal": "Continue",
@@ -434,11 +434,11 @@ messages = {
     },
     "karaoke_genius_fallback_button": {
         "normal": "Search on Genius",
-        "kawaii": "Find on Genius 📜"
+        "kawaii": "Find on Genius (づ｡◕‿‿◕｡)づ"
     },
     "karaoke_retry_success": {
         "normal": "Lyrics found! Starting karaoke...",
-        "kawaii": "Yay, I found them! Starting karaoke~ 🎤"
+        "kawaii": "Yay, I found them! Starting karaoke~ (ﾉ´ヮ`)ﾉ*: ･ﾟ"
     },
     "karaoke_retry_fail": {
         "normal": "Sorry, I still couldn't find synced lyrics for **{query}**.",
@@ -478,7 +478,7 @@ messages = {
     },
     "error_title_generic": {
         "normal": "Access Denied",
-        "kawaii": "Access Denied! (壁)"
+        "kawaii": "Access Denied! (・`m´・)"
     },
     "error_desc_generic": {
         "normal": "The bot was blocked from accessing this video. This can happen with certain live streams or premieres.",
@@ -506,11 +506,11 @@ messages = {
     },
     "discord_command_button": {
         "normal": "Join Server",
-        "kawaii": "Join Us! ♡"
+        "kawaii": "Join Us! <3"
     },
     "24_7_on_title": {
         "normal": "📻 24/7 Radio ON",
-        "kawaii": "📻 24/7 Radio ON ✧"
+        "kawaii": "24/7 Radio ON ✧"
     },
     "24_7_on_desc": {
         "normal": "Queue will loop indefinitely – bot stays & auto-resumes when you re-join.",
@@ -518,7 +518,7 @@ messages = {
     },
     "24_7_off_title": {
         "normal": "📴 24/7 Radio OFF",
-        "kawaii": "📴 24/7 Radio OFF (；一_一)"
+        "kawaii": "24/7 Radio OFF (；一_一)"
     },
     "24_7_off_desc": {
         "normal": "Queue cleared – bot will disconnect after 60 s if left alone.",
@@ -526,19 +526,19 @@ messages = {
     },
         "24_7_auto_title": {
         "normal": "🔄 24/7 Auto Mode",
-        "kawaii": "🔄 24/7 Auto Mode ✨"
+        "kawaii": "24/7 Auto Mode (b ᵔ▽ᵔ)b"
     },
     "24_7_auto_desc": {
         "normal": "Autoplay enabled - will add similar songs when playlist ends!",
-        "kawaii": "Autoplay on! New similar songs will appear magically~ ✨"
+        "kawaii": "Autoplay on! New similar songs will appear magically~"
     },
     "24_7_normal_title": {
         "normal": "🔁 24/7 Loop Mode",
-        "kawaii": "🔁 24/7 Loop Mode ♾️"
+        "kawaii": "24/7 Loop Mode (o･ω･o)"
     },
     "24_7_normal_desc": {
         "normal": "Playlist will loop indefinitely without adding new songs.",
-        "kawaii": "Playlist looping forever~ No new songs added! ♾️"
+        "kawaii": "Playlist looping forever~ No new songs added!"
     },
     "24_7_invalid_mode": {
         "normal": "Invalid mode! Use `/24_7 auto` or `/24_7 normal`",
@@ -550,11 +550,11 @@ messages = {
     },
     "previous_button": {
         "normal": "⬅️ Previous",
-        "kawaii": "⬅️ Back"
+        "kawaii": "Back <--"
     },
     "next_button": {
         "normal": "Next ➡️",
-        "kawaii": "Next! ➡️"
+        "kawaii": "Next -->"
     },
     "queue_status_title": {
         "normal": "Current Status",
@@ -566,27 +566,27 @@ messages = {
     },
     "queue_status_loop": {
         "normal": "🔁 **Loop (Song)**: Enabled",
-        "kawaii": "🔁 **Loop (Song)**: On! 💖"
+        "kawaii": "**Loop (Song)**: On! (ﾉ´ヮ`)ﾉ*: ･ﾟ"
     },
     "queue_status_24_7": {
         "normal": "📻 **24/7 ({mode})**: Enabled",
-        "kawaii": "📻 **24/7 ({mode})**: Let's go! ✨"
+        "kawaii": "**24/7 ({mode})**: Let's go! (づ｡◕‿‿◕｡)づ"
     },
     "queue_status_autoplay": {
         "normal": "➡️ **Autoplay**: Enabled",
-        "kawaii": "➡️ **Autoplay**: On! ♫"
+        "kawaii": "**Autoplay**: On!"
     },
     "now_playing_in_queue": {
         "normal": "▶️ Now Playing",
-        "kawaii": "▶️ Now Playing!~"
+        "kawaii": "Now Playing!~"
     },
     "reconnect_start": {
         "normal": "🔃 Reconnecting to the voice channel to improve stability...",
-        "kawaii": "🔃 Reconnecting to make things smooooth~ (o･ω･)ﾉ"
+        "kawaii": "Reconnecting to make things smooooth~ (o･ω･)ﾉ"
     },
     "reconnect_success": {
         "normal": "✅ Reconnected! Resuming playback from where you left off.",
-        "kawaii": "✅ Reconnected! Let's continue the party~ ヽ(o^ ^o)ﾉ"
+        "kawaii": "Reconnected! Let's continue the party~ ヽ(o^ ^o)ﾉ"
     },
     "reconnect_not_playing": {
         "normal": "I can only reconnect during active playback.",
@@ -594,15 +594,15 @@ messages = {
     },
     "autoplay_direct_link_notice": {
         "normal": "💿 The last track was a direct link, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
-        "kawaii": "💿 The last song was a direct link! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+        "kawaii": "The last song was a direct link! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
     },
     "autoplay_file_notice": {
         "normal": "💿 The last track was a local file, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
-        "kawaii": "💿 The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+        "kawaii": "The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
     },
     "skip_confirmation": {
         "normal": "⏭️ Song Skipped!",
-        "kawaii": "⏭️ Skipped!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "Skipped!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
     },
     "skip_queue_empty": {
         "normal": "The queue is now empty.",
@@ -610,7 +610,7 @@ messages = {
     },
     "remove_title": {
         "normal": "🗑️ Remove Songs",
-        "kawaii": "🗑️ Remove Songs! (o･ω･)ﾉ"
+        "kawaii": "Remove Songs! (o･ω･)ﾉ"
     },
     "remove_description": {
         "normal": "Use the dropdown menu to select one or more songs to remove.\nUse the buttons to navigate if you have more than 25 songs.",
@@ -618,11 +618,11 @@ messages = {
     },
     "remove_placeholder": {
         "normal": "Select one or more songs to remove...",
-        "kawaii": "Which songs should go?~ ♡"
+        "kawaii": "Which songs should go?~"
     },
     "remove_success_title": {
         "normal": "✅ {count} Song(s) Removed",
-        "kawaii": "✅ Poof! {count} song(s) are gone!~"
+        "kawaii": "Poof! {count} song(s) are gone!~"
     },
     "remove_processed": {
         "normal": "*Selection has been processed.*",
@@ -630,7 +630,7 @@ messages = {
     },
     "replay_success_title": {
         "normal": "🎵 Song Replayed",
-        "kawaii": "🎵 Playing it again!~"
+        "kawaii": "Playing it again!~"
     },
     "replay_success_desc": {
         "normal": "Restarting [{title}]({url}) from the beginning.",
@@ -638,7 +638,7 @@ messages = {
     },
     "search_results_title": {
         "normal": "🔎 Search Results",
-        "kawaii": "🔎 I found these for you!~"
+        "kawaii": "I found these for you!~"
     },
     "search_results_description": {
         "normal": "Please select a song from the dropdown menu below to add it to the queue.",
@@ -646,7 +646,7 @@ messages = {
     },
     "search_placeholder": {
         "normal": "Choose a song to add...",
-        "kawaii": "Which one do you want?~ ♡"
+        "kawaii": "Which one do you want?~"
     },
     "search_no_results": {
         "normal": "Sorry, I couldn't find any results for **{query}**.",
@@ -658,35 +658,35 @@ messages = {
     },
     "search_song_added": {
         "normal": "✅ Added to Queue",
-        "kawaii": "✅ Added!~"
+        "kawaii": "Added!~"
     },
     "support_title": {
         "normal": "💖 Support the Creator",
-        "kawaii": "💖 Support Me! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"
+        "kawaii": "Support Me! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"
     },
     "support_description": {
         "normal": "I spend countless hours, day and night, optimizing Playify, fixing bugs, and adding new features. Your support helps me keep the project alive and thriving! Every donation is deeply appreciated and allows me to dedicate more time to making the bot better for you.",
-        "kawaii": "I spend sooooo much time, day and night, making Playify super cute and fast for you, fixing all the little boo-boos! (´• ω •`) ♡ Your support helps me keep going! Every little bit makes me super duper happy and lets me make the bot even better!~"
+        "kawaii": "I spend sooooo much time, day and night, making Playify super cute and fast for you, fixing all the little boo-boos! (´• ω •`) Your support helps me keep going! Every little bit makes me super duper happy and lets me make the bot even better!~"
     },
     "support_patreon_title": {
         "normal": "🌟 Become a Patron",
-        "kawaii": "🌟 Be My Patron!~"
+        "kawaii": "Be My Patron!~"
     },
     "support_paypal_title": {
         "normal": "💰 One-Time Donation",
-        "kawaii": "💰 One-Time Tip!~"
+        "kawaii": "One-Time Tip!~"
     },
     "support_discord_title": {
         "normal": "💬 Join the Community",
-        "kawaii": "💬 Hang Out With Us!~"
+        "kawaii": "Hang Out With Us!~"
     },
     "support_contact_title": {
         "normal": "✉️ Contact Me",
-        "kawaii": "✉️ Talk to Me!~"
+        "kawaii": "Talk to Me!~"
     },
     "seek_success": {
         "normal": "▶️ Jumped to **{timestamp}**.",
-        "kawaii": "Hehe, teleported to **{timestamp}**!~ ✨"
+        "kawaii": "Hehe, teleported to **{timestamp}**!~"
     },
     "seek_fail_live": {
         "normal": "Cannot seek in a live stream.",
@@ -706,7 +706,7 @@ messages = {
     },
     "seek_interface_title": {
         "normal": "⏱️ Playback Control",
-        "kawaii": "⏱️ Time Travel!~"
+        "kawaii": "Time Travel!~"
     },
     "seek_interface_footer": {
         "normal": "This interface will time out in 5 minutes.",
@@ -722,15 +722,27 @@ messages = {
     },
     "rewind_button_label": {
         "normal": "Rewind 15s",
-        "kawaii": "⏪ Go back!"
+        "kawaii": "<-- Go back!"
     },
     "fastforward_button_label": {
         "normal": "Forward 15s",
-        "kawaii": "⏩ Zoom!"
+        "kawaii": "Zoom! -->"
     },
     "jump_to_button_label": {
         "normal": "Jump to...",
-        "kawaii": "✏️ Pick a time"
+        "kawaii": "Pick a time..."
+    },
+    "autoplay_loading_title": {
+        "normal": "💿 Autoplay in Progress",
+        "kawaii": "Autoplay Magic!~ c(ˊᗜˋ*c)"
+    },
+    "autoplay_loading_description": {
+        "normal": "{progress_bar}\nAdding song {processed}/{total} to the queue...",
+        "kawaii": "{progress_bar}\nFinding a new song for you... {processed}/{total}"
+    },
+    "autoplay_finished_description": {
+        "normal": "Added **{count}** new songs to the queue! Enjoy the music.",
+        "kawaii": "Added **{count}** new songs! Let the party continue~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
     },
 }
 
@@ -3118,49 +3130,78 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                 elif (is_24_7_on and music_player.autoplay_enabled) or music_player.autoplay_enabled:
                     music_player.suppress_next_now_playing = False
                     seed_url = None
-                    is_recommendable = False
+                    progress_message = None
+                    
                     if music_player.current_info and music_player.current_url and any(s in music_player.current_url for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
-                        is_recommendable = True
-                    if is_recommendable:
                         seed_url = music_player.current_url
-                        if music_player.text_channel:
-                            try:
-                                await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
-                            except discord.Forbidden: pass
                     else:
                         if music_player.text_channel and music_player.current_info:
                             try:
                                 notice_key = "autoplay_file_notice" if music_player.current_info.get('source_type') == 'file' else "autoplay_direct_link_notice"
-                                await music_player.text_channel.send(embed=Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
+                                notice_embed = Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
+                                progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
                             except discord.Forbidden: pass
+                        
                         source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
                         for track in reversed(source_list):
                             track_url = track.get('url')
                             if track_url and any(s in track_url for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
                                 seed_url = track_url
                                 break
+                    
                     if seed_url:
-                        if "youtube.com" in seed_url or "youtu.be" in seed_url:
-                            mix_playlist_url = get_mix_playlist_url(seed_url)
-                            if mix_playlist_url:
-                                try:
+                        added_count = 0
+                        try:
+                            if not progress_message and music_player.text_channel:
+                                initial_embed = Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+                                progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
+                            
+                            recommendations = []
+                            if "youtube.com" in seed_url or "youtu.be" in seed_url:
+                                mix_playlist_url = get_mix_playlist_url(seed_url)
+                                if mix_playlist_url:
                                     info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, mix_playlist_url)
                                     if info.get("entries"):
                                         current_video_id = get_video_id(seed_url)
-                                        for entry in info["entries"]:
-                                            if entry and get_video_id(entry.get("url", "")) != current_video_id:
-                                                await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
-                                except Exception as e: logger.error(f"YouTube Mix Error for autoplay: {e}")
-                        elif "soundcloud.com" in seed_url:
-                            track_id = get_soundcloud_track_id(seed_url)
-                            station_url = get_soundcloud_station_url(track_id)
-                            if station_url:
-                                try:
+                                        recommendations = [entry for entry in info["entries"] if entry and get_video_id(entry.get("url", "")) != current_video_id][:50]
+                            elif "soundcloud.com" in seed_url:
+                                track_id = get_soundcloud_track_id(seed_url)
+                                station_url = get_soundcloud_station_url(track_id)
+                                if station_url:
                                     info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, station_url)
                                     if info.get("entries") and len(info.get("entries")) > 1:
-                                        for entry in info["entries"][1:]:
-                                            if entry: await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
-                                except Exception as e: logger.error(f"SoundCloud Station Error for autoplay: {e}")
+                                        recommendations = info["entries"][1:]
+
+                            if recommendations and progress_message:
+                                total_to_add = len(recommendations)
+                                progress_embed = progress_message.embeds[0]
+                                progress_embed.title = get_messages("autoplay_loading_title", guild_id)
+                                progress_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total=total_to_add)
+                                await progress_message.edit(embed=progress_embed)
+                                await asyncio.sleep(0.5)
+
+                                for i, entry in enumerate(recommendations):
+                                    await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
+                                    added_count += 1
+                                    
+                                    if (i + 1) % 10 == 0 or (i + 1) == total_to_add:
+                                        progress = (i + 1) / total_to_add
+                                        updated_embed = progress_message.embeds[0]
+                                        updated_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(progress), processed=added_count, total=total_to_add)
+                                        await progress_message.edit(embed=updated_embed)
+                                        await asyncio.sleep(0.5)
+                        
+                        except Exception as e: 
+                            logger.error(f"Autoplay progress UI error: {e}", exc_info=True)
+                        finally:
+                            if progress_message and added_count > 0:
+                                final_embed = progress_message.embeds[0]
+                                final_embed.title = None
+                                final_embed.description = get_messages("autoplay_finished_description", guild_id).format(count=added_count)
+                                await progress_message.edit(embed=final_embed)
+                            elif progress_message and added_count == 0:
+                                await progress_message.delete()
+                    
                 if music_player.queue.empty():
                     music_player.current_info = None
                     music_player.current_task = None
