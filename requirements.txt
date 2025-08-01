@@ -1,6 +1,6 @@
 # Core Discord library and voice dependency
-discord.py
-PyNacl
+git+https://github.com/Rapptz/discord.py
+PyNaCl
 
 # Audio/Video downloading
 yt_dlp
