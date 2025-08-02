@@ -94,14 +94,6 @@ url_cache = TTLCache(maxsize=75000, ttl=7200)
 
 # --- Bot Configuration Dictionaries ---
 
-AVAILABLE_COOKIES = [
-    "cookies_1.txt",
-    "cookies_2.txt",
-    "cookies_3.txt",
-    "cookies_4.txt",
-    "cookies_5.txt"
-]
-
 # Dictionary of available audio filters and their FFmpeg options
 AUDIO_FILTERS = {
     "slowed": "asetrate=44100*0.8",
@@ -128,6 +120,7 @@ FILTER_DISPLAY_NAMES = {
 }
 
 messages = {
+    # --- NEW --- Error reporting messages
     "critical_error_title": {
         "normal": "🚨 An Unexpected Error Occurred",
         "kawaii": "(╥﹏╥) Oh no! A critical error happened..."
@@ -138,7 +131,7 @@ messages = {
     },
     "critical_error_report_field": {
         "normal": "Report on GitHub",
-        "kawaii": "Report the boo-boo! o(>_<)o"
+        "kawaii": "Report the boo-boo! 🩹"
     },
     "critical_error_report_value": {
         "normal": "You can create an issue here:\n**https://github.com/alan7383/playify/issues**\n\nPlease include the error details below.",
@@ -148,6 +141,7 @@ messages = {
         "normal": "Error Details",
         "kawaii": "Error info (for the smart people!)"
     },
+    # ... (rest of your messages dictionary)
     "no_voice_channel": {
         "normal": "You must be in a voice channel to use this command.",
         "kawaii": "(>ω<) You must be in a voice channel!"
@@ -226,7 +220,7 @@ messages = {
     },
     "song_added": {
         "normal": "🎵 Added to Queue",
-        "kawaii": "(っ◕‿◕)っ Added to Queue"
+        "kawaii": "(っ◕‿◕)っ ♫ SONG ADDED ♫"
     },
     "playlist_added": {
         "normal": "🎶 Playlist Added",
@@ -254,7 +248,7 @@ messages = {
     },
     "now_playing_title": {
         "normal": "🎵 Now Playing",
-        "kawaii": "｡ﾟ･ Now Playing ･ﾟ｡"
+        "kawaii": "♫♬ NOW PLAYING ♬♫"
     },
     "now_playing_description": {
         "normal": "[{title}]({url})",
@@ -286,7 +280,7 @@ messages = {
     },
     "loop": {
         "normal": "🔁 Looping for the current song {state}.",
-        "kawaii": "Looping for the current song is {state}. <(￣︶￣)>"
+        "kawaii": "🔁 Looping for the current song {state}."
     },
     "loop_state_enabled": {
         "normal": "enabled",
@@ -326,7 +320,7 @@ messages = {
     },
     "autoplay_toggle": {
         "normal": "Autoplay {state}.",
-        "kawaii": "Autoplay is {state} (◕‿◕✿)"
+        "kawaii": "♫ Autoplay {state} (◕‿◕✿)"
     },
     "autoplay_state_enabled": {
         "normal": "enabled",
@@ -342,7 +336,7 @@ messages = {
     },
     "queue_title": {
         "normal": "🎶 Queue",
-        "kawaii": "Queue (◕‿◕✿)"
+        "kawaii": "🎶 Queue (◕‿◕✿)"
     },
     "queue_description": {
         "normal": "There are **{count} songs** in the queue.",
@@ -350,11 +344,11 @@ messages = {
     },
     "queue_next": {
         "normal": "Next songs:",
-        "kawaii": "Next songs are:"
+        "kawaii": "Next songs: ♫"
     },
     "queue_song": {
         "normal": "- [{title}]({url})",
-        "kawaii": "- [{title}]({url})~"
+        "kawaii": "- ♪ [{title}]({url})"
     },
     "clear_queue_success": {
         "normal": "✅ Queue cleared.",
@@ -362,7 +356,7 @@ messages = {
     },
     "play_next_added": {
         "normal": "🎵 Added as next song",
-        "kawaii": "(っ◕‿◕)っ Added as next song"
+        "kawaii": "(っ◕‿◕)っ ♫ Added as next song ♫"
     },
     "no_song_playing": {
         "normal": "No song is currently playing.",
@@ -378,11 +372,11 @@ messages = {
     },
     "filter_title": {
         "normal": "🎧 Audio Filters",
-        "kawaii": "Audio Filters! ヾ(≧▽≦*)o"
+        "kawaii": "🎧 Filters! ヾ(≧▽≦*)o"
     },
     "filter_description": {
         "normal": "Click on the buttons to enable or disable a filter in real time!",
-        "kawaii": "Clicky clicky to change the sound! (b ᵔ▽ᵔ)b"
+        "kawaii": "Clicky clicky to change the sound! ~☆"
     },
     "no_filter_playback": {
         "normal": "Nothing is currently playing to apply a filter on.",
@@ -394,15 +388,15 @@ messages = {
     },
     "karaoke_disclaimer": {
         "normal": "Please note: The timing of the arrow (») and lyric accuracy are matched automatically and can vary based on the song version or active filters.",
-        "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ The arrow (») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
+        "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ ♡ The arrow (») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
     },
     "karaoke_warning_title": {
         "normal": "🎤 Karaoke - Important Notice",
-        "kawaii": "Karaoke Time! Just a little note~ (´• ω •`)"
+        "kawaii": "🎤 Karaoke Time! Just a little note~ (´• ω •`)"
     },
     "karaoke_warning_description": {
         "normal": "Please note that the timing of the lyrics (») is matched automatically and can vary.\n\n**💡 Pro Tip:** For the best results, try adding `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).\n\nPress **Continue** to start.",
-        "kawaii": "The timing of the lyrics (») does its best to be perfect, but sometimes it's a little shy! ପ(๑•ᴗ•๑)ଓ\n\n**Pro Tip:** For the bestest results, try adding `topic` or `audio` to your search, like `party addict kets4eki topic`!\n\nSmash that **Continue** button to begin~ <3"
+        "kawaii": "The timing of the lyrics (») does its best to be perfect, but sometimes it's a little shy! ପ(๑•ᴗ•๑)ଓ ♡\n\n**💡 Pro Tip:** For the bestest results, try adding `topic` or `audio` to your search, like `party addict kets4eki topic`!\n\nSmash that **Continue** button to begin~ 💖"
     },
     "karaoke_warning_button": {
         "normal": "Continue",
@@ -434,11 +428,11 @@ messages = {
     },
     "karaoke_genius_fallback_button": {
         "normal": "Search on Genius",
-        "kawaii": "Find on Genius (づ｡◕‿‿◕｡)づ"
+        "kawaii": "Find on Genius 📜"
     },
     "karaoke_retry_success": {
         "normal": "Lyrics found! Starting karaoke...",
-        "kawaii": "Yay, I found them! Starting karaoke~ (ﾉ´ヮ`)ﾉ*: ･ﾟ"
+        "kawaii": "Yay, I found them! Starting karaoke~ 🎤"
     },
     "karaoke_retry_fail": {
         "normal": "Sorry, I still couldn't find synced lyrics for **{query}**.",
@@ -478,7 +472,7 @@ messages = {
     },
     "error_title_generic": {
         "normal": "Access Denied",
-        "kawaii": "Access Denied! (・`m´・)"
+        "kawaii": "Access Denied! (壁)"
     },
     "error_desc_generic": {
         "normal": "The bot was blocked from accessing this video. This can happen with certain live streams or premieres.",
@@ -506,11 +500,11 @@ messages = {
     },
     "discord_command_button": {
         "normal": "Join Server",
-        "kawaii": "Join Us! <3"
+        "kawaii": "Join Us! ♡"
     },
     "24_7_on_title": {
         "normal": "📻 24/7 Radio ON",
-        "kawaii": "24/7 Radio ON ✧"
+        "kawaii": "📻 24/7 Radio ON ✧"
     },
     "24_7_on_desc": {
         "normal": "Queue will loop indefinitely – bot stays & auto-resumes when you re-join.",
@@ -518,7 +512,7 @@ messages = {
     },
     "24_7_off_title": {
         "normal": "📴 24/7 Radio OFF",
-        "kawaii": "24/7 Radio OFF (；一_一)"
+        "kawaii": "📴 24/7 Radio OFF (；一_一)"
     },
     "24_7_off_desc": {
         "normal": "Queue cleared – bot will disconnect after 60 s if left alone.",
@@ -526,35 +520,36 @@ messages = {
     },
         "24_7_auto_title": {
         "normal": "🔄 24/7 Auto Mode",
-        "kawaii": "24/7 Auto Mode (b ᵔ▽ᵔ)b"
+        "kawaii": "🔄 24/7 Auto Mode ✨"
     },
     "24_7_auto_desc": {
         "normal": "Autoplay enabled - will add similar songs when playlist ends!",
-        "kawaii": "Autoplay on! New similar songs will appear magically~"
+        "kawaii": "Autoplay on! New similar songs will appear magically~ ✨"
     },
     "24_7_normal_title": {
         "normal": "🔁 24/7 Loop Mode",
-        "kawaii": "24/7 Loop Mode (o･ω･o)"
+        "kawaii": "🔁 24/7 Loop Mode ♾️"
     },
     "24_7_normal_desc": {
         "normal": "Playlist will loop indefinitely without adding new songs.",
-        "kawaii": "Playlist looping forever~ No new songs added!"
+        "kawaii": "Playlist looping forever~ No new songs added! ♾️"
     },
     "24_7_invalid_mode": {
         "normal": "Invalid mode! Use `/24_7 auto` or `/24_7 normal`",
         "kawaii": "Oops! Use `/24_7 auto` or `/24_7 normal` (◕‿◕)"
     },
+        # --- NEW --- Messages for the instant /queue
     "queue_page_footer": {
         "normal": "Page {current_page}/{total_pages}",
         "kawaii": "Page {current_page}/{total_pages}  (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
     },
     "previous_button": {
         "normal": "⬅️ Previous",
-        "kawaii": "Back <--"
+        "kawaii": "⬅️ Back"
     },
     "next_button": {
         "normal": "Next ➡️",
-        "kawaii": "Next -->"
+        "kawaii": "Next! ➡️"
     },
     "queue_status_title": {
         "normal": "Current Status",
@@ -566,27 +561,27 @@ messages = {
     },
     "queue_status_loop": {
         "normal": "🔁 **Loop (Song)**: Enabled",
-        "kawaii": "**Loop (Song)**: On! (ﾉ´ヮ`)ﾉ*: ･ﾟ"
+        "kawaii": "🔁 **Loop (Song)**: On! 💖"
     },
     "queue_status_24_7": {
         "normal": "📻 **24/7 ({mode})**: Enabled",
-        "kawaii": "**24/7 ({mode})**: Let's go! (づ｡◕‿‿◕｡)づ"
+        "kawaii": "📻 **24/7 ({mode})**: Let's go! ✨"
     },
     "queue_status_autoplay": {
         "normal": "➡️ **Autoplay**: Enabled",
-        "kawaii": "**Autoplay**: On!"
+        "kawaii": "➡️ **Autoplay**: On! ♫"
     },
     "now_playing_in_queue": {
         "normal": "▶️ Now Playing",
-        "kawaii": "Now Playing!~"
+        "kawaii": "▶️ Now Playing!~"
     },
     "reconnect_start": {
         "normal": "🔃 Reconnecting to the voice channel to improve stability...",
-        "kawaii": "Reconnecting to make things smooooth~ (o･ω･)ﾉ"
+        "kawaii": "🔃 Reconnecting to make things smooooth~ (o･ω･)ﾉ"
     },
     "reconnect_success": {
         "normal": "✅ Reconnected! Resuming playback from where you left off.",
-        "kawaii": "Reconnected! Let's continue the party~ ヽ(o^ ^o)ﾉ"
+        "kawaii": "✅ Reconnected! Let's continue the party~ ヽ(o^ ^o)ﾉ"
     },
     "reconnect_not_playing": {
         "normal": "I can only reconnect during active playback.",
@@ -594,23 +589,25 @@ messages = {
     },
     "autoplay_direct_link_notice": {
         "normal": "💿 The last track was a direct link, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
-        "kawaii": "The last song was a direct link! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+        "kawaii": "💿 The last song was a direct link! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
     },
     "autoplay_file_notice": {
         "normal": "💿 The last track was a local file, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
-        "kawaii": "The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
+        "kawaii": "💿 The last song was a file! I can't find similar songs for that one... (´• ω •`) Looking through our playlist for another song to use!~"
     },
+    # --- NEW --- Messages for /skip with kaomoji
     "skip_confirmation": {
         "normal": "⏭️ Song Skipped!",
-        "kawaii": "Skipped!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "⏭️ Skipped!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
     },
     "skip_queue_empty": {
         "normal": "The queue is now empty.",
         "kawaii": "The queue is empty now... (´･ω･`)"
     },
+    # --- NEW --- Messages for /remove with kaomoji
     "remove_title": {
         "normal": "🗑️ Remove Songs",
-        "kawaii": "Remove Songs! (o･ω･)ﾉ"
+        "kawaii": "🗑️ Remove Songs! (o･ω･)ﾉ"
     },
     "remove_description": {
         "normal": "Use the dropdown menu to select one or more songs to remove.\nUse the buttons to navigate if you have more than 25 songs.",
@@ -618,11 +615,11 @@ messages = {
     },
     "remove_placeholder": {
         "normal": "Select one or more songs to remove...",
-        "kawaii": "Which songs should go?~"
+        "kawaii": "Which songs should go?~ ♡"
     },
     "remove_success_title": {
         "normal": "✅ {count} Song(s) Removed",
-        "kawaii": "Poof! {count} song(s) are gone!~"
+        "kawaii": "✅ Poof! {count} song(s) are gone!~"
     },
     "remove_processed": {
         "normal": "*Selection has been processed.*",
@@ -630,7 +627,7 @@ messages = {
     },
     "replay_success_title": {
         "normal": "🎵 Song Replayed",
-        "kawaii": "Playing it again!~"
+        "kawaii": "🎵 Playing it again!~"
     },
     "replay_success_desc": {
         "normal": "Restarting [{title}]({url}) from the beginning.",
@@ -638,7 +635,7 @@ messages = {
     },
     "search_results_title": {
         "normal": "🔎 Search Results",
-        "kawaii": "I found these for you!~"
+        "kawaii": "🔎 I found these for you!~"
     },
     "search_results_description": {
         "normal": "Please select a song from the dropdown menu below to add it to the queue.",
@@ -646,7 +643,7 @@ messages = {
     },
     "search_placeholder": {
         "normal": "Choose a song to add...",
-        "kawaii": "Which one do you want?~"
+        "kawaii": "Which one do you want?~ ♡"
     },
     "search_no_results": {
         "normal": "Sorry, I couldn't find any results for **{query}**.",
@@ -658,37 +655,37 @@ messages = {
     },
     "search_song_added": {
         "normal": "✅ Added to Queue",
-        "kawaii": "Added!~"
+        "kawaii": "✅ Added!~"
     },
     "support_title": {
         "normal": "💖 Support the Creator",
-        "kawaii": "Support Me! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"
+        "kawaii": "💖 Support Me! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"
     },
     "support_description": {
         "normal": "I spend countless hours, day and night, optimizing Playify, fixing bugs, and adding new features. Your support helps me keep the project alive and thriving! Every donation is deeply appreciated and allows me to dedicate more time to making the bot better for you.",
-        "kawaii": "I spend sooooo much time, day and night, making Playify super cute and fast for you, fixing all the little boo-boos! (´• ω •`) Your support helps me keep going! Every little bit makes me super duper happy and lets me make the bot even better!~"
+        "kawaii": "I spend sooooo much time, day and night, making Playify super cute and fast for you, fixing all the little boo-boos! (´• ω •`) ♡ Your support helps me keep going! Every little bit makes me super duper happy and lets me make the bot even better!~"
     },
     "support_patreon_title": {
         "normal": "🌟 Become a Patron",
-        "kawaii": "Be My Patron!~"
+        "kawaii": "🌟 Be My Patron!~"
     },
     "support_paypal_title": {
         "normal": "💰 One-Time Donation",
-        "kawaii": "One-Time Tip!~"
+        "kawaii": "💰 One-Time Tip!~"
     },
     "support_discord_title": {
         "normal": "💬 Join the Community",
-        "kawaii": "Hang Out With Us!~"
+        "kawaii": "💬 Hang Out With Us!~"
     },
     "support_contact_title": {
         "normal": "✉️ Contact Me",
-        "kawaii": "Talk to Me!~"
+        "kawaii": "✉️ Talk to Me!~"
     },
     "seek_success": {
         "normal": "▶️ Jumped to **{timestamp}**.",
-        "kawaii": "Hehe, teleported to **{timestamp}**!~"
+        "kawaii": "Hehe, teleported to **{timestamp}**!~ ✨"
     },
-    "seek_fail_live": {
+    "seek_fail_live": { # <-- CELLE QUI MANQUAIT !
         "normal": "Cannot seek in a live stream.",
         "kawaii": "Aww, we can't time travel in a live stream... (｡•́︿•̀｡)"
     },
@@ -706,7 +703,7 @@ messages = {
     },
     "seek_interface_title": {
         "normal": "⏱️ Playback Control",
-        "kawaii": "Time Travel!~"
+        "kawaii": "⏱️ Time Travel!~"
     },
     "seek_interface_footer": {
         "normal": "This interface will time out in 5 minutes.",
@@ -722,27 +719,15 @@ messages = {
     },
     "rewind_button_label": {
         "normal": "Rewind 15s",
-        "kawaii": "<-- Go back!"
+        "kawaii": "⏪ Go back!"
     },
     "fastforward_button_label": {
         "normal": "Forward 15s",
-        "kawaii": "Zoom! -->"
+        "kawaii": "⏩ Zoom!"
     },
     "jump_to_button_label": {
         "normal": "Jump to...",
-        "kawaii": "Pick a time..."
-    },
-    "autoplay_loading_title": {
-        "normal": "💿 Autoplay in Progress",
-        "kawaii": "Autoplay Magic!~ c(ˊᗜˋ*c)"
-    },
-    "autoplay_loading_description": {
-        "normal": "{progress_bar}\nAdding song {processed}/{total} to the queue...",
-        "kawaii": "{progress_bar}\nFinding a new song for you... {processed}/{total}"
-    },
-    "autoplay_finished_description": {
-        "normal": "Added **{count}** new songs to the queue! Enjoy the music.",
-        "kawaii": "Added **{count}** new songs! Let the party continue~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        "kawaii": "✏️ Pick a time"
     },
 }
 
@@ -802,6 +787,7 @@ class MusicPlayer:
         self.hydration_task = None
         self.hydration_lock = asyncio.Lock()
         
+        # --- ADD THIS LINE ---
         self.suppress_next_now_playing = False
 
         self.is_auto_promoting = False
@@ -846,63 +832,60 @@ class SeekView(View):
     FORWARD_AMOUNT = 15
 
     def __init__(self, interaction: discord.Interaction):
-        super().__init__(timeout=300.0) # 5 minute timeout
+        super().__init__(timeout=300.0) 
         self.interaction = interaction
         self.guild_id = interaction.guild.id
         self.music_player = get_player(self.guild_id)
         self.is_kawaii = get_mode(self.guild_id)
         self.message = None
-        self.update_task = None
-        
-        # Apply button labels
+        self.update_task = None 
+
         self.rewind_button.label = get_messages("rewind_button_label", self.guild_id)
         self.jump_button.label = get_messages("jump_to_button_label", self.guild_id)
         self.forward_button.label = get_messages("fastforward_button_label", self.guild_id)
 
-    async def start_update_task(self):
-        """Starts the background task to update the embed."""
+    def start_update_task(self):
+        """Démarre la tâche de fond pour mettre à jour l'embed."""
         if self.update_task is None or self.update_task.done():
             self.update_task = asyncio.create_task(self.updater_loop())
 
     async def updater_loop(self):
-        """Loop that updates the message at regular intervals."""
+        """Boucle qui met à jour le message à intervalle régulier."""
         while not self.is_finished():
-            # CORRECTION 1: Delay reduced to 2 seconds for more fluidity
             await asyncio.sleep(2)
             
-            # CORRECTION 2: Only updates if music is currently playing
-            # This handles pause/resume automatically
-            if self.music_player.voice_client and self.music_player.voice_client.is_playing():
-                # We make sure the message still exists before trying to edit it
+            if not self.music_player or not self.music_player.voice_client:
+                break
+
+            if self.music_player.voice_client.is_playing():
                 if self.message:
                     try:
-                        await self.update_embed()
+                        await self.update_embed(interaction=None) 
                     except discord.NotFound:
-                        # The message has been deleted, stop the task
                         break
+                    except Exception as e:
+                        logger.error(f"Error in SeekView updater_loop: {e}")
+                        break
+        logger.debug(f"SeekView updater_loop for guild {self.guild_id} has finished.")
 
     def get_current_time(self) -> int:
-        """Calculates the current playback position in seconds."""
-        # If the music is paused, return the last known position
-        if not self.music_player.voice_client.is_playing():
+        """Calcule la position de lecture actuelle en secondes."""
+        if not self.music_player or not self.music_player.voice_client or not self.music_player.voice_client.is_playing():
             return self.music_player.start_time
         
-        # Otherwise, calculate the live position
         if self.music_player.playback_started_at:
             elapsed = time.time() - self.music_player.playback_started_at
             return self.music_player.start_time + (elapsed * self.music_player.playback_speed)
         
         return self.music_player.start_time
 
-    async def update_embed(self, interaction: discord.Interaction = None, jumped: bool = False):
-        """Updates the embed with the progress bar."""
+    async def update_embed(self, interaction: discord.Interaction | None):
+        """Met à jour l'embed avec la barre de progression."""
         current_pos = int(self.get_current_time())
-        # Make sure current_info is not None
         if not self.music_player.current_info:
             return
             
         total_duration = self.music_player.current_info.get('duration', 0)
-        
         title = self.music_player.current_info.get("title", "Unknown Track")
         
         progress_bar = create_progress_bar(current_pos, total_duration)
@@ -915,10 +898,8 @@ class SeekView(View):
         )
         embed.set_footer(text=get_messages("seek_interface_footer", self.guild_id))
         
-        # If it's a response to a button interaction
         if interaction and not interaction.response.is_done():
             await interaction.response.edit_message(embed=embed, view=self)
-        # If it's an update from the background loop
         elif self.message:
             await self.message.edit(embed=embed, view=self)
 
@@ -930,7 +911,7 @@ class SeekView(View):
         self.music_player.is_seeking = True
         self.music_player.seek_info = target_seconds
         self.music_player.voice_client.stop()
-        await self.update_embed(interaction, jumped=True)
+        await self.update_embed(interaction)
 
     @discord.ui.button(style=ButtonStyle.secondary, emoji="✏️")
     async def jump_button(self, interaction: discord.Interaction, button: Button):
@@ -945,18 +926,28 @@ class SeekView(View):
         self.music_player.is_seeking = True
         self.music_player.seek_info = target_seconds
         self.music_player.voice_client.stop()
-        await self.update_embed(interaction, jumped=True)
+        await self.update_embed(interaction)
 
+    # on_timeout est la fonction la plus importante pour le nettoyage
     async def on_timeout(self):
-        if self.update_task:
+        """Appelé lorsque la vue expire après 5 minutes."""
+        logger.debug(f"SeekView for guild {self.guild_id} has timed out.")
+        # ÉTAPE 1: Annuler la tâche de mise à jour de manière explicite
+        if self.update_task and not self.update_task.done():
             self.update_task.cancel()
+        
+        # ÉTAPE 2: Désactiver les boutons sur le message
         if self.message:
             for item in self.children:
                 item.disabled = True
             try:
+                # On met à jour le message une dernière fois pour montrer les boutons grisés
                 await self.message.edit(view=self)
             except discord.NotFound:
-                pass # The message has already been deleted
+                pass # Le message a déjà été supprimé, pas de problème
+        
+        # ÉTAPE 3: Appeler la méthode stop() de la vue pour un nettoyage complet
+        self.stop()
 
 class SearchSelect(discord.ui.Select):
     """ The dropdown menu component for the /search command. """
@@ -1396,6 +1387,8 @@ class FilterView(View):
         music_player = get_player(self.guild_id)
         if music_player.voice_client and (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
 
+            # --- START OF CORRECTION ---
+
             # 1. We save the CURRENT playback speed (before the change)
             old_speed = music_player.playback_speed
 
@@ -1409,10 +1402,14 @@ class FilterView(View):
             # 4. We update the player's speed with the NEW speed for the next playback
             music_player.playback_speed = get_speed_multiplier_from_filters(active_guild_filters)
 
+            # --- END OF CORRECTION ---
+
             # We indicate that we are changing the filter to restart playback at the correct position
             music_player.is_seeking = True
             music_player.seek_info = elapsed_time
             await safe_stop(music_player.voice_client)
+
+# --- NEW --- View for the paginated /queue command
 
 class QueueView(View):
     """
@@ -1654,7 +1651,7 @@ class RemoveView(View):
 # --- General & State Helpers ---
 
 def get_file_duration(file_path: str) -> float:
-    """Uses ffprobe to get the duration of a local file in seconds."""
+    """Utilise ffprobe pour obtenir la durée d'un fichier local en secondes."""
     command = [
         'ffprobe',
         '-v', 'error',
@@ -1742,24 +1739,31 @@ def ydl_worker(ydl_opts, query, cookies_file=None):
         # This prevents trying to pickle the entire exception object.
         return {'status': 'error', 'message': str(e)}
 
-async def run_ydl_with_low_priority(ydl_opts, query, loop=None, specific_cookie_file=None):
+async def run_ydl_with_low_priority(ydl_opts, query, loop=None, use_cookies=False):
     """
     Sends the yt-dlp task to the process pool.
-    Uses a specific cookie file if provided.
+    It can now optionally pick a random cookie file from a pool.
     """
     if loop is None:
         loop = asyncio.get_running_loop()
     
     cookies_file_to_use = None
-
-    # This is now the ONLY logic for cookies in this function.
-    if specific_cookie_file:
+    if use_cookies:
+        cookie_files = ["cookies_1.txt", "cookies_2.txt", "cookies_3.txt"]
+        
+        chosen_cookie_file = random.choice(cookie_files)
+        
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        cookies_file_to_use = os.path.join(script_dir, specific_cookie_file)
+        cookies_file_to_use = os.path.join(script_dir, chosen_cookie_file)
+        
+        logger.info(f"Cookie strategy enabled. Using: {chosen_cookie_file}")
+        
+        # Vérifier que le fichier choisi existe
         if not os.path.exists(cookies_file_to_use):
-            logger.error(f"Specified cookie file {cookies_file_to_use} not found! Aborting cookie use for this request.")
-            cookies_file_to_use = None
+            logger.error(f"Cookie file {cookies_file_to_use} not found! Aborting cookie use for this request.")
+            cookies_file_to_use = None 
 
+    # On passe le chemin du cookie (ou None) au worker
     result_dict = await loop.run_in_executor(
         process_pool, 
         ydl_worker, 
@@ -1791,12 +1795,14 @@ async def play_silence_loop(guild_id: int):
     source = 'anullsrc=channel_layout=stereo:sample_rate=48000'
     FFMPEG_OPTS = {'before_options': '-f lavfi', 'options': '-vn -c:a libopus -b:a 16k'}
 
+    # --- START OF THE DEFINITIVE FIX ---
     # We define a callback that does absolutely nothing.
     # This prevents vc.stop() from triggering the previous song's after_playing logic.
     def noop_callback(error):
         if error:
             logger.error(f"[{guild_id}] Error in no-op callback for silence loop: {error}")
 
+    # --- END OF THE DEFINITIVE FIX ---
 
     try:
         while vc.is_connected():
@@ -1955,6 +1961,7 @@ def clear_audio_cache(guild_id: int):
         except Exception as e:
             logger.error(f"Error while deleting cache for guild {guild_id}: {e}")
 
+# --- NEW --- Helper functions for instant /queue
 def get_full_opts():
     """Returns standard options for fetching full metadata."""
     return {
@@ -1981,6 +1988,7 @@ async def fetch_meta(url, _):
         logger.warning(f"Failed to hydrate metadata for {url}: {e}")
         return None # Return None on failure
     
+# --- NEW --- Background task to fetch missing metadata without blocking
 async def background_queue_hydrator(guild_id: int):
     """
     A background task that iterates through the queue and fetches metadata
@@ -2033,6 +2041,7 @@ def get_messages(message_key, guild_id):
     mode = "kawaii" if is_kawaii else "normal"
     return messages[message_key][mode]
 
+# --- AJOUTER CETTE NOUVELLE FONCTION ---
 async def safe_stop(vc: discord.VoiceClient):
     """
     Stops the voice client and forcefully kills the underlying FFMPEG process
@@ -2051,6 +2060,7 @@ async def safe_stop(vc: discord.VoiceClient):
         vc.stop()
         # A tiny delay to ensure the OS has time to process the kill signal
         await asyncio.sleep(0.1)
+# --- FIN DE L'AJOUT ---
 
 def create_queue_item_from_info(info: dict) -> dict:
     """
@@ -2058,6 +2068,7 @@ def create_queue_item_from_info(info: dict) -> dict:
     This version correctly handles the difference between local files and online sources.
     """
     
+    # --- NEW: Special handling for local files ---
     # If the source_type is 'file', we build a very specific and clean dictionary
     # to ensure no data from previous online songs can interfere.
     if info.get('source_type') == 'file':
@@ -2070,6 +2081,8 @@ def create_queue_item_from_info(info: dict) -> dict:
             'source_type': 'file'    # Critically preserve this type
         }
 
+    # --- Original logic for all online sources (YouTube, SoundCloud, etc.) ---
+    # This part remains the same as before.
     return {
         'url': info.get('webpage_url', info.get('url')), # Prioritize the user-friendly URL
         'title': info.get('title', 'Unknown Title'),
@@ -2959,6 +2972,7 @@ def get_soundcloud_station_url(track_id):
         return f"https://soundcloud.com/discover/sets/track-stations:{track_id}"
     return 
     
+# --- NEW --- Helper function to parse yt-dlp errors into user-friendly messages
 def parse_yt_dlp_error(error_string: str) -> tuple[str, str, str]:
     """
     Parses a yt-dlp error string to find a known cause.
@@ -3030,52 +3044,30 @@ async def handle_playback_error(guild_id: int, error: Exception):
 
 async def fetch_video_info_with_retry(query, ydl_opts_override=None):
     """
-    Fetches video info with a robust retry strategy using a central pool of cookies.
-    1. Tries without cookies.
-    2. If blocked, shuffles the central cookie list and tries them one by one.
-    3. Only fails completely if all cookies have been tried and have failed.
+    Fetches video info, automatically retrying with cookies if a restriction is detected.
+    This centralizes the "No Cookies by Default" logic.
     """
     base_ydl_opts = {
-        "format": "bestaudio[acodec=opus]/bestaudio/best",
+        "format": "bestaudio/best",
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
         "socket_timeout": 10,
     }
+    
     ydl_opts = {**base_ydl_opts, **(ydl_opts_override or {})}
 
     try:
         logger.info(f"Fetching info for '{query}' without cookies...")
-        return await run_ydl_with_low_priority(ydl_opts, query)
-    
+        return await run_ydl_with_low_priority(ydl_opts, query, use_cookies=False)
     except yt_dlp.utils.DownloadError as e:
         error_str = str(e).lower()
-        if "sign in" not in error_str and "age-restricted" not in error_str and "confirm you're not a bot" not in error_str:
-            logger.error(f"Fetch failed for '{query}' with a non-restriction error. No cookie retry needed.")
+        if "sign in" in error_str or "age-restricted" in error_str or "confirm you're not a bot" in error_str:
+            logger.warning(f"Restriction detected for '{query}'. Retrying with cookies.")
+            return await run_ydl_with_low_priority(ydl_opts, query, use_cookies=True)
+        else:
             raise e
 
-        logger.warning(f"Restriction detected for '{query}'. Initiating cookie rotation strategy.")
-
-        logger.warning(f"Restriction detected for '{query}'. Initiating cookie rotation strategy.")
-
-        cookies_to_try = AVAILABLE_COOKIES.copy()
-        random.shuffle(cookies_to_try)
-
-        for cookie_name in cookies_to_try:
-            try:
-                logger.info(f"Retrying with cookie from pool: {cookie_name}")
-                
-                return await run_ydl_with_low_priority(
-                    ydl_opts,
-                    query,
-                    specific_cookie_file=cookie_name
-                )
-            except yt_dlp.utils.DownloadError as cookie_e:
-                logger.warning(f"Attempt with cookie '{cookie_name}' also failed. Reason: {str(cookie_e).splitlines()[0]}")
-
-        logger.critical(f"ALL ({len(cookies_to_try)}) AVAILABLE COOKIES FAILED for query: '{query}'. They are likely all expired or invalid.")
-        raise e
-    
 async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     music_player = get_player(guild_id)
 
@@ -3085,19 +3077,24 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
     async def after_playing(error, song_info):
         if error:
             logger.error(f'Error after playing in guild {guild_id}: {error}')
+            
         if not music_player.voice_client or not music_player.voice_client.is_connected():
             logger.info(f"[{guild_id}] after_playing: Canceling next play_audio call because the voice client is no longer connected.")
             return
+
         if music_player.is_reconnecting:
             return
+
         if music_player.seek_info is not None:
             new_seek_time = music_player.seek_info
             music_player.seek_info = None
             await play_audio(guild_id, seek_time=new_seek_time, is_a_loop=True)
             return
+
         if not song_info:
             await play_audio(guild_id, is_a_loop=False)
             return
+
         if music_player.loop_current:
             await play_audio(guild_id, is_a_loop=True)
         else:
@@ -3105,6 +3102,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             if _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
                 await music_player.queue.put(track_to_requeue)
                 logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}' to the end of the queue.")
+            
             await play_audio(guild_id, is_a_loop=False)
 
     try:
@@ -3113,95 +3111,84 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             music_player.is_resuming_live = False
             seek_time = 0.1
             is_a_loop = True
+        
         elif is_a_loop or seek_time > 0:
             logger.info(f"[{guild_id}] Executing replay mission (loop or seek).")
             pass
+
         else:
             logger.info(f"[{guild_id}] Executing 'play next' mission.")
             if music_player.lyrics_task and not music_player.lyrics_task.done():
                 music_player.lyrics_task.cancel()
+            
             music_player.is_current_live = False
+            
             if music_player.queue.empty():
                 is_kawaii = get_mode(guild_id)
                 is_24_7_on = _24_7_active.get(guild_id, False)
+
                 if is_24_7_on and not music_player.autoplay_enabled and music_player.radio_playlist:
                     for track_info_radio in music_player.radio_playlist:
                         await music_player.queue.put(track_info_radio)
+                
                 elif (is_24_7_on and music_player.autoplay_enabled) or music_player.autoplay_enabled:
                     music_player.suppress_next_now_playing = False
                     seed_url = None
-                    progress_message = None
                     
-                    if music_player.current_info and music_player.current_url and any(s in music_player.current_url for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
+                    is_recommendable = False
+                    if music_player.current_info and music_player.current_url:
+                        if "youtube.com" in music_player.current_url or "youtu.be" in music_player.current_url or "soundcloud.com" in music_player.current_url:
+                            is_recommendable = True
+
+                    if is_recommendable:
                         seed_url = music_player.current_url
+                        if music_player.text_channel:
+                            try:
+                                await music_player.text_channel.send(embed=Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
+                            except discord.Forbidden: pass
                     else:
                         if music_player.text_channel and music_player.current_info:
                             try:
-                                notice_key = "autoplay_file_notice" if music_player.current_info.get('source_type') == 'file' else "autoplay_direct_link_notice"
-                                notice_embed = Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
-                                progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
+                                if music_player.current_info.get('source_type') == 'file':
+                                    notice_key = "autoplay_file_notice"
+                                else:
+                                    notice_key = "autoplay_direct_link_notice"
+                                
+                                await music_player.text_channel.send(embed=Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue()), silent=SILENT_MESSAGES)
                             except discord.Forbidden: pass
                         
                         source_list = music_player.radio_playlist if is_24_7_on and music_player.radio_playlist else music_player.history
                         for track in reversed(source_list):
                             track_url = track.get('url')
-                            if track_url and any(s in track_url for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
+                            if track_url and ("youtube.com" in track_url or "youtu.be" in track_url or "soundcloud.com" in track_url):
                                 seed_url = track_url
                                 break
                     
                     if seed_url:
-                        added_count = 0
-                        try:
-                            if not progress_message and music_player.text_channel:
-                                initial_embed = Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue())
-                                progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
-                            
-                            recommendations = []
-                            if "youtube.com" in seed_url or "youtu.be" in seed_url:
-                                mix_playlist_url = get_mix_playlist_url(seed_url)
-                                if mix_playlist_url:
+                        if "youtube.com" in seed_url or "youtu.be" in seed_url:
+                            mix_playlist_url = get_mix_playlist_url(seed_url)
+                            if mix_playlist_url:
+                                try:
+                                    # Note: Replaced with your optimized function
                                     info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, mix_playlist_url)
                                     if info.get("entries"):
                                         current_video_id = get_video_id(seed_url)
-                                        recommendations = [entry for entry in info["entries"] if entry and get_video_id(entry.get("url", "")) != current_video_id][:50]
-                            elif "soundcloud.com" in seed_url:
-                                track_id = get_soundcloud_track_id(seed_url)
-                                station_url = get_soundcloud_station_url(track_id)
-                                if station_url:
+                                        for entry in info["entries"]:
+                                            if entry and get_video_id(entry.get("url", "")) != current_video_id:
+                                                await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
+                                except Exception as e: logger.error(f"YouTube Mix Error for autoplay: {e}")
+                        elif "soundcloud.com" in seed_url:
+                            track_id = get_soundcloud_track_id(seed_url)
+                            station_url = get_soundcloud_station_url(track_id)
+                            if station_url:
+                                try:
+                                    # Note: Replaced with your optimized function
                                     info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, station_url)
                                     if info.get("entries") and len(info.get("entries")) > 1:
-                                        recommendations = info["entries"][1:]
+                                        for entry in info["entries"][1:]:
+                                            if entry: await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
+                                except Exception as e: logger.error(f"SoundCloud Station Error for autoplay: {e}")
 
-                            if recommendations and progress_message:
-                                total_to_add = len(recommendations)
-                                progress_embed = progress_message.embeds[0]
-                                progress_embed.title = get_messages("autoplay_loading_title", guild_id)
-                                progress_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total=total_to_add)
-                                await progress_message.edit(embed=progress_embed)
-                                await asyncio.sleep(0.5)
-
-                                for i, entry in enumerate(recommendations):
-                                    await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
-                                    added_count += 1
-                                    
-                                    if (i + 1) % 10 == 0 or (i + 1) == total_to_add:
-                                        progress = (i + 1) / total_to_add
-                                        updated_embed = progress_message.embeds[0]
-                                        updated_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(progress), processed=added_count, total=total_to_add)
-                                        await progress_message.edit(embed=updated_embed)
-                                        await asyncio.sleep(0.5)
-                        
-                        except Exception as e: 
-                            logger.error(f"Autoplay progress UI error: {e}", exc_info=True)
-                        finally:
-                            if progress_message and added_count > 0:
-                                final_embed = progress_message.embeds[0]
-                                final_embed.title = None
-                                final_embed.description = get_messages("autoplay_finished_description", guild_id).format(count=added_count)
-                                await progress_message.edit(embed=final_embed)
-                            elif progress_message and added_count == 0:
-                                await progress_message.delete()
-                    
                 if music_player.queue.empty():
                     music_player.current_info = None
                     music_player.current_task = None
@@ -3210,11 +3197,12 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                         if music_player.voice_client and not music_player.voice_client.is_playing() and len(music_player.voice_client.channel.members) == 1:
                             await music_player.voice_client.disconnect()
                     return
+            
             track_info = await music_player.queue.get()
             if track_info.pop('skip_now_playing', False):
                 music_player.suppress_next_now_playing = True
             if not music_player.loop_current:
-                music_player.history.append(track_info)
+                 music_player.history.append(track_info)
             music_player.current_url = track_info['url']
             music_player.last_was_single = track_info.get('is_single', True)
             music_player.current_info = track_info
@@ -3227,62 +3215,99 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in AUDIO_FILTERS]) if active_filters else ""
         music_player.active_filter = filter_chain if filter_chain else None
         
-        full_playback_info = None
+        audio_url = None
         if music_player.current_info.get('source_type') == 'file':
-            full_playback_info = music_player.current_info
+            audio_url = music_player.current_url
+            music_player.current_info['webpage_url'] = None
         else:
+            # --- STRATÉGIE N°1 : NO COOKIES BY DEFAULT ---
+            full_playback_info = None
             try:
-                full_playback_info = await fetch_video_info_with_retry(music_player.current_url)
+                # --- Tentative n°1 : SANS cookies ---
+                logger.info(f"[{guild_id}] Attempting to fetch URL without cookies...")
+                ydl_opts_nocookies = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
+                # On appelle la fonction avec use_cookies=False (valeur par défaut)
+                full_playback_info = await run_ydl_with_low_priority(ydl_opts_nocookies, music_player.current_url)
+                logger.info(f"[{guild_id}] Success without cookies.")
+                
             except yt_dlp.utils.DownloadError as e:
-                logger.error(f"[{guild_id}] FINAL FETCH FAILURE for {music_player.current_url}, even after all retries. Error: {e}")
+                error_str = str(e).lower()
+                # Si l'erreur est une demande de connexion, on réessaie AVEC les cookies
+                if "sign in" in error_str or "age-restricted" in error_str or "confirm you're not a bot" in error_str:
+                    logger.warning(f"[{guild_id}] Fetch failed, restriction detected. Retrying with cookies...")
+                    try:
+                        # --- Tentative n°2 : AVEC un cookie au hasard ---
+                        ydl_opts_cookies = {"format": "bestaudio[acodec=opus]/bestaudio/best", "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 10}
+                        # On appelle la fonction en activant la stratégie du pool de cookies
+                        full_playback_info = await run_ydl_with_low_priority(ydl_opts_cookies, music_player.current_url, use_cookies=True)
+                        logger.info(f"[{guild_id}] Success with cookies.")
+                    except yt_dlp.utils.DownloadError as e2:
+                        # Si même avec les cookies ça échoue, on abandonne et on signale l'erreur
+                        logger.error(f"[{guild_id}] Fetch failed even with cookies: {e2}")
+                        raise e2 # On relance l'exception pour que le reste du code la gère
+                else:
+                    # Si c'était une autre erreur (vidéo privée, indisponible...), on abandonne directement
+                    raise e
+            
+            # Le reste de votre code qui traite full_playback_info ne change pas.
+            # Il doit être dans un try/except pour gérer le cas où full_playback_info est resté None.
+            try:
+                original_track_info = music_player.current_info.copy()
+                final_info = {**original_track_info, **full_playback_info}
+                
+                new_title = full_playback_info.get("title", "")
+                if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
+                    final_info["title"] = original_track_info["title"]
+
+                music_player.current_info = final_info
+                audio_url = final_info["url"] 
+                music_player.is_current_live = final_info.get('is_live', False) or final_info.get('live_status') == 'is_live'
+            # Le bloc 'except yt_dlp.utils.DownloadError as e:' qui suit ne change pas.
+                
+                new_title = full_playback_info.get("title", "")
+                if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
+                    final_info["title"] = original_track_info["title"]
+
+                music_player.current_info = final_info
+                audio_url = final_info["url"] 
+                music_player.is_current_live = final_info.get('is_live', False) or final_info.get('live_status') == 'is_live'
+
+            except yt_dlp.utils.DownloadError as e:
                 if music_player.text_channel:
                     try:
                         is_kawaii = get_mode(guild_id)
                         emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
-                        embed = Embed(
-                            title=f'{emoji} Playback Failed',
-                            description=get_messages(desc_key, guild_id) + "\n*This track will be skipped.*",
-                            color=0xFF9AA2 if is_kawaii else discord.Color.orange()
-                        )
+                        embed = Embed(title=f'{emoji} Playback Failed', description=get_messages(desc_key, guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
                         embed.add_field(name="Affected URL", value=f"`{music_player.current_url}`")
                         await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
                     except discord.Forbidden: pass
                 music_player.current_task = bot.loop.create_task(play_audio(guild_id))
                 return
-
-        if not full_playback_info:
-            logger.error(f"[{guild_id}] Could not get any playback info for {music_player.current_url}. Skipping.")
-            music_player.current_task = bot.loop.create_task(play_audio(guild_id))
-            return
         
-        original_track_info = music_player.current_info.copy()
-        final_info = {**original_track_info, **full_playback_info}
-        new_title = full_playback_info.get("title", "")
-        if ("video #" in new_title or "AGB video" in new_title) and original_track_info.get("title"):
-            final_info["title"] = original_track_info["title"]
-        music_player.current_info = final_info
-        audio_url = final_info.get("url")
         if not audio_url:
-            logger.error(f"[{guild_id}] Playback info retrieved but 'url' key is missing. Skipping. Info: {final_info}")
             music_player.current_task = bot.loop.create_task(play_audio(guild_id))
             return
-        music_player.is_current_live = final_info.get('is_live', False) or final_info.get('live_status') == 'is_live'
-        
-        ffmpeg_options = {"options": "-vn"}
-        if music_player.current_info.get('source_type') != 'file':
-            ffmpeg_options["before_options"] = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+            
+        ffmpeg_options = {}
+        if music_player.current_info.get('source_type') == 'file':
+            ffmpeg_options = {"options": "-vn"}
+        else:
+            ffmpeg_options = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
+
         if seek_time > 0:
             ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}".strip()
+
         if music_player.active_filter:
             ffmpeg_options["options"] = f"{ffmpeg_options.get('options', '')} -af \"{music_player.active_filter}\"".strip()
 
         source = discord.FFmpegPCMAudio(audio_url, **ffmpeg_options)
+        
         info_for_after = music_player.current_info.copy()
         callback = lambda e: bot.loop.create_task(after_playing(e, info_for_after))
         
         try:
             if music_player.voice_client and not music_player.voice_client.is_playing():
-                music_player.voice_client.play(source, after=callback)
+                 music_player.voice_client.play(source, after=callback)
             else:
                 logger.warning(f"[{guild_id}] Race condition detected in play_audio. Ignored redundant play call.")
                 source.cleanup()
@@ -3301,13 +3326,27 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         
         if music_player.suppress_next_now_playing:
             music_player.suppress_next_now_playing = False  
+        
         elif not is_a_loop and seek_time == 0:
             is_kawaii = get_mode(guild_id)
             title = music_player.current_info.get("title", "Unknown Title")
-            description_text = f"💿 `{title}`" if music_player.current_info.get('source_type') == 'file' else get_messages("now_playing_description", guild_id).format(title=title, url=music_player.current_info.get("webpage_url", music_player.current_url))
-            embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=0xC7CEEA if is_kawaii else discord.Color.green())
+            
+            description_text = ""
+            if music_player.current_info.get('source_type') == 'file':
+                description_text = f"💿 `{title}`"
+            else:
+                webpage_url = music_player.current_info.get("webpage_url", music_player.current_url)
+                description_text = get_messages("now_playing_description", guild_id).format(title=title, url=webpage_url)
+            
+            embed = Embed(
+                title=get_messages("now_playing_title", guild_id),
+                description=description_text, 
+                color=0xC7CEEA if is_kawaii else discord.Color.green()
+            )
+
             if music_player.current_info.get("thumbnail"):
                 embed.set_thumbnail(url=music_player.current_info["thumbnail"])
+            
             if music_player.text_channel:
                 try:
                     await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
@@ -3318,7 +3357,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
 
     except Exception as e:
         await handle_playback_error(guild_id, e)
-        
+
 async def update_karaoke_task(guild_id: int):
     """Background task for karaoke mode, manages filters and speed."""
     music_player = get_player(guild_id)
@@ -3444,6 +3483,7 @@ async def karaoke(interaction: discord.Interaction):
             except (asyncio.TimeoutError, Exception):
                 logger.warning("Broad synced search also failed or timed out.")
 
+        # --- CORRECTED LOGIC ---
         # First, try to parse the lyrics if a result was found
         lyrics_lines = []
         if lrc:
@@ -3468,6 +3508,7 @@ async def karaoke(interaction: discord.Interaction):
             # Use followup.send because the interaction is already deferred
             await interaction.followup.send(silent=SILENT_MESSAGES,embed=error_embed, view=view)
             return
+        # --- END OF CORRECTION ---
 
         # If we get here, lyrics_lines is valid. Proceed with karaoke.
         music_player.synced_lyrics = lyrics_lines
@@ -3539,23 +3580,17 @@ async def play(interaction: discord.Interaction, query: str):
     amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
     direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
 
+    # --- NOUVELLE FONCTION HELPER INTERNE POUR LA CONVERSION DE PISTE UNIQUE ---
     async def handle_single_track_conversion(platform_tracks, platform_name):
         track_name, artist_name = platform_tracks[0]
         search_term = f"{track_name} {artist_name}"
-        
         try:
-            sanitized_search_term = sanitize_query(search_term)
+            sanitized_query = sanitize_query(search_term)
+            yt_search_query = f"ytsearch:{sanitized_query}"
             
-            prioritized_query = f"ytsearch:{sanitized_search_term} lyrics"
-            standard_query = f"ytsearch:{sanitized_search_term}"
-
-            logger.info(f"Trying prioritized search for single track conversion: '{prioritized_query}'")
-            info = await fetch_video_info_with_retry(prioritized_query, ydl_opts_override={"noplaylist": True})
+            # Utilisation de la fonction robuste
+            info = await fetch_video_info_with_retry(yt_search_query, ydl_opts_override={"noplaylist": True})
             
-            if not info or not info.get("entries"):
-                logger.info(f"Prioritized search failed for single track, falling back to: '{standard_query}'")
-                info = await fetch_video_info_with_retry(standard_query, ydl_opts_override={"noplaylist": True})
-
             video = info["entries"][0] if "entries" in info and info["entries"] else None
             if not video:
                 raise Exception("No results found after robust search.")
@@ -3564,7 +3599,7 @@ async def play(interaction: discord.Interaction, query: str):
             if not video_url:
                 raise KeyError("No valid URL found in video metadata")
 
-            cache_key = sanitized_search_term.lower()
+            cache_key = sanitized_query.lower()
             url_cache[cache_key] = video_url
 
             queue_item = {
@@ -3589,7 +3624,7 @@ async def play(interaction: discord.Interaction, query: str):
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         
         except Exception as e:
-            logger.error(f"{platform_name} conversion error for '{search_term}': {e}", exc_info=True)
+            logger.error(f"{platform_name} conversion error for '{search_term}': {e}")
             error_embed = Embed(
                 description=get_messages("search_error", guild_id),
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
@@ -3599,6 +3634,7 @@ async def play(interaction: discord.Interaction, query: str):
             except discord.errors.NotFound:
                 await interaction.channel.send(content=f"{interaction.user.mention}, an error occurred.", embed=error_embed, silent=SILENT_MESSAGES)
 
+    # --- NOUVELLE FONCTION HELPER INTERNE POUR LA GESTION DES PLAYLISTS ---
     async def handle_playlist_processing(platform_tracks, platform_name):
         embed = Embed(
             title=f"🎶 {platform_name} Playlist Processing",
@@ -3674,47 +3710,57 @@ async def play(interaction: discord.Interaction, query: str):
         original_query = f"{track_name} {artist_name}"
         sanitized_query = sanitize_query(original_query)
         cache_key = sanitized_query.lower()
-        
-        if cache_key in url_cache:
-            logger.info(f"Cache hit for '{original_query}'")
-            if url_cache[cache_key] is None:
-                return cache_key, None, track_name, artist_name
-            return cache_key, url_cache[cache_key], track_name, artist_name
-
-        logger.info(f"Converting to YouTube: {original_query}")
+        logger.info(f"Searching YouTube for: {original_query} (Sanitized: {sanitized_query})")
 
         try:
-            prioritized_search = f"ytsearch:{sanitize_query(f'{original_query} lyrics')}"
+            if cache_key in url_cache:
+                logger.info(f"Cache hit for {cache_key}")
+                return cache_key, url_cache[cache_key], track_name, artist_name
 
-            standard_search = f"ytsearch:{sanitize_query(original_query)}"
-
-            search_strategies = [prioritized_search, standard_search]
             ydl_opts_override = {"extract_flat": True, "noplaylist": True}
+            search_query_full = f"ytsearch:{sanitized_query}"
+            info_full = await fetch_video_info_with_retry(search_query_full, ydl_opts_override)
 
-            for search_query in search_strategies:
-                logger.info(f"Trying playlist conversion search: '{search_query}'")
-                info = await fetch_video_info_with_retry(search_query, ydl_opts_override)
+            if "entries" in info_full and info_full["entries"]:
+                for entry in info_full["entries"][:3]:
+                    try:
+                        video_url = entry["url"]
+                        video_title = entry.get("title", "Unknown Title")
+                        logger.info(f"Found YouTube URL: {video_url} (Title: {video_title})")
+                        url_cache[cache_key] = video_url
+                        return cache_key, video_url, track_name, artist_name
+                    except Exception as e:
+                        logger.warning(f"Skipping unavailable video for {sanitized_query}: {e}")
+                        continue
+                logger.warning(f"No accessible videos in top results for {sanitized_query}")
 
-                if "entries" in info and info["entries"]:
-                    for entry in info["entries"][:3]: 
-                        try:
-                            video_url = entry["url"]
-                            video_title = entry.get("title", "Unknown Title")
-                            logger.info(f"Success with '{search_query}'. Found: {video_title} ({video_url})")
-                            
-                            url_cache[cache_key] = video_url
-                            return cache_key, video_url, track_name, artist_name
-                        except Exception:
-                            continue
-            
-            logger.warning(f"No valid YouTube results found for any variation of '{original_query}'")
-            return cache_key, None, track_name, artist_name
+            sanitized_track = sanitize_query(track_name)
+            logger.info(f"Fallback search: {sanitized_track}")
+            search_query_track = f"ytsearch:{sanitized_track}"
+            info_track = await fetch_video_info_with_retry(search_query_track, ydl_opts_override)
 
-        except Exception as e:
-            logger.error(f"Failed to search YouTube for '{sanitized_query}': {e}")
+            if "entries" in info_track and info_track["entries"]:
+                for entry in info_track["entries"][:3]:
+                    try:
+                        video_url = entry["url"]
+                        video_title = entry.get("title", "Unknown Title")
+                        logger.info(f"Found YouTube URL via fallback: {video_url} (Title: {video_title})")
+                        url_cache[cache_key] = video_url
+                        return cache_key, video_url, track_name, artist_name
+                    except Exception as e:
+                        logger.warning(f"Skipping unavailable video for {sanitized_track}: {e}")
+                        continue
+                logger.warning(f"No accessible videos in top results for {sanitized_track}")
+
+            logger.warning(f"No YouTube results for any query variation of '{original_query}'")
             url_cache[cache_key] = None
             return cache_key, None, track_name, artist_name
-        
+        except Exception as e:
+            logger.error(f"Failed to search YouTube for {sanitized_query}: {e}")
+            url_cache[cache_key] = None
+            return cache_key, None, track_name, artist_name
+
+    # --- LOGIQUE DE ROUTAGE PRINCIPALE ---
     platform_processor = None
     platform_name = ""
 
@@ -3848,23 +3894,19 @@ async def play(interaction: discord.Interaction, query: str):
                 await message.edit(embed=embed)
 
             else:
-                title = info.get('title', 'Unknown Title')
-                url = info.get("webpage_url", info.get("url", "#")) 
-
                 queue_item = {
-                    'url': url,
-                    'title': title,
-                    'webpage_url': url,
+                    'url': info["webpage_url"],
+                    'title': info.get('title', 'Unknown Title'),
+                    'webpage_url': info["webpage_url"],
                     'thumbnail': info.get('thumbnail'),
                     'is_single': True,
                     'skip_now_playing': True
                 }
 
                 await music_player.queue.put(queue_item)
-                
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
-                    description=f"[{title}]({url})",
+                    description=f"[{info['title']}]({info['webpage_url']})",
                     color=0xFFDAC1 if is_kawaii else discord.Color.blue()
                 )
                 if info.get("thumbnail"):
@@ -3932,7 +3974,7 @@ async def play(interaction: discord.Interaction, query: str):
                 except:
                     fallback_title = "External audio file"
                 
-                info = await fetch_video_info_with_retry(search_query)
+                info = await fetch_video_info_with_retry(search_query) # Utilisation de la fonction robuste
                 video_info = info
                 if not video_info.get('title'):
                     video_info['title'] = fallback_title
@@ -4155,6 +4197,9 @@ async def clear_queue(interaction: discord.Interaction):
     music_player.history.clear()
     music_player.radio_playlist.clear()
 
+    # --- LINE REMOVED ---
+    # clear_audio_cache(guild_id) # We no longer clear the cache here
+
     embed = Embed(description=get_messages("clear_queue_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
     await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed)
 
@@ -4168,7 +4213,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
         await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
         return
 
-    guild_id = interaction.guild.id
+    guild_id = interaction.guild_id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
@@ -4188,23 +4233,29 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
 
     queue_item = None
 
+    # --- BRANCH 1: The user provided a link or a search term ---
     if query:
+        # We also define the regex here for detection
+        direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
         try:
             info = {}
-            direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
+            # --- NEW DETECTION LOGIC ---
+            # Case A: It's a direct link to a file
+            if direct_link_regex.match(query):
+                logger.info(f"/playnext detected a direct link: {query}")
+                ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
+                info = await run_ydl_with_low_priority(ydl_opts, query)
+                if not info.get('title'):
+                    info['title'] = os.path.basename(urlparse(query).path)
 
-            spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
-            deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
-            apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
-            tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
-            amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
+            # Case B: It's a platform link (Spotify, Deezer...)
+            else:
+                spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
+                deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
+                apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
+                tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
+                amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
 
-            is_platform_link = (spotify_regex.match(query) or deezer_regex.match(query) or 
-                                apple_music_regex.match(query) or tidal_regex.match(query) or 
-                                amazon_music_regex.match(query))
-
-            search_query_for_yt = query
-            if is_platform_link:
                 tracks = None
                 if spotify_regex.match(query): tracks = await process_spotify_url(query, interaction)
                 elif deezer_regex.match(query): tracks = await process_deezer_url(query, interaction)
@@ -4212,33 +4263,17 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
                 elif tidal_regex.match(query): tracks = await process_tidal_url(query, interaction)
                 elif amazon_music_regex.match(query): tracks = await process_amazon_music_url(query, interaction)
 
+                search_query_for_yt = query
                 if tracks:
                     if len(tracks) > 1:
                         raise Exception("Playlists and albums are not supported for /playnext.")
                     track_name, artist_name = tracks[0]
                     search_query_for_yt = f"{track_name} {artist_name}"
 
-                prioritized_search = f"ytsearch:{sanitize_query(search_query_for_yt + ' lyrics')}"
-                logger.info(f"Trying prioritized search for /playnext: '{prioritized_search}'")
-                search_results = await fetch_video_info_with_retry(prioritized_search, ydl_opts_override={"noplaylist": True})
-
-                if not search_results or not search_results.get("entries"):
-                    standard_search = f"ytsearch:{sanitize_query(search_query_for_yt)}"
-                    logger.info(f"Prioritized search failed, falling back to: '{standard_search}'")
-                    search_results = await fetch_video_info_with_retry(standard_search, ydl_opts_override={"noplaylist": True})
-                
-                info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
-
-            else:
-                if direct_link_regex.match(query):
-                    ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
-                    info = await run_ydl_with_low_priority(ydl_opts, query)
-                    if not info.get('title'):
-                        info['title'] = os.path.basename(urlparse(query).path)
-                else:
-                    search_term = f"ytsearch:{sanitize_query(query)}" if not query.startswith(('http://', 'https://')) else query
-                    search_results = await fetch_video_info_with_retry(search_term, ydl_opts_override={"noplaylist": True})
+                    yt_search_term = f"ytsearch:{sanitize_query(search_query_for_yt)}" if not search_query_for_yt.startswith(('http://', 'https://')) else search_query_for_yt
+                    search_results = await fetch_video_info_with_retry(yt_search_term, ydl_opts_override={"noplaylist": True})
                     info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
+
 
             if not info:
                 raise Exception("Could not find any video or track information.")
@@ -4257,6 +4292,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
             logger.error(f"Error processing /playnext for query '{query}': {e}", exc_info=True)
             return
             
+    # --- BRANCH 2: The user provided a local file (unchanged) ---
     elif file:
         try:
             if not file.content_type or not (file.content_type.startswith("audio/") or file.content_type.startswith("video/")):
@@ -4284,6 +4320,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
             logger.error(f"Error processing file in /playnext for guild {guild_id}: {e}")
             return
 
+    # --- COMMON LOGIC: Add to queue and confirm (unchanged) ---
     if queue_item:
         new_queue = asyncio.Queue()
         await new_queue.put(queue_item)
@@ -4375,6 +4412,7 @@ async def filter_command(interaction: discord.Interaction):
         color=0xB5EAD7 if is_kawaii else discord.Color.blue()
     )
 
+    # KEY CHANGE: "ephemeral=True" is removed to make the message public
     await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, view=view)
 
 @bot.tree.command(name="pause", description="Pause the current playback")
@@ -4461,7 +4499,7 @@ async def skip(interaction: discord.Interaction):
 
     voice_client = await ensure_voice_connection(interaction)
     if not voice_client:
-        return
+        return 
 
     if not voice_client.is_playing() and not voice_client.is_paused():
         embed = Embed(
@@ -4491,56 +4529,20 @@ async def skip(interaction: discord.Interaction):
 
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         await safe_stop(voice_client)
-        return
-
+        return 
 
     queue_snapshot = list(music_player.queue._queue)
-    next_song_info = queue_snapshot[0] if queue_snapshot else None
 
-    music_player.suppress_next_now_playing = True
+    embed = Embed(
+        description=get_messages("skip_confirmation", guild_id),
+        color=0xE2F0CB if is_kawaii else discord.Color.blue()
+    )
     
-    embed = None 
-
-    if next_song_info:
-        hydrated_next_info = next_song_info.copy()
-
-        if (not hydrated_next_info.get('title') or hydrated_next_info.get('title') == 'Unknown Title' or not hydrated_next_info.get('thumbnail')) and not hydrated_next_info.get('source_type') == 'file':
-            try:
-                logger.info(f"[{guild_id}] Skip: Hydrating next track on-the-fly: {hydrated_next_info['url']}")
-                full_info = await fetch_video_info_with_retry(hydrated_next_info['url'])
-                if full_info:
-                    hydrated_next_info['title'] = full_info.get('title', 'Unknown Title')
-                    hydrated_next_info['thumbnail'] = full_info.get('thumbnail')
-                    hydrated_next_info['webpage_url'] = full_info.get('webpage_url', hydrated_next_info['url'])
-            except Exception as e:
-                logger.error(f"[{guild_id}] On-the-fly hydration during skip failed: {e}")
-
-        next_title = hydrated_next_info.get("title", "Unknown Title")
-        description_text = ""
-        if hydrated_next_info.get('source_type') == 'file':
-            description_text = f"💿 `{next_title}`"
-        else:
-            next_url = hydrated_next_info.get("webpage_url", "#")
-            description_text = get_messages("now_playing_description", guild_id).format(title=next_title, url=next_url)
-
-        embed = Embed(
-            title=get_messages("now_playing_title", guild_id),
-            description=description_text,
-            color=0xE2F0CB if is_kawaii else discord.Color.blue()
-        )
-        embed.set_author(name=get_messages("skip_confirmation", guild_id))
-        
-        if hydrated_next_info.get("thumbnail"):
-            embed.set_thumbnail(url=hydrated_next_info["thumbnail"])
-
-    else:
-        embed = Embed(
-            title=get_messages("skip_confirmation", guild_id),
-            color=0xE2F0CB if is_kawaii else discord.Color.blue()
-        )
-        embed.set_footer(text=get_messages("skip_queue_empty", guild_id))
+    if not queue_snapshot:
+        embed.description += "\n*" + get_messages("skip_queue_empty", guild_id) + "*"
 
     await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
+    
     await safe_stop(voice_client)
 
 # /loop command
@@ -5173,10 +5175,8 @@ async def seek_interactive(interaction: discord.Interaction):
         await interaction.response.send_message(get_messages("seek_fail_live", guild_id), ephemeral=True, silent=SILENT_MESSAGES)
         return
     
-    # Create the view and the initial embed
     view = SeekView(interaction)
     
-    # Create the initial embed (will be updated by the view)
     initial_embed = Embed(
         title=get_messages("seek_interface_title", guild_id),
         description="Loading player...",
@@ -5185,10 +5185,10 @@ async def seek_interactive(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=initial_embed, view=view, silent=SILENT_MESSAGES)
     
-    # Update the view with the message and start the background task
+    # On stocke le message et on démarre la tâche
     view.message = await interaction.original_response()
-    await view.update_embed() # First manual update
-    await view.start_update_task()
+    await view.update_embed(interaction=None) 
+    view.start_update_task() 
 
 # ==============================================================================
 # 6. DISCORD EVENTS
