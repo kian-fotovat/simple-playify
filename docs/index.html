@@ -1156,12 +1156,12 @@
   <section class="stats-container">
     <div class="stats-content">
       <div class="stat-block fade-in">
-        <h3 class="stat-number" data-target="1300">0</h3>
+        <h3 class="stat-number" data-target="1300" data-suffix="+">0</h3>
         <p class="stat-label"><i class="fas fa-server"></i>Servers Trust Playify</p>
       </div>
       <div class="stat-divider fade-in"></div>
       <div class="stat-block fade-in delay-1">
-        <h3 class="stat-number" data-target="70000">0</h3>
+        <h3 class="stat-number" data-target="60000" data-suffix="+">0</h3>
         <p class="stat-label"><i class="fas fa-users"></i>Community Members</p>
       </div>
     </div>
@@ -1409,30 +1409,48 @@
         setInterval(createParticles, 1000);
         createParticles();
       }
+
+      // === [NOUVEAU] Stats Hover Glow Effect ===
+      const statBlocks = document.querySelectorAll('.stat-block');
+      statBlocks.forEach(block => {
+          block.addEventListener('mousemove', (e) => {
+              const rect = block.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              block.style.setProperty('--mouse-x', `${x}px`);
+              block.style.setProperty('--mouse-y', `${y}px`);
+          });
+      });
       
       // === Number Counting & Fade-in Animation ===
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
+            // Animation pour les chiffres
             if (entry.target.classList.contains('stat-number')) {
               const counter = entry.target;
-              const target = +counter.getAttribute('data-target');
+              const target = parseInt(counter.dataset.target, 10);
+              const suffix = counter.dataset.suffix || ''; // Récupère le suffixe, ou une chaîne vide
               let startTime = null;
+
               const updateCounter = (currentTime) => {
                 if (!startTime) startTime = currentTime;
                 const progress = Math.min((currentTime - startTime) / 2500, 1);
-                // LIGNE CORRIGÉE 1/2
-                counter.innerText = Math.floor((1 - Math.pow(1 - progress, 3)) * target).toLocaleString('en-US'); 
+                const currentNum = Math.floor((1 - Math.pow(1 - progress, 3)) * target);
+
+                counter.innerText = currentNum.toLocaleString('en-US'); // Formate le nombre pendant l'animation
+                
                 if (progress < 1) {
                     requestAnimationFrame(updateCounter);
                 } else {
-                    // LIGNE CORRIGÉE 2/2
-                    counter.innerText = target.toLocaleString('en-US');
+                    // Une fois terminé, formate le nombre final ET ajoute le suffixe
+                    counter.innerText = target.toLocaleString('en-US') + suffix;
                 }
               };
               requestAnimationFrame(updateCounter);
               observer.unobserve(counter);
             }
+            // Animation pour le fade-in
             if(entry.target.classList.contains('fade-in')) {
                 entry.target.classList.add('visible');
                 observer.unobserve(entry.target);
