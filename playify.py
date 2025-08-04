@@ -4588,8 +4588,6 @@ async def play(interaction: discord.Interaction, query: str):
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
-            else:
-                await interaction.followup.send(f"✅ Ajouté à la file : {video_info.get('title', 'Unknown Title')}", ephemeral=True, silent=True)
 
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
