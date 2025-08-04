@@ -3691,21 +3691,19 @@ async def fetch_video_info_with_retry(query, ydl_opts_override=None):
         logger.critical(f"ALL ({len(cookies_to_try)}) AVAILABLE COOKIES FAILED for query: '{query}'. They are likely all expired or invalid.")
         raise e
     
-async def play_audio(guild_id, seek_time=0, is_a_loop=False):
+
+async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ended=None):
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
 
-    # This check prevents multiple play tasks from starting simultaneously.
     if music_player.voice_client and music_player.voice_client.is_playing() and not is_a_loop and not seek_time > 0:
         return
 
     async def after_playing(error):
-        """ This inner function is called by discord.py after a song finishes. """
         if error:
             logger.error(f'Error after playing in guild {guild_id}: {error}')
         
-        # We need the info of the song that just finished to handle 24/7 looping
-        song_that_just_finished = music_player.current_info
+        song_that_finished = music_player.current_info
         
         if not music_player.voice_client or not music_player.voice_client.is_connected():
             logger.info(f"[{guild_id}] after_playing: Voice client disconnected, stopping playback loop.")
@@ -3721,18 +3719,17 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             
         if music_player.loop_current:
             bot.loop.create_task(play_audio(guild_id, is_a_loop=True))
-            return # --- IMPORTANT ADDITION: We stop here if we're looping
+            return
 
-        # The state is now cleared ONLY if not looping.
         music_player.current_info = None
         
-        if song_that_just_finished: # Ensure we have info before trying to re-queue
-            track_to_requeue = create_queue_item_from_info(song_that_just_finished)
+        if song_that_finished:
+            track_to_requeue = create_queue_item_from_info(song_that_finished)
             if _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
                 await music_player.queue.put(track_to_requeue)
                 logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}'")
         
-        bot.loop.create_task(play_audio(guild_id, is_a_loop=False))
+        bot.loop.create_task(play_audio(guild_id, is_a_loop=False, song_that_just_ended=song_that_finished))
 
     try:
         if not (is_a_loop or seek_time > 0):
@@ -3745,29 +3742,43 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                         await music_player.queue.put(track_info_radio)
                 elif (_24_7_active.get(guild_id, False) and music_player.autoplay_enabled) or music_player.autoplay_enabled:
                     music_player.suppress_next_now_playing = False
+                    
                     seed_url = None
                     progress_message = None
-                    if music_player.current_info and music_player.current_url and any(s in music_player.current_url for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
-                        seed_url = music_player.current_url
-                    else:
-                        if music_player.text_channel and music_player.current_info:
-                            try:
-                                notice_key = "autoplay_file_notice" if music_player.current_info.get('source_type') == 'file' else "autoplay_direct_link_notice"
-                                notice_embed = Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
-                                progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
-                            except discord.Forbidden: pass
-                        source_list = music_player.radio_playlist if _24_7_active.get(guild_id, False) and music_player.radio_playlist else music_player.history
-                        for track in reversed(source_list):
-                            track_url = track.get('url')
-                            if track_url and any(s in track_url for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
-                                seed_url = track_url
-                                break
+
+                    seed_source_info = song_that_just_ended or (music_player.history[-1] if music_player.history else None)
+                    
+                    if seed_source_info:
+                        url_to_test = seed_source_info.get('webpage_url') or seed_source_info.get('url', '')
+
+                        if any(s in url_to_test for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
+                            seed_url = url_to_test
+                        else:
+                            if music_player.text_channel:
+                                try:
+                                    notice_key = "autoplay_file_notice" if seed_source_info.get('source_type') == 'file' else "autoplay_direct_link_notice"
+                                    notice_embed = Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
+                                    progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
+                                except discord.Forbidden: pass
+                            
+                            source_list = music_player.radio_playlist if _24_7_active.get(guild_id, False) and music_player.radio_playlist else music_player.history
+                            for track in reversed(source_list):
+                                fallback_url_to_test = track.get('webpage_url') or track.get('url', '')
+                                if fallback_url_to_test and any(s in fallback_url_to_test for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
+                                    seed_url = fallback_url_to_test
+                                    break
+                    
                     if seed_url:
                         added_count = 0
                         try:
                             if not progress_message and music_player.text_channel:
-                                initial_embed = Embed(description=get_messages("autoplay_added", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+                                initial_embed = Embed(
+                                    title=get_messages("autoplay_loading_title", guild_id),
+                                    description=get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total='?'),
+                                    color=0xC7CEEA if is_kawaii else discord.Color.blue()
+                                )
                                 progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
+                            
                             recommendations = []
                             if "youtube.com" in seed_url or "youtu.be" in seed_url:
                                 mix_playlist_url = get_mix_playlist_url(seed_url)
@@ -3783,16 +3794,13 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                                     info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, station_url)
                                     if info.get("entries") and len(info.get("entries")) > 1:
                                         recommendations = info["entries"][1:]
+
                             if recommendations and progress_message:
                                 total_to_add = len(recommendations)
-                                progress_embed = progress_message.embeds[0]
-                                progress_embed.title = get_messages("autoplay_loading_title", guild_id)
-                                progress_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total=total_to_add)
-                                await progress_message.edit(embed=progress_embed)
-                                await asyncio.sleep(0.5)
                                 for i, entry in enumerate(recommendations):
                                     await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
                                     added_count += 1
+                                    
                                     if (i + 1) % 10 == 0 or (i + 1) == total_to_add:
                                         progress = (i + 1) / total_to_add
                                         updated_embed = progress_message.embeds[0]
@@ -3804,15 +3812,16 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                         finally:
                             if progress_message and added_count > 0:
                                 final_embed = progress_message.embeds[0]
-                                final_embed.title = None
+                                final_embed.title = None 
                                 final_embed.description = get_messages("autoplay_finished_description", guild_id).format(count=added_count)
+                                final_embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
                                 await progress_message.edit(embed=final_embed)
                             elif progress_message and added_count == 0:
                                 await progress_message.delete()
 
                 if music_player.queue.empty():
                     music_player.current_task = None
-                    bot.loop.create_task(update_controller(bot, guild_id)) # Update to idle state
+                    bot.loop.create_task(update_controller(bot, guild_id))
                     if not _24_7_active.get(guild_id, False):
                         await asyncio.sleep(60)
                         if music_player.voice_client and not music_player.voice_client.is_playing() and len(music_player.voice_client.channel.members) == 1:
@@ -3827,7 +3836,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
             if track_info.pop('skip_now_playing', False):
                 music_player.suppress_next_now_playing = True
             
-            # Use the track_info directly as the base for current_info
             music_player.current_info = track_info
             
             if not music_player.loop_current:
@@ -3853,17 +3861,17 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
                         embed = Embed(
                             title=f'{emoji} Playback Failed',
                             description=get_messages(desc_key, guild_id) + "\n*This track will be skipped.*",
-                            color=0xFF9AA2 if is_kawaii else discord.Color.orange()
+                            color=0xFF9AA2 if is_kawaii else discord.Color.red()
                         )
                         embed.add_field(name="Affected URL", value=f"`{url_for_fetching}`")
                         await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
                     except discord.Forbidden: pass
-                bot.loop.create_task(play_audio(guild_id)) # Skip to next
+                bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
                 return
 
         if not full_playback_info:
             logger.error(f"[{guild_id}] Could not get any playback info for {url_for_fetching}. Skipping.")
-            bot.loop.create_task(play_audio(guild_id)) # Skip to next
+            bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
             return
         
         music_player.current_info.update(full_playback_info)
@@ -3871,7 +3879,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False):
         audio_url = music_player.current_info.get("url")
         if not audio_url:
             logger.error(f"[{guild_id}] Playback info retrieved but 'url' key is missing. Skipping.")
-            bot.loop.create_task(play_audio(guild_id)) # Skip to next
+            bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
             return
             
         music_player.is_current_live = music_player.current_info.get('is_live', False) or music_player.current_info.get('live_status') == 'is_live'
@@ -4114,7 +4122,7 @@ async def play(interaction: discord.Interaction, query: str):
         await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True)
         return
 
-    guild_id = interaction.guild_id
+    guild_id = interaction.guild.id
     is_kawaii = get_mode(guild_id)
     music_player = get_player(guild_id)
 
@@ -4175,8 +4183,6 @@ async def play(interaction: discord.Interaction, query: str):
             }
             await music_player.queue.put(queue_item)
             
-            # --- THIS IS THE KEY CHANGE ---
-            # If a controller is NOT active, send a public confirmation message.
             if guild_id not in controller_channels:
                 embed = Embed(
                     title=get_messages("song_added", guild_id),
@@ -4188,9 +4194,6 @@ async def play(interaction: discord.Interaction, query: str):
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
-            else:
-                # If a controller IS active, just send a silent, ephemeral confirmation.
-                await interaction.followup.send(f"✅ Added to queue: {video.get('title', track_name)}", ephemeral=True, silent=True)
 
         except Exception as e:
             logger.error(f"{platform_name} conversion error for '{search_term}': {e}", exc_info=True)
@@ -4253,7 +4256,6 @@ async def play(interaction: discord.Interaction, query: str):
 
         failed_text = "\n\n**Failed tracks (up to 5):**\n" + "\n".join(failed_tracks_list) if failed_tracks_list else ""
         
-        # Determine the correct message keys for the final embed
         platform_key_map = {
             "Spotify": ("spotify_playlist_added", "spotify_playlist_description"),
             "Deezer": ("deezer_playlist_added", "deezer_playlist_description"),
@@ -4318,7 +4320,7 @@ async def play(interaction: discord.Interaction, query: str):
             logger.error(f"Failed to search YouTube for '{sanitized_query}': {e}")
             url_cache[cache_key] = None
             return cache_key, None, track_name, artist_name
-        
+    
     platform_processor = None
     platform_name = ""
 
@@ -4349,7 +4351,6 @@ async def play(interaction: discord.Interaction, query: str):
             await handle_playlist_processing(platform_tracks, platform_name)
 
     elif soundcloud_regex.match(query) or youtube_regex.match(query) or ytmusic_regex.match(query) or bandcamp_regex.match(query):
-
         try:
             platform = ""
             if soundcloud_regex.match(query): platform = "SoundCloud"
@@ -4357,7 +4358,6 @@ async def play(interaction: discord.Interaction, query: str):
             elif youtube_regex.match(query): platform = "YouTube"
             elif bandcamp_regex.match(query): platform = "Bandcamp"
 
-            # Transforms a YouTube video URL with a playlist parameter into a clean playlist URL
             try:
                 parsed_url = urlparse(query)
                 query_params = parse_qs(parsed_url.query)
@@ -4374,11 +4374,9 @@ async def play(interaction: discord.Interaction, query: str):
 
             info = await fetch_video_info_with_retry(query, ydl_opts_override={"extract_flat": True, "noplaylist": False})
 
-            # This is a playlist or a channel with multiple entries
             if "entries" in info and info["entries"]:
                 tracks_to_add = []
                 
-                # Correctly handle nested playlists and individual tracks
                 for entry in info["entries"]:
                     if not entry: continue
                     if 'entries' in entry and entry.get('entries'):
@@ -4398,7 +4396,6 @@ async def play(interaction: discord.Interaction, query: str):
                 processed = 0
                 failed = 0
 
-                # Send initial "Processing..." message
                 embed = Embed(
                     title=f"Processing {platform} Resource",
                     description=get_messages("loading_playlist", guild_id).format(processed=0, total=total_tracks),
@@ -4406,7 +4403,6 @@ async def play(interaction: discord.Interaction, query: str):
                 )
                 message = await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
-                # Loop through tracks and add them to the queue
                 for track_entry in tracks_to_add:
                     try:
                         video_url = track_entry.get('url')
@@ -4427,7 +4423,6 @@ async def play(interaction: discord.Interaction, query: str):
                         await music_player.queue.put(queue_item)
                         processed += 1
 
-                        # Update the progress message periodically
                         if processed % 10 == 0 or processed == total_tracks:
                             progress = processed / total_tracks
                             bar = create_loading_bar(progress)
@@ -4445,13 +4440,8 @@ async def play(interaction: discord.Interaction, query: str):
                         processed += 1
                         continue
                 
-                # --- INSTANT CONTROLLER UPDATE (PERFORMANCE FIX) ---
-                # After populating the queue, immediately trigger a controller update.
-                # This makes the UI feel instantly responsive.
                 bot.loop.create_task(update_controller(bot, guild_id))
-                # --- END OF FIX ---
 
-                # Edit the final confirmation message
                 final_added_count = total_tracks - failed
                 first_entry_thumbnail = tracks_to_add[0].get("thumbnail") if tracks_to_add else None
                 
@@ -4469,7 +4459,6 @@ async def play(interaction: discord.Interaction, query: str):
                     embed.set_thumbnail(url=first_entry_thumbnail)
                 await message.edit(embed=embed)
             
-            # This is a single track
             else:
                 title = info.get('title', 'Unknown Title')
                 url = info.get("webpage_url", info.get("url", "#")) 
@@ -4486,14 +4475,15 @@ async def play(interaction: discord.Interaction, query: str):
 
                 await music_player.queue.put(queue_item)
                 
-                embed = Embed(
-                    title=get_messages("song_added", guild_id),
-                    description=f"[{title}]({url})",
-                    color=0xFFDAC1 if is_kawaii else discord.Color.blue()
-                )
-                if info.get("thumbnail"):
-                    embed.set_thumbnail(url=info["thumbnail"])
-                await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
+                if guild_id not in controller_channels:
+                    embed = Embed(
+                        title=get_messages("song_added", guild_id),
+                        description=f"[{title}]({url})",
+                        color=0xFFDAC1 if is_kawaii else discord.Color.blue()
+                    )
+                    if info.get("thumbnail"):
+                        embed.set_thumbnail(url=info["thumbnail"])
+                    await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
 
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
@@ -4598,9 +4588,8 @@ async def play(interaction: discord.Interaction, query: str):
                 if is_kawaii:
                     embed.set_footer(text="☆⌒(≧▽° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES,embed=embed)
-            
             else:
-                await interaction.followup.send(f"✅ Added to queue: {video_info.get('title', 'Unknown Title')}", ephemeral=True, silent=True)
+                await interaction.followup.send(f"✅ Ajouté à la file : {video_info.get('title', 'Unknown Title')}", ephemeral=True, silent=True)
 
         except yt_dlp.utils.DownloadError as e:
             emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
