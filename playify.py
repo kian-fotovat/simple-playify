@@ -18,7 +18,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from spotify_scraper import SpotifyClient
 from spotify_scraper.core.exceptions import SpotifyScraperError
 import random
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote_plus
 from cachetools import TTLCache
 import logging
 import requests
@@ -661,6 +661,14 @@ messages = {
         "normal": "✅ Added to Queue",
         "kawaii": "Added!~"
     },
+    "jump_to_placeholder": {
+        "normal": "Jump to a specific song in the queue...",
+        "kawaii": "Wanna jump to a song?~"
+    },
+    "jump_to_success": {
+        "normal": "⏭️ Jumped to **{title}**!",
+        "kawaii": "Yay! We jumped to **{title}**!~"
+    },
     "support_title": {
         "normal": "💖 Support the Creator",
         "kawaii": "Support Me! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"
@@ -837,7 +845,19 @@ messages = {
         "normal": "Show Queue",
         "kawaii": "Queue (=^-ω-^=)"
     },
-    "controller_vol_down_label": {
+    "controller_jump_to_song_label": {
+        "normal": "Jump to...",
+        "kawaii": "Jump to song..."
+    },
+    "jump_to_title": {
+        "normal": "️ JUMP TO SONG",
+        "kawaii": "Jump to a Song! (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+    },
+    "jump_to_description": {
+        "normal": "Use the dropdown menu to jump to a specific song in the queue.\nUse the buttons to navigate if you have a lot of songs.",
+        "kawaii": "Pick a song from the list to jump to it!~ If you click on the button, it's going to be a lot of music!"
+    },
+    "controller_vol_down_label": {        
         "normal": " ",
         "kawaii": " softer.. "
     },
@@ -920,6 +940,8 @@ class MusicPlayer:
         self.duration_hydration_lock = asyncio.Lock()
         self.queue_lock = asyncio.Lock()
         self.silence_management_lock = asyncio.Lock()
+        self.is_paused_by_leave = False
+        self.manual_stop = False 
 
 # --- NEW --- Music Controller Core Logic
 
@@ -945,6 +967,111 @@ class AddSongModal(discord.ui.Modal, title="Add a Song or Playlist"):
         else:
             await interaction.response.send_message("Error: Could not find the play command.", ephemeral=True)
 
+class JumpToSelect(discord.ui.Select):
+    """ The dropdown menu for jumping to a song, designed for pagination. """
+    def __init__(self, tracks_on_page: list, page_offset: int, guild_id: int):
+        options = []
+        for i, track in enumerate(tracks_on_page):
+            global_index = i + page_offset
+            title = track.get('title', 'Unknown Title')
+            options.append(discord.SelectOption(
+                label=f"{global_index + 1}. {title}"[:100],
+                value=str(global_index) # The value is the GLOBAL index in the queue
+            ))
+        
+        super().__init__(
+            placeholder=get_messages("jump_to_placeholder", guild_id),
+            min_values=1, max_values=1, options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        guild_id = interaction.guild_id
+        music_player = get_player(guild_id)
+        vc = music_player.voice_client
+
+        if not vc or not (vc.is_playing() or vc.is_paused()):
+            return await interaction.response.defer()
+
+        selected_index = int(self.values[0])
+        
+        async with music_player.queue_lock:
+            queue_list = list(music_player.queue._queue)
+            if not 0 <= selected_index < len(queue_list):
+                return await interaction.response.defer()
+            
+            # Add all the skipped tracks to the history to make /previous work correctly.
+            tracks_to_skip = queue_list[:selected_index]
+            music_player.history.extend(tracks_to_skip)
+            logger.info(f"[{guild_id}] JumpTo: Added {len(tracks_to_skip)} skipped tracks to history.")
+
+            # Keep only the songs from the selected index onwards
+            new_queue_list = queue_list[selected_index:]
+            
+            new_queue = asyncio.Queue()
+            for item in new_queue_list:
+                await new_queue.put(item)
+            music_player.queue = new_queue
+
+        # --- FIX: Delete the original message instead of editing it. ---
+        # First, acknowledge the interaction silently.
+        await interaction.response.defer()
+        # Then, delete the original message (the one with the dropdown menu).
+        await interaction.delete_original_response()
+        
+        # Stop the player to start the new song
+        music_player.manual_stop = True
+        await safe_stop(vc)
+
+class JumpToView(View):
+    """ The interactive view for the /jumpto command, with pagination. """
+    def __init__(self, interaction: discord.Interaction, all_tracks: list):
+        super().__init__(timeout=300.0)
+        self.interaction = interaction
+        self.guild_id = interaction.guild_id
+        self.all_tracks = all_tracks
+        self.current_page = 0
+        self.items_per_page = 25
+        self.total_pages = math.ceil(len(self.all_tracks) / self.items_per_page) if self.all_tracks else 1
+        
+    async def update_view(self):
+        """ Rebuilds the view with the correct dropdown and buttons for the current page. """
+        self.clear_items()
+        start_index = self.current_page * self.items_per_page
+        end_index = start_index + self.items_per_page
+        tracks_on_page = self.all_tracks[start_index:end_index]
+
+        # Hydrate missing track titles for better display, just like in /remove
+        tracks_to_hydrate = [t for t in tracks_on_page if (not t.get('title') or t.get('title') == 'Unknown Title') and not t.get('source_type') == 'file']
+        if tracks_to_hydrate:
+            tasks = [fetch_meta(track['url'], None) for track in tracks_to_hydrate]
+            hydrated_results = await asyncio.gather(*tasks)
+            hydrated_map = {res['url']: res for res in hydrated_results if res}
+            for track in tracks_on_page:
+                if track.get('url') in hydrated_map:
+                    track['title'] = hydrated_map[track['url']].get('title', 'Unknown Title')
+
+        self.add_item(JumpToSelect(tracks_on_page, page_offset=start_index, guild_id=self.guild_id))
+
+        if self.total_pages > 1:
+            prev_button = Button(label="⬅️ Previous", style=ButtonStyle.secondary, disabled=(self.current_page == 0))
+            next_button = Button(label="Next ➡️", style=ButtonStyle.secondary, disabled=(self.current_page >= self.total_pages - 1))
+            prev_button.callback = self.prev_page
+            next_button.callback = self.next_page
+            self.add_item(prev_button)
+            self.add_item(next_button)
+            
+    async def prev_page(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if self.current_page > 0: self.current_page -= 1
+        await self.update_view()
+        await interaction.edit_original_response(view=self)
+
+    async def next_page(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if self.current_page < self.total_pages - 1: self.current_page += 1
+        await self.update_view()
+        await interaction.edit_original_response(view=self)
+
 class MusicControllerView(View):
     def __init__(self, bot, guild_id):
         super().__init__(timeout=None)
@@ -966,7 +1093,8 @@ class MusicControllerView(View):
             "controller_vol_up": "🔊",
             "controller_lyrics": "📜",
             "controller_karaoke": "🎤",
-            "controller_queue": "📜"
+            "controller_queue": "📜",
+            "controller_jump_to_song": "⤵️"
         }
         # The update_buttons method is called to set the initial state of the buttons
         self.update_buttons()
@@ -1031,6 +1159,7 @@ class MusicControllerView(View):
     @discord.ui.button(style=ButtonStyle.primary, custom_id="controller_previous", row=0)
     async def previous_button(self, interaction: discord.Interaction, button: Button):
         music_player = get_player(interaction.guild_id)
+        guild_id = interaction.guild_id
         vc = interaction.guild.voice_client
         if not vc or not (vc.is_playing() or vc.is_paused()):
             return await interaction.response.defer()
@@ -1047,13 +1176,43 @@ class MusicControllerView(View):
             music_player.is_seeking, music_player.seek_info = True, 0
             await safe_stop(vc)
             return await interaction.response.defer()
+        
+        # --- JOURNAL DE DÉBOGAGE ---
+        logger.warning("="*20 + f" [DEBUG-PREVIOUS] INITIATED in Guild {guild_id} " + "="*20)
+        history_before = [item.get('title', 'N/A') for item in music_player.history]
+        queue_before = [item.get('title', 'N/A') for item in list(music_player.queue._queue)]
+        current_song_title = music_player.current_info.get('title', 'N/A') if music_player.current_info else "N/A"
+        logger.info(f"[DEBUG-PREVIOUS] State BEFORE: Current Song='{current_song_title}', History Size={len(history_before)}, Queue Size={len(queue_before)}")
+        logger.info(f"[DEBUG-PREVIOUS] History Content: {history_before[-5:]}") # 5 derniers
+        # --- FIN DU JOURNAL ---
+
         async with music_player.queue_lock:
             if len(music_player.history) < 2:
+                logger.warning("[DEBUG-PREVIOUS] Aborted: Not enough history.")
                 return await interaction.response.send_message("No previous song in history.", ephemeral=True, silent=True)
-            current_song, previous_song = music_player.history.pop(), music_player.history.pop()
-            new_queue = asyncio.Queue(); await new_queue.put(previous_song); await new_queue.put(current_song)
-            for item in list(music_player.queue._queue): await new_queue.put(item)
+            
+            rest_of_queue = list(music_player.queue._queue)
+            logger.info(f"[DEBUG-PREVIOUS] Copied 'rest_of_queue' (size {len(rest_of_queue)})")
+
+            current_song_popped = music_player.history.pop()
+            previous_song_popped = music_player.history.pop()
+            logger.info(f"[DEBUG-PREVIOUS] Popped: current='{current_song_popped.get('title')}', previous='{previous_song_popped.get('title')}'")
+
+            new_queue_items = [previous_song_popped, current_song_popped] + rest_of_queue
+            logger.info(f"[DEBUG-PREVIOUS] Reconstructed 'new_queue_items' (new size should be {len(rest_of_queue) + 2})")
+
+            new_queue = asyncio.Queue()
+            for item in new_queue_items:
+                await new_queue.put(item)
+            
             music_player.queue = new_queue
+            
+            queue_after_size = music_player.queue.qsize()
+            logger.warning(f"[DEBUG-PREVIOUS] State AFTER: New Queue Size={queue_after_size}")
+            if queue_after_size != len(queue_before) + 2:
+                 logger.error(f"[DEBUG-PREVIOUS] POTENTIAL BUG: Queue size mismatch!")
+        
+        music_player.manual_stop = True
         await safe_stop(vc)
         await interaction.response.defer()
 
@@ -1082,20 +1241,42 @@ class MusicControllerView(View):
             return await interaction.response.defer()
         if music_player.lyrics_task and not music_player.lyrics_task.done(): music_player.lyrics_task.cancel()
         if music_player.loop_current: music_player.is_seeking, music_player.seek_info = True, 0
+        music_player.manual_stop = True
         await safe_stop(vc)
         await interaction.response.defer()
 
     @discord.ui.button(style=ButtonStyle.danger, custom_id="controller_stop", row=0)
     async def stop_button(self, interaction: discord.Interaction, button: Button):
-        guild_id, music_player = interaction.guild_id, get_player(interaction.guild_id)
-        if music_player.lyrics_task and not music_player.lyrics_task.done(): music_player.lyrics_task.cancel()
+        guild_id = interaction.guild_id
+        music_player = get_player(guild_id)
+        
+        # Defer the response immediately
+        await interaction.response.defer()
+
+        # --- FIX START: Perform a full cleanup just like the /stop command ---
+        if music_player.lyrics_task and not music_player.lyrics_task.done():
+            music_player.lyrics_task.cancel()
+
         vc = music_player.voice_client
         if vc and vc.is_connected():
+            # Stop playback and kill FFmpeg
             await safe_stop(vc)
-            if music_player.current_task and not music_player.current_task.done(): music_player.current_task.cancel()
+            
+            # Cancel the main playback task
+            if music_player.current_task and not music_player.current_task.done():
+                music_player.current_task.cancel()
+
+            # Disconnect from the voice channel
             await vc.disconnect()
+            
+            # Reset the player state entirely for the guild
+            clear_audio_cache(guild_id)
+            music_players[guild_id] = MusicPlayer()
+            logger.info(f"[{guild_id}] Player state fully reset via controller stop button.")
+
+            # Update the controller to show the idle state
             await update_controller(self.bot, guild_id)
-        await interaction.response.defer()
+        # --- FIX END ---
 
     @discord.ui.button(style=ButtonStyle.success, custom_id="controller_add_song", row=0)
     async def add_song_button(self, interaction: discord.Interaction, button: Button):
@@ -1162,7 +1343,17 @@ class MusicControllerView(View):
     @discord.ui.button(style=ButtonStyle.primary, custom_id="controller_queue", row=2)
     async def queue_button(self, interaction: discord.Interaction, button: Button):
         queue_command = self.bot.tree.get_command('queue')
-        await queue_command.callback(interaction)
+        if queue_command:
+            await queue_command.callback(interaction)
+
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_jump_to_song", row=2)
+    async def jump_to_song_button(self, interaction: discord.Interaction, button: Button):
+        jumpto_command = self.bot.tree.get_command('jumpto')
+        if jumpto_command:
+            await jumpto_command.callback(interaction)
+        else:
+            await interaction.response.send_message("Jump To command not found.", ephemeral=True, silent=True)
+
 
 def launch_total_duration_hydration(bot, guild_id):
     """
@@ -1237,6 +1428,7 @@ async def create_status_embed(guild_id: int) -> Embed:
 async def create_controller_embed(bot, guild_id):
     """
     Creates the controller embed using texts from the messages dictionary.
+    This version includes robust data hydration to fix display bugs.
     """
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
@@ -1261,16 +1453,28 @@ async def create_controller_embed(bot, guild_id):
     requester = info.get("requester", bot.user)
     artist = info.get("uploader", "Unknown Artist")
     
-    queue_snapshot = list(music_player.queue._queue)
+    is_24_7_normal = _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled
     
+    queue_snapshot = []
+    if is_24_7_normal and music_player.radio_playlist:
+        current_url = music_player.current_info.get('url') if music_player.current_info else None
+        try:
+            current_index = [t.get('url') for t in music_player.radio_playlist].index(current_url)
+            queue_snapshot = music_player.radio_playlist[current_index + 1:] + music_player.radio_playlist[:current_index]
+        except (ValueError, IndexError):
+            queue_snapshot = list(music_player.queue._queue)
+    else:
+        queue_snapshot = list(music_player.queue._queue)
+
     tracks_to_display = queue_snapshot[:5]
-    visible_tracks_to_hydrate = [
+    
+    tracks_to_hydrate = [
         track for track in tracks_to_display
-        if (not track.get('duration', 0) > 0 or not track.get('title') or track.get('title') in ['Unknown Title', 'Loading...'])
+        if (not track.get('duration', 0) > 0 or "video #" in track.get('title', ''))
         and not track.get('source_type') == 'file'
     ]
-    if visible_tracks_to_hydrate:
-        tasks = [fetch_meta(track['url'], None) for track in visible_tracks_to_hydrate]
+    if tracks_to_hydrate:
+        tasks = [fetch_meta(track['url'], None) for track in tracks_to_hydrate]
         hydrated_results = await asyncio.gather(*tasks)
         hydrated_map = {res['url']: res for res in hydrated_results if res}
         for track in tracks_to_display:
@@ -1281,7 +1485,7 @@ async def create_controller_embed(bot, guild_id):
     next_song_text = get_messages("controller_nothing_next", guild_id)
     if tracks_to_display:
         next_song = tracks_to_display[0]
-        next_title = next_song.get('title', 'N/A')
+        next_title = next_song.get('title', 'Loading...')
         next_duration = format_duration(next_song.get('duration', 0))
         if next_song.get('source_type') == 'file':
             next_song_text = f"💿 `{next_title}` - `{next_duration}`"
@@ -1289,21 +1493,26 @@ async def create_controller_embed(bot, guild_id):
             next_url = next_song.get('webpage_url', next_song.get('url', '#'))
             next_song_text = f"[{next_title}]({next_url}) - `{next_duration}`"
 
-    # --- Reverse display logic ---
+    # --- Cleaned-up display logic for the queue ---
     queue_list_text = []
     if len(tracks_to_display) > 1:
+        # We display the rest of the queue (from the 2nd song onwards)
         list_to_display = tracks_to_display[1:]
-        list_to_display.reverse()
-
-        for idx, item in enumerate(list_to_display):
-            global_position = len(tracks_to_display) - idx
+        
+        for i, item in enumerate(list_to_display, start=2): # Correctly number from 2
             item_title = item.get('title', 'Loading...')
-            item_duration = item.get('duration', 0)
-            formatted_duration = format_duration(item_duration)
+            item_duration = format_duration(item.get('duration', 0))
+
+            # Truncate title to avoid overly long lines
+            display_title = (item_title[:38] + '..') if len(item_title) > 40 else item_title
+
             if item.get('source_type') == 'file':
-                queue_list_text.append(f"`{global_position}.` 💿 `{item_title[:35]}` - `{formatted_duration}`")
+                queue_list_text.append(f"`{i}.` 💿 `{display_title}` - `{item_duration}`")
             else:
-                queue_list_text.append(f"`{global_position}.` {item_title[:40]} - `{formatted_duration}`")
+                queue_list_text.append(f"`{i}.` {display_title} - `{item_duration}`")
+
+        # Reverse the list to show the highest numbers at the top, as intended
+        queue_list_text.reverse()
                 
     elif len(tracks_to_display) == 1:
         queue_list_text.append(get_messages("controller_no_other_songs", guild_id))
@@ -1345,6 +1554,11 @@ async def create_controller_embed(bot, guild_id):
         )
 
     # --- Footer ---
+    is_24_7_normal = _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled
+    
+    # --- CORRECTION --- On utilise la radio_playlist pour un compte total stable en mode 24/7
+    count_for_display = len(music_player.radio_playlist) if is_24_7_normal and music_player.radio_playlist else len(queue_snapshot)
+
     is_full_hydration_needed = any(not track.get('duration', 0) > 0 for track in queue_snapshot if not track.get('source_type') == 'file')
     
     total_duration_text = ""
@@ -1354,19 +1568,17 @@ async def create_controller_embed(bot, guild_id):
     else:
         def safe_get_duration(item):
             try:
-                # Tries to convert the duration to float. Handles integers, floats, and numeric strings.
                 return float(item.get('duration', 0))
             except (ValueError, TypeError):
-                # If the conversion fails (e.g., the value is None or a non-numeric text), returns 0.
                 return 0.0
-
-        queued_songs_duration = sum(safe_get_duration(item) for item in queue_snapshot)
-        current_song_duration = safe_get_duration(info)
-        total_playlist_duration = current_song_duration + queued_songs_duration
+        
+        # Pour la durée, on se base sur la playlist complète si elle existe en 24/7
+        list_for_duration = music_player.radio_playlist if is_24_7_normal and music_player.radio_playlist else queue_snapshot + ([info] if info else [])
+        total_playlist_duration = sum(safe_get_duration(item) for item in list_for_duration)
         total_duration_text = format_duration(total_playlist_duration)
 
     footer_text = get_messages("controller_footer", guild_id).format(
-        count=len(queue_snapshot),
+        count=count_for_display,
         duration=total_duration_text,
         volume=int(music_player.volume * 100)
     )
@@ -1375,7 +1587,7 @@ async def create_controller_embed(bot, guild_id):
     return embed
 
 async def update_controller(bot, guild_id):
-    """Fetches, generates, and edits the controller message for a guild."""
+    """Fetches, generates, and edits/sends the controller message for a guild."""
     if guild_id not in controller_channels:
         return
 
@@ -1396,13 +1608,13 @@ async def update_controller(bot, guild_id):
                 message = await channel.fetch_message(message_id)
                 await message.edit(embed=embed, view=view)
             except (discord.NotFound, discord.Forbidden):
-                # Message was deleted or permissions lost, create a new one
+                # Message was deleted or permissions lost, create a new one silently
                 logger.warning(f"Controller message {message_id} not found in guild {guild_id}. Creating new one.")
-                new_message = await channel.send(embed=embed, view=view)
+                new_message = await channel.send(embed=embed, view=view, silent=True)
                 controller_messages[guild_id] = new_message.id
         else:
-            # No message ID stored, create one
-            new_message = await channel.send(embed=embed, view=view)
+            # No message ID stored, create one silently
+            new_message = await channel.send(embed=embed, view=view, silent=True)
             controller_messages[guild_id] = new_message.id
     except Exception as e:
         logger.error(f"Failed to update controller for guild {guild_id}: {e}", exc_info=True)
@@ -2260,6 +2472,45 @@ class RemoveView(View):
 
 # --- General & State Helpers ---
 
+async def fetch_video_info_with_retry(query: str, ydl_opts_override=None):
+    """
+    Fetches video info using yt-dlp, with a robust retry mechanism for age-restricted content.
+    This is the new universal function for all online fetching.
+    """
+    base_ydl_opts = {
+        "format": "bestaudio[acodec=opus]/bestaudio/best",
+        "quiet": True, "no_warnings": True, "no_color": True, "socket_timeout": 15,
+    }
+    ydl_opts = {**base_ydl_opts, **(ydl_opts_override or {})}
+
+    try:
+        # First attempt: no cookies
+        logger.info(f"Fetching info for '{query[:100]}' (no cookies).")
+        return await run_ydl_with_low_priority(ydl_opts, query)
+    except yt_dlp.utils.DownloadError as e:
+        error_str = str(e).lower()
+        # Check for age restriction errors
+        if "sign in to confirm your age" in error_str or "age-restricted" in error_str:
+            logger.warning(f"Age restriction detected for '{query[:100]}'. Retrying with cookies.")
+            
+            cookies_to_try = AVAILABLE_COOKIES.copy()
+            random.shuffle(cookies_to_try) # Shuffle to distribute load/bans
+
+            for cookie_name in cookies_to_try:
+                try:
+                    logger.info(f"Retrying with cookie: {cookie_name}")
+                    return await run_ydl_with_low_priority(ydl_opts, query, specific_cookie_file=cookie_name)
+                except Exception as cookie_e:
+                    logger.warning(f"Cookie '{cookie_name}' failed: {str(cookie_e)[:150]}")
+                    continue # Try the next cookie
+            
+            # If all cookies failed, re-raise the original error
+            logger.error(f"All cookies failed for age-restricted content: '{query[:100]}'")
+            raise e
+        else:
+            # Not an age restriction error, re-raise it
+            raise e
+
 def get_file_duration(file_path: str) -> float:
     """Uses ffprobe to get the duration of a local file in seconds."""
     command = [
@@ -2554,6 +2805,12 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
             except Exception as e:
                 logger.error(f"[{guild_id}] Unexpected error while promoting: {e}")
 
+    # Auto-setup the controller channel on first use if not already set.
+    if guild_id not in controller_channels:
+        controller_channels[guild_id] = interaction.channel.id
+        controller_messages[guild_id] = None # Ensure a new message is created
+        logger.info(f"[{guild_id}] Controller channel has been auto-set to #{interaction.channel.name}")
+
     # Final sanity check and return the healthy client.
     music_player.text_channel = interaction.channel
     music_player.voice_client = vc
@@ -2582,7 +2839,11 @@ def get_full_opts():
 async def fetch_meta(url, _):
     """Fetches metadata for a single URL, used for queue hydration."""
     try:
-        data = await run_ydl_with_low_priority(get_full_opts(), url)
+        # --- THIS IS THE FIX ---
+        # We now use the robust, cookie-aware function for all metadata fetching.
+        data = await fetch_video_info_with_retry(url)
+        # --- END OF FIX ---
+        
         # We make sure the duration is returned.
         return {
             'url': url,
@@ -2682,7 +2943,8 @@ def create_queue_item_from_info(info: dict) -> dict:
             'webpage_url': None,     # A local file has no webpage URL
             'thumbnail': None,       # A local file has no thumbnail
             'is_single': False,      # When re-queuing, it's considered part of a list
-            'source_type': 'file'    # Critically preserve this type
+            'source_type': 'file',   # Critically preserve this type
+            'requester': info.get('requester') 
         }
 
     return {
@@ -2691,9 +2953,10 @@ def create_queue_item_from_info(info: dict) -> dict:
         'webpage_url': info.get('webpage_url', info.get('url')),
         'thumbnail': info.get('thumbnail'),
         'is_single': False, # When re-queuing, it's part of a loop, not a single add
-        'source_type': info.get('source_type') # Preserve for other potential types
+        'source_type': info.get('source_type'), # Preserve for other potential types
+        'requester': info.get('requester')
     }
-
+    
 # --- Text, Formatting & Lyrics Helpers ---
 
 def get_cleaned_song_info(music_info: dict) -> tuple[str, str]:
@@ -3643,55 +3906,6 @@ async def handle_playback_error(guild_id: int, error: Exception):
         music_players[guild_id] = MusicPlayer()
         logger.info(f"Player for guild {guild_id} has been reset and disconnected due to a critical error.")
 
-async def fetch_video_info_with_retry(query, ydl_opts_override=None):
-    """
-    Fetches video info with a robust retry strategy using a central pool of cookies.
-    1. Tries without cookies.
-    2. If blocked, shuffles the central cookie list and tries them one by one.
-    3. Only fails completely if all cookies have been tried and have failed.
-    """
-    base_ydl_opts = {
-        "format": "bestaudio[acodec=opus]/bestaudio/best",
-        "quiet": True,
-        "no_warnings": True,
-        "no_color": True,
-        "socket_timeout": 10,
-    }
-    ydl_opts = {**base_ydl_opts, **(ydl_opts_override or {})}
-
-    try:
-        logger.info(f"Fetching info for '{query}' without cookies...")
-        return await run_ydl_with_low_priority(ydl_opts, query)
-    
-    except yt_dlp.utils.DownloadError as e:
-        error_str = str(e).lower()
-        if "sign in" not in error_str and "age-restricted" not in error_str and "confirm you're not a bot" not in error_str:
-            logger.error(f"Fetch failed for '{query}' with a non-restriction error. No cookie retry needed.")
-            raise e
-
-        logger.warning(f"Restriction detected for '{query}'. Initiating cookie rotation strategy.")
-
-        logger.warning(f"Restriction detected for '{query}'. Initiating cookie rotation strategy.")
-
-        cookies_to_try = AVAILABLE_COOKIES.copy()
-        random.shuffle(cookies_to_try)
-
-        for cookie_name in cookies_to_try:
-            try:
-                logger.info(f"Retrying with cookie from pool: {cookie_name}")
-                
-                return await run_ydl_with_low_priority(
-                    ydl_opts,
-                    query,
-                    specific_cookie_file=cookie_name
-                )
-            except yt_dlp.utils.DownloadError as cookie_e:
-                logger.warning(f"Attempt with cookie '{cookie_name}' also failed. Reason: {str(cookie_e).splitlines()[0]}")
-
-        logger.critical(f"ALL ({len(cookies_to_try)}) AVAILABLE COOKIES FAILED for query: '{query}'. They are likely all expired or invalid.")
-        raise e
-    
-
 async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ended=None):
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
@@ -3703,8 +3917,18 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
         if error:
             logger.error(f'Error after playing in guild {guild_id}: {error}')
         
+        if music_player.is_paused_by_leave:
+            logger.info(f"[{guild_id}] Playback intentionally paused due to empty channel. Not proceeding to next track.")
+            return
+
         song_that_finished = music_player.current_info
         
+        if music_player.manual_stop:
+            logger.warning(f"[{guild_id}] after_playing: Manual stop detected. Bypassing 24/7 logic.")
+            music_player.manual_stop = False 
+            bot.loop.create_task(play_audio(guild_id, is_a_loop=False, song_that_just_ended=song_that_finished))
+            return
+
         if not music_player.voice_client or not music_player.voice_client.is_connected():
             logger.info(f"[{guild_id}] after_playing: Voice client disconnected, stopping playback loop.")
             return
@@ -3727,7 +3951,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
             track_to_requeue = create_queue_item_from_info(song_that_finished)
             if _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled:
                 await music_player.queue.put(track_to_requeue)
-                logger.info(f"[{guild_id}] 24/7 Normal: Looping track '{track_to_requeue.get('title')}'")
         
         bot.loop.create_task(play_audio(guild_id, is_a_loop=False, song_that_just_ended=song_that_finished))
 
@@ -3783,6 +4006,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                             if "youtube.com" in seed_url or "youtu.be" in seed_url:
                                 mix_playlist_url = get_mix_playlist_url(seed_url)
                                 if mix_playlist_url:
+                                    # Autoplay still uses yt-dlp directly for mixes as it's more reliable
                                     info = await run_ydl_with_low_priority({"extract_flat": True, "quiet": True, "noplaylist": False}, mix_playlist_url)
                                     if info.get("entries"):
                                         current_video_id = get_video_id(seed_url)
@@ -3797,8 +4021,16 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
 
                             if recommendations and progress_message:
                                 total_to_add = len(recommendations)
+                                original_requester = seed_source_info.get('requester', bot.user) if seed_source_info else bot.user
+                                
                                 for i, entry in enumerate(recommendations):
-                                    await music_player.queue.put({'url': entry.get('url'), 'title': entry.get('title', 'Unknown Title'), 'webpage_url': entry.get('webpage_url', entry.get('url')), 'is_single': True})
+                                    await music_player.queue.put({
+                                        'url': entry.get('url'), 
+                                        'title': entry.get('title', 'Unknown Title'), 
+                                        'webpage_url': entry.get('webpage_url', entry.get('url')), 
+                                        'is_single': True,
+                                        'requester': original_requester
+                                    })
                                     added_count += 1
                                     
                                     if (i + 1) % 10 == 0 or (i + 1) == total_to_add:
@@ -3852,9 +4084,10 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
             full_playback_info = music_player.current_info
         else:
             try:
+            # New simplified logic: use the universal fetcher for all online content.
                 full_playback_info = await fetch_video_info_with_retry(url_for_fetching)
-            except yt_dlp.utils.DownloadError as e:
-                logger.error(f"[{guild_id}] FINAL FETCH FAILURE for {url_for_fetching}: {e}")
+            except Exception as e:
+                logger.error(f"[{guild_id}] FINAL FETCH FAILURE for {url_for_fetching}: {e}", exc_info=True)
                 if music_player.text_channel:
                     try:
                         emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
@@ -3885,7 +4118,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
         music_player.is_current_live = music_player.current_info.get('is_live', False) or music_player.current_info.get('live_status') == 'is_live'
         
         active_filters = server_filters.get(guild_id, set())
-        filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in AUDIO_FILTERS]) if active_filters else ""
+        filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in active_filters]) if active_filters else ""
         
         ffmpeg_options = {"options": "-vn"}
         if music_player.current_info.get('source_type') != 'file':
@@ -3899,27 +4132,38 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
         
         callback = lambda e: bot.loop.create_task(after_playing(e))
         
+        if not music_player.voice_client or not music_player.voice_client.is_connected():
+            logger.warning(f"[{guild_id}] Lecture annulée au dernier moment : le client vocal n'est plus valide.")
+            return
+
         music_player.voice_client.play(source, after=callback)
 
         music_player.start_time = seek_time
         music_player.playback_started_at = time.time()
-        
+
+        if guild_id in controller_channels and not is_a_loop and seek_time == 0:
+            channel_id = controller_channels.get(guild_id)
+            message_id = controller_messages.get(guild_id)
+            
+            if channel_id and message_id:
+                try:
+                    channel = bot.get_channel(channel_id)
+                    if channel and channel.last_message_id != message_id:
+                        logger.info(f"[{guild_id}] Controller is not the last message. Re-anchoring.")
+                        old_message = await channel.fetch_message(message_id)
+                        await old_message.delete()
+                        controller_messages[guild_id] = None
+                except (discord.NotFound, discord.Forbidden):
+                    logger.info(f"[{guild_id}] Old controller not found during re-anchor check. Resetting.")
+                    controller_messages[guild_id] = None
+                except Exception as e:
+                    logger.error(f"[{guild_id}] Error in controller re-anchor check: {e}")
+
         bot.loop.create_task(update_controller(bot, guild_id))
         
         if music_player.suppress_next_now_playing:
-            music_player.suppress_next_now_playing = False  
-        elif not is_a_loop and seek_time == 0 and guild_id not in controller_channels:
-            title = music_player.current_info.get("title", "Unknown Title")
-            desc_text = f"💿 `{title}`" if music_player.current_info.get('source_type') == 'file' else get_messages("now_playing_description", guild_id).format(title=title, url=music_player.current_info.get("webpage_url", music_player.current_url))
-            embed = Embed(title=get_messages("now_playing_title", guild_id), description=desc_text, color=0xC7CEEA if is_kawaii else discord.Color.green())
-            if music_player.current_info.get("thumbnail"):
-                embed.set_thumbnail(url=music_player.current_info["thumbnail"])
-            if music_player.text_channel:
-                try:
-                    await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
-                except Exception as e:
-                    logger.error(f"Failed to send 'Now Playing' message to guild {guild_id}: {e}")
-
+            music_player.suppress_next_now_playing = False
+        
     except Exception as e:
         await handle_playback_error(guild_id, e)
 
@@ -4627,7 +4871,7 @@ async def play(interaction: discord.Interaction, query: str):
 
     if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
-
+                
 @bot.tree.command(name="play-files", description="Plays one or more uploaded audio or video files.")
 @app_commands.describe(
     file1="The first audio/video file to play.",
@@ -4735,13 +4979,23 @@ async def queue(interaction: discord.Interaction):
         return
 
     await interaction.response.defer()
-    guild_id = interaction.guild_id
+    guild_id = interaction.guild.id
     music_player = get_player(guild_id)
 
-    # We work on a copy of the list to avoid interfering with the player
-    all_tracks = list(music_player.queue._queue)
+    is_24_7_normal = _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled
+    tracks_for_display = []
+    
+    if is_24_7_normal and music_player.radio_playlist:
+        current_url = music_player.current_info.get('url') if music_player.current_info else None
+        try:
+            current_index = [t.get('url') for t in music_player.radio_playlist].index(current_url)
+            tracks_for_display = music_player.radio_playlist[current_index + 1:] + music_player.radio_playlist[:current_index + 1]
+        except (ValueError, IndexError):
+            tracks_for_display = music_player.radio_playlist
+    else:
+        tracks_for_display = list(music_player.queue._queue)
 
-    if not all_tracks and not music_player.current_info:
+    if not tracks_for_display and not music_player.current_info:
         is_kawaii = get_mode(guild_id)
         embed = Embed(
             description=get_messages("queue_empty", guild_id),
@@ -4750,8 +5004,7 @@ async def queue(interaction: discord.Interaction):
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
         return
 
-    # The view will now handle the hydration and pagination itself
-    view = QueueView(interaction=interaction, tracks=all_tracks, items_per_page=5)
+    view = QueueView(interaction=interaction, tracks=tracks_for_display, items_per_page=5)
     view.update_button_states()
     initial_embed = await view.create_queue_embed()
     await interaction.followup.send(embed=initial_embed, view=view, silent=SILENT_MESSAGES)
@@ -4806,11 +5059,11 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
         return
 
     queue_item = None
+    info = None
 
     if query:
         try:
-            info = {}
-            direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
+            search_term = query
 
             spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
             deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
@@ -4818,11 +5071,10 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
             tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
             amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
 
-            is_platform_link = (spotify_regex.match(query) or deezer_regex.match(query) or 
-                                apple_music_regex.match(query) or tidal_regex.match(query) or 
+            is_platform_link = (spotify_regex.match(query) or deezer_regex.match(query) or
+                                apple_music_regex.match(query) or tidal_regex.match(query) or
                                 amazon_music_regex.match(query))
 
-            search_query_for_yt = query
             if is_platform_link:
                 tracks = None
                 if spotify_regex.match(query): tracks = await process_spotify_url(query, interaction)
@@ -4835,29 +5087,21 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
                     if len(tracks) > 1:
                         raise Exception("Playlists and albums are not supported for /playnext.")
                     track_name, artist_name = tracks[0]
-                    search_query_for_yt = f"{track_name} {artist_name}"
+                    search_term = f"{track_name} {artist_name}"
 
-                prioritized_search = f"ytsearch:{sanitize_query(search_query_for_yt + ' lyrics')}"
-                logger.info(f"Trying prioritized search for /playnext: '{prioritized_search}'")
-                search_results = await fetch_video_info_with_retry(prioritized_search, ydl_opts_override={"noplaylist": True})
+            youtube_regex = re.compile(r'^(https?://)?((www|m)\.)?(youtube\.com|youtu\.be)/.+$')
+            soundcloud_regex = re.compile(r'^(https?://)?(www\.)?(soundcloud\.com)/.+$')
+            direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
 
-                if not search_results or not search_results.get("entries"):
-                    standard_search = f"ytsearch:{sanitize_query(search_query_for_yt)}"
-                    logger.info(f"Prioritized search failed, falling back to: '{standard_search}'")
-                    search_results = await fetch_video_info_with_retry(standard_search, ydl_opts_override={"noplaylist": True})
-                
-                info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
+            search_query = search_term
+            if not (youtube_regex.match(search_term) or soundcloud_regex.match(search_term) or direct_link_regex.match(search_term)):
+                logger.info(f"[/playnext] Processing as keyword search: {search_term}")
+                search_query = f"ytsearch:{sanitize_query(search_term)}"
 
-            else:
-                if direct_link_regex.match(query):
-                    ydl_opts = {"format": "bestaudio/best", "quiet": True, "no_warnings": True, "noplaylist": True}
-                    info = await run_ydl_with_low_priority(ydl_opts, query)
-                    if not info.get('title'):
-                        info['title'] = os.path.basename(urlparse(query).path)
-                else:
-                    search_term = f"ytsearch:{sanitize_query(query)}" if not query.startswith(('http://', 'https://')) else query
-                    search_results = await fetch_video_info_with_retry(search_term, ydl_opts_override={"noplaylist": True})
-                    info = search_results["entries"][0] if "entries" in search_results and search_results["entries"] else search_results
+            info = await fetch_video_info_with_retry(search_query, ydl_opts_override={"noplaylist": True})
+
+            if 'entries' in info and info.get('entries'):
+                info = info['entries'][0]
 
             if not info:
                 raise Exception("Could not find any video or track information.")
@@ -4870,45 +5114,10 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
                 'is_single': True,
                 'requester': interaction.user
             }
-
         except Exception as e:
             embed = Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
             logger.error(f"Error processing /playnext for query '{query}': {e}", exc_info=True)
-            return
-            
-    elif file:
-        try:
-            if not file.content_type or not (file.content_type.startswith("audio/") or file.content_type.startswith("video/")):
-                embed = Embed(description="Invalid file type. Please upload an audio or video file.", color=0xFF9AA2 if is_kawaii else discord.Color.red())
-                await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-                return
-
-            guild_cache_dir = os.path.join("audio_cache", str(guild_id))
-            os.makedirs(guild_cache_dir, exist_ok=True)
-            file_path = os.path.join(guild_cache_dir, file.filename)
-            await file.save(file_path)
-            logger.info(f"File saved for /playnext in guild {guild_id}: {file_path}")
-
-            # --- THIS IS THE FIX ---
-            # We now calculate the duration for files added via /playnext
-            duration = get_file_duration(file_path)
-
-            queue_item = {
-                'url': file_path,
-                'title': file.filename,
-                'webpage_url': None,
-                'thumbnail': None,
-                'is_single': True,
-                'source_type': 'file',
-                'duration': duration, # And we add it to the queue item
-                'requester': interaction.user
-            }
-            # --- END OF FIX ---
-        except Exception as e:
-            embed = Embed(description="An error occurred while processing the file.", color=0xFF9AA2 if is_kawaii else discord.Color.red())
-            await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-            logger.error(f"Error processing file in /playnext for guild {guild_id}: {e}")
             return
 
     if queue_item:
@@ -5725,15 +5934,9 @@ async def remove(interaction: discord.Interaction):
     
     await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
-# --- ADD THIS NEW SLASH COMMAND TO YOUR 'playify.py' FILE ---
-
 @bot.tree.command(name="search", description="Searches for a song and lets you choose from the top results.")
 @app_commands.describe(query="The name of the song to search for.")
 async def search(interaction: discord.Interaction, query: str):
-    """
-    Searches YouTube for a query and presents the top 5 results in a dropdown
-    for the user to choose from.
-    """
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True, silent=SILENT_MESSAGES)
         return
@@ -5748,24 +5951,19 @@ async def search(interaction: discord.Interaction, query: str):
         return
 
     try:
-        logger.info(f"[{guild_id}] Executing /search for: '{query}'")
-        
-        # We search for the top 5 results.
-        ydl_opts_search = {
-            "format": "bestaudio/best",
-            "quiet": True,
-            "no_warnings": True,
-            "extract_flat": True, # Fast way to get metadata
-            "noplaylist": True,
-            "no_color": True,
-            "socket_timeout": 10,
-        }
+        logger.info(f"[{guild_id}] Executing /search for: '{query}' via yt-dlp")
         
         sanitized_query = sanitize_query(query)
-        search_query = f"ytsearch5:{sanitized_query}" # Search for 5 results
-        info = await fetch_video_info_with_retry(search_query, ydl_opts_override={"extract_flat": True, "noplaylist": True})
+        # Use "ytsearch5:" to get the top 5 results directly from YouTube.
+        search_query = f"ytsearch5:{sanitized_query}"
+        
+        info = await fetch_video_info_with_retry(
+            search_query, 
+            ydl_opts_override={"extract_flat": True, "noplaylist": True}
+        )
 
         search_results = info.get("entries", [])
+        
         if not search_results:
             embed = Embed(
                 description=get_messages("search_no_results", guild_id).format(query=query),
@@ -5774,7 +5972,6 @@ async def search(interaction: discord.Interaction, query: str):
             await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES, ephemeral=True)
             return
 
-        # Create the interactive view and the initial embed.
         view = SearchView(search_results, guild_id)
         embed = Embed(
             title=get_messages("search_results_title", guild_id),
@@ -5936,6 +6133,38 @@ async def previous(interaction: discord.Interaction):
     
     # Send a simple confirmation to the user
     await interaction.followup.send("Skipping back to the previous song.", silent=SILENT_MESSAGES)
+
+@bot.tree.command(name="jumpto", description="Opens a menu to jump to a specific song in the queue.")
+async def jumpto(interaction: discord.Interaction):
+    """
+    Shows an interactive, paginated view for jumping to a specific song.
+    """
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
+        return
+
+    guild_id = interaction.guild_id
+    is_kawaii = get_mode(guild_id)
+    music_player = get_player(guild_id)
+
+    if music_player.queue.empty():
+        embed = Embed(description=get_messages("queue_empty", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
+        return
+    
+    await interaction.response.defer()
+    
+    all_tracks = list(music_player.queue._queue)
+    view = JumpToView(interaction, all_tracks)
+    await view.update_view()
+    
+    embed = Embed(
+        title=get_messages("jump_to_title", guild_id),
+        description=get_messages("jump_to_description", guild_id),
+        color=0xC7CEEA if is_kawaii else discord.Color.blue()
+    )
+    
+    await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
         
 # ==============================================================================
 # 6. DISCORD EVENTS
@@ -5955,23 +6184,9 @@ async def on_message(message: discord.Message):
 
     guild_id = message.guild.id
 
-    # Check if the message is in a configured controller channel
-    if guild_id in controller_channels and message.channel.id == controller_channels[guild_id]:
-        logger.info(f"[{guild_id}] New message detected in controller channel. Re-anchoring controller.")
-        
-        # Delete the old controller message
-        if guild_id in controller_messages and controller_messages[guild_id]:
-            try:
-                old_message = await message.channel.fetch_message(controller_messages[guild_id])
-                await old_message.delete()
-            except (discord.NotFound, discord.Forbidden):
-                # Message was likely already deleted, which is okay.
-                pass
-        
-        # Reset the message ID and post a new, updated controller
-        controller_messages[guild_id] = None
-        # We use create_task to avoid blocking the on_message event
-        bot.loop.create_task(update_controller(bot, guild_id))
+    # This event no longer handles controller re-anchoring.
+    # That logic is now in `play_audio` to trigger only on song changes.
+    pass
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -6027,6 +6242,7 @@ async def on_voice_state_update(member, before, after):
             
             # If music is playing, we STOP it. This is the crucial change.
             if vc.is_playing() and not music_player.is_playing_silence:
+                music_player.is_paused_by_leave = True
                 if music_player.playback_started_at:
                     elapsed = time.time() - music_player.playback_started_at
                     music_player.start_time += elapsed * music_player.playback_speed
@@ -6057,6 +6273,7 @@ async def on_voice_state_update(member, before, after):
         if len([m for m in bot_channel.members if not m.bot]) == 1:
             logger.info(f"[{guild_id}] First user joined. Resuming playback procedures.")
             
+            music_player.is_paused_by_leave = False
             was_playing_silence = music_player.silence_task and not music_player.silence_task.done()
             
             if music_player.current_info:
@@ -6075,7 +6292,7 @@ async def on_voice_state_update(member, before, after):
                 else:
                     logger.info(f"Resuming track '{music_player.current_info.get('title')}' at {current_timestamp:.2f}s.")
                     bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
-
+                    
 @bot.event
 async def on_ready():
     logger.info(f"{bot.user.name} is online.")
