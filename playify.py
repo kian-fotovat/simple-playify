@@ -4655,6 +4655,7 @@ async def play(interaction: discord.Interaction, query: str):
             return
 
         # Cas 1: Plateformes nécessitant une conversion (Spotify, etc.)
+        platform_processor = None
         if spotify_regex.match(query): platform_processor, platform_name = process_spotify_url, "Spotify"
         elif deezer_regex.match(query): platform_processor, platform_name = process_deezer_url, "Deezer"
         elif apple_music_regex.match(query): platform_processor, platform_name = process_apple_music_url, "Apple Music"
