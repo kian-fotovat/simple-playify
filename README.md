@@ -29,6 +29,20 @@
 
 ---
 
+
+<a id="easy-setup"></a>
+## (つ≧▽≦)つ Easy Windows Setup (just once, promise)
+
+Too lazy to mess with Docker, Python, or configs? (｡•́︿•̀｡)  
+No worries — I made a Windows app that sets up everything for you in one go!  
+You’ll just need to enter your **Discord token** + **Spotify / Genius API keys** once, and you’re done forever!
+
+**Get it here:**  
+📄 [Instructions & info](https://alan7383.github.io/playify/self-host.html)  
+⬇ [Direct download](https://github.com/alan7383/playify/releases/download/1.1.0/Playify_Setup_v1.1.0.exe)
+
+---
+
 <a id="what-is-playify"></a>
 ## ＼(＾O＾)／ What is Playify?
 
