@@ -2414,8 +2414,18 @@ def run_bot(status_queue, log_queue):
         dynamic_footer_info = ""
         active_filters = server_filters.get(guild_id, set())
 
-        PLATFORM_DISPLAY = { "Spotify": "Spotify 🟢", "Deezer": "Deezer 🎵", "Apple Music": "Apple Music 🍎", "Tidal": "Tidal 🌊", "Amazon Music": "Amazon Music 📦", "SoundCloud": "SoundCloud ☁️", "YouTube": "YouTube ▶️" }
-        KAOMOJI_PLATFORM_DISPLAY = { "Spotify": "Spotify ヾ(⌐■_■)ノ♪", "Deezer": "Deezer (つ◕_◕)つ", "Apple Music": "Apple Music (≧◡≦)", "Tidal": "Tidal (〜￣▽￣)〜", "Amazon Music": "Amazon Music (b ᵔ▽ᵔ)b", "SoundCloud": "SoundCloud (ˊᵒ̴̶̷̤ ꇴ ᵒ̴̶̷̤ˋ)", "YouTube": "YouTube (►_◄)" }
+        PLATFORM_DISPLAY = {
+            "Spotify": "Spotify 🟢", "Deezer": "Deezer 🎵", "Apple Music": "Apple Music 🍎",
+            "Tidal": "Tidal 🌊", "Amazon Music": "Amazon Music 📦", "SoundCloud": "SoundCloud ☁️",
+            "YouTube": "YouTube ▶️",
+            "Twitch": "Twitch 🟣"  
+        }
+        KAOMOJI_PLATFORM_DISPLAY = {
+            "Spotify": "Spotify ヾ(⌐■_■)ノ♪", "Deezer": "Deezer (つ◕_◕)つ", "Apple Music": "Apple Music (≧◡≦)",
+            "Tidal": "Tidal (〜￣▽￣)〜", "Amazon Music": "Amazon Music (b ᵔ▽ᵔ)b", "SoundCloud": "SoundCloud (ˊᵒ̴̶̷̤ ꇴ ᵒ̴̶̷̤ˋ)",
+            "YouTube": "YouTube (►_◄)",
+            "Twitch": "Twitch (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        }
 
         if active_filters:
             filter_name = next(iter(active_filters))
@@ -2431,6 +2441,7 @@ def run_bot(status_queue, log_queue):
             elif source_type == 'file': dynamic_footer_info = "Source: Local File" + (" (`•ω•´)" if is_kawaii else " 💿")
             elif 'youtube.com' in url or 'youtu.be' in url: dynamic_footer_info = f"Source: {current_display_map['YouTube']}"
             elif 'soundcloud.com' in url: dynamic_footer_info = f"Source: {current_display_map['SoundCloud']}"
+            elif 'twitch.tv' in url: dynamic_footer_info = f"Source: {current_display_map['Twitch']}"   
             elif 'bandcamp.com' in url: dynamic_footer_info = "Source: Bandcamp" + (" (ﾉ$ヮ$)ﾉ" if is_kawaii else " 🎷")
             else:
                 ping_ms = round(bot.latency * 1000)
@@ -4755,7 +4766,7 @@ def run_bot(status_queue, log_queue):
             apple_music_regex = re.compile(r'^(https?://)?(music\.apple\.com)/.+$')
             tidal_regex = re.compile(r'^(https?://)?(www\.)?tidal\.com/.+$')
             amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
-            direct_platform_regex = re.compile(r'^(https?://)?((www|m)\.)?(youtube\.com|youtu\.be|music\.youtube\.com|soundcloud\.com)|([^\.]+)\.bandcamp\.com/.+$')
+            direct_platform_regex = re.compile(r'^(https?://)?((www|m)\.)?(youtube\.com|youtu\.be|music\.youtube\.com|soundcloud\.com|twitch\.tv)|([^\.]+)\.bandcamp\.com/.+$')
             direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
 
             # Case 1: Platform conversion (Spotify, Deezer, etc.)
