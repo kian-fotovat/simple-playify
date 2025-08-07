@@ -49,7 +49,7 @@ except NotImplementedError: # Some systems may not support logical=False
     process_pool = ProcessPoolExecutor(max_workers=os.cpu_count())
 
 SILENT_MESSAGES = True
-IS_PUBLIC_VERSION = False
+IS_PUBLIC_VERSION = True
 
 # --- Logging ---
 
@@ -989,54 +989,57 @@ class LazySearchItem:
 
     async def resolve(self):
         """
-        Performs the search on SoundCloud and stores the full result.
+        Performs the search and stores the full result.
         It intelligently filters out 30-second previews.
+        The search is done on YouTube if IS_PUBLIC_VERSION is False, otherwise on SoundCloud.
         Only performs the search once thanks to the lock and check.
         """
         async with self.search_lock:
             if self.resolved_info:
                 return self.resolved_info
 
+            if IS_PUBLIC_VERSION:
+                search_prefix = "scsearch5:"
+                platform_name = "SoundCloud"
+            else:
+                search_prefix = "ytsearch5:"
+                platform_name = "YouTube"
+
             search_term = f"{self.title} {self.artist}"
-            logger.info(f"[LazyResolve] Resolving on SoundCloud: '{search_term}'")
+            logger.info(f"[LazyResolve] Resolving on {platform_name}: '{search_term}'")
             try:
-                # 1. We search for several results on SoundCloud to have a choice
-                search_prefix = "scsearch5:" # Search for the first 5 results
                 search_query = f"{search_prefix}{sanitize_query(search_term)}"
                 
-                # 2. We use 'extract_flat' for a quick search of metadata
                 info = await fetch_video_info_with_retry(search_query, {"noplaylist": True, "extract_flat": True})
                 
                 entries = info.get("entries")
                 if not entries:
-                    raise ValueError("No results found on SoundCloud.")
+                    raise ValueError(f"No results found on {platform_name}.")
                 
-                # 3. Find the first track that lasts more than 40 seconds to avoid previews
                 best_video_info = None
-                for video in entries:
-                    if video.get('duration', 0) > 40:
-                        best_video_info = video
-                        logger.info(f"[LazyResolve] Found suitable full track: '{video.get('title')}'")
-                        break
+                if platform_name == "SoundCloud":
+                    for video in entries:
+                        if video.get('duration', 0) > 40:
+                            best_video_info = video
+                            logger.info(f"[LazyResolve] Found suitable full track: '{video.get('title')}'")
+                            break
                 
-                # Fallback solution: if no long track is found, take the first one
                 if not best_video_info:
-                    logger.warning(f"[LazyResolve] No track >40s found. Falling back to first result (might be a preview).")
+                    logger.info(f"[LazyResolve] Using first result from {platform_name}.")
                     best_video_info = entries[0]
 
-                # 4. We retrieve the *complete* information of the chosen track to guarantee playback
                 full_video_info = await fetch_video_info_with_retry(best_video_info['url'], {"noplaylist": True})
                 
                 full_video_info['requester'] = self.requester
-                full_video_info['original_platform'] = self.original_platform # Inject the original platform
+                full_video_info['original_platform'] = self.original_platform
                 self.resolved_info = full_video_info
                 return self.resolved_info
 
             except Exception as e:
-                logger.error(f"[LazyResolve] Failed to resolve '{search_term}' on SoundCloud: {e}")
+                logger.error(f"[LazyResolve] Failed to resolve '{search_term}' on {platform_name}: {e}")
                 self.resolved_info = {'error': True, 'title': search_term}
                 return self.resolved_info
-
+                    
 class AddSongModal(discord.ui.Modal, title="Add a Song or Playlist"):
     def __init__(self, bot: commands.Bot):
         super().__init__()
@@ -1665,42 +1668,44 @@ async def update_controller(bot, guild_id, interaction: Optional[discord.Interac
         embed = await create_controller_embed(bot, guild_id)
         view = MusicControllerView(bot, guild_id)
 
-        # --- NEW LOGIC ---
+        # --- NOUVELLE LOGIQUE CENTRALE ---
         if interaction:
-            # Scenario 1: We are responding directly to a command.
-            # Edit the "thinking..." message to become the new controller.
+            # Scénario 1 : On répond directement à une commande.
+            # On transforme le message "réfléchit..." en nouveau contrôleur.
             await interaction.edit_original_response(content=None, embed=embed, view=view)
             message = await interaction.original_response()
             
-            # If an old controller message exists, delete it to avoid duplicates.
+            # Si un ancien message de contrôleur existe, on le supprime pour éviter les doublons.
             old_message_id = controller_messages.get(guild_id)
             if old_message_id and old_message_id != message.id:
                 try:
                     old_message = await channel.fetch_message(old_message_id)
                     await old_message.delete()
                 except (discord.NotFound, discord.Forbidden):
-                    pass # It was already gone, no problem.
+                    pass # Déjà parti, pas de problème.
 
-            # Save the new message's ID as the official controller message.
+            # On sauvegarde l'ID du nouveau message comme étant le contrôleur officiel.
             controller_messages[guild_id] = message.id
         else:
-            # Scenario 2: This is a background update (e.g., song ended).
-            # Use the existing logic to edit the persistent message.
+            # Scénario 2 : C'est une mise à jour de fond (ex: fin de chanson).
+            # On utilise la logique existante pour modifier le message persistant.
             message_id = controller_messages.get(guild_id)
             if message_id:
                 try:
                     message = await channel.fetch_message(message_id)
                     await message.edit(embed=embed, view=view)
                 except (discord.NotFound, discord.Forbidden):
+                    # Le message a été supprimé, on en crée un nouveau.
                     new_message = await channel.send(embed=embed, view=view, silent=True)
                     controller_messages[guild_id] = new_message.id
             else:
+                # Pas d'ID de message stocké, on en crée un nouveau.
                 new_message = await channel.send(embed=embed, view=view, silent=True)
                 controller_messages[guild_id] = new_message.id
                 
     except Exception as e:
         logger.error(f"Failed to update controller for guild {guild_id}: {e}", exc_info=True)
-
+                
 # --- Discord UI Classes (Views & Modals) ---
 
 class SeekModal(discord.ui.Modal):
@@ -4036,6 +4041,12 @@ async def handle_playback_error(guild_id: int, error: Exception):
         music_players[guild_id] = MusicPlayer()
         logger.info(f"Player for guild {guild_id} has been reset and disconnected due to a critical error.")
 
+# ==============================================================================
+# 4. CORE AUDIO & PLAYBACK LOGIC
+# ==============================================================================
+
+# ... (les autres fonctions restent inchangées) ...
+
 async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ended=None):
     music_player = get_player(guild_id)
     is_kawaii = get_mode(guild_id)
@@ -4106,7 +4117,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                         url_to_test = seed_source_info.get('webpage_url') or seed_source_info.get('url', '')
 
                         if IS_PUBLIC_VERSION and ("youtube.com" in url_to_test or "youtu.be" in url_to_test):
-                             url_to_test = ""
+                            url_to_test = ""
 
                         if any(s in url_to_test for s in ["youtube.com", "youtu.be", "soundcloud.com"]):
                             seed_url = url_to_test
@@ -4196,15 +4207,11 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
 
             next_item = await music_player.queue.get()
             
-            # --- START OF LAZY LOADING MODIFICATION ---
             full_playback_info = None
-            # We check if the item from the queue is a lazy object or a normal track
             if isinstance(next_item, LazySearchItem):
                 logger.info(f"[{guild_id}] Lazy track detected, initiating resolution.")
                 resolved_info = await next_item.resolve()
 
-                # If resolution fails (rate limit, private video, etc.), we log the error
-                # and move to the next song without crashing.
                 if not resolved_info or resolved_info.get('error'):
                     failed_title = resolved_info.get('title', 'unknown')
                     logger.warning(f"[{guild_id}] Failed to resolve track '{failed_title}', skipping to the next one.")
@@ -4221,11 +4228,9 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                     bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
                     return
 
-                # Resolution succeeded, we use this complete information for playback
                 full_playback_info = resolved_info
             else:
                 full_playback_info = next_item
-            # --- FIN DE LA MODIFICATION POUR LE LAZY LOADING ---
 
             if 'requester' not in full_playback_info:
                 full_playback_info['requester'] = bot.user 
@@ -4244,17 +4249,13 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
         
         url_for_fetching = music_player.current_info.get('webpage_url') or music_player.current_info.get('url')
         
-        # The 'full_playback_info' has already been obtained or enriched in the previous step.
-        # We just need to make sure it is complete if it doesn't come from a lazy resolution.
-        # The existing logic below already handles this case well.
-        if music_player.current_info.get('source_type') == 'file':
-            pass # The info is already complete
-        elif not music_player.current_info.get('formats'): # 'formats' is a good indicator of complete info from yt-dlp
+        if music_player.current_info.get('source_type') != 'file':
+            logger.info(f"[{guild_id}] Refreshing stream URL for '{music_player.current_info.get('title')}' to prevent expiration.")
             try:
-                enriched_info = await fetch_video_info_with_retry(url_for_fetching)
-                music_player.current_info.update(enriched_info)
+                refreshed_info = await fetch_video_info_with_retry(url_for_fetching)
+                music_player.current_info.update(refreshed_info)
             except Exception as e:
-                logger.error(f"[{guild_id}] FINAL FETCH FAILURE for {url_for_fetching}: {e}", exc_info=True)
+                logger.error(f"[{guild_id}] FAILED to refresh stream URL for {url_for_fetching}: {e}", exc_info=True)
                 if music_player.text_channel:
                     try:
                         emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
@@ -4271,7 +4272,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
 
         audio_url = music_player.current_info.get("url")
         if not audio_url:
-            logger.error(f"[{guild_id}] Playback info retrieved but 'url' key is missing. Skipping.")
+            logger.error(f"[{guild_id}] Playback info retrieved but 'url' key is missing after refresh. Skipping.")
             bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
             return
             
@@ -4525,6 +4526,12 @@ async def play_autocomplete(interaction: discord.Interaction, current: str) -> l
     if not current or len(current) < 3:
         return []
 
+    # --- CORRECTION ---
+    # If the input looks like a URL, don't show any suggestions.
+    if re.match(r'https?://', current):
+        return []
+    # --- FIN DE LA CORRECTION ---
+
     try:
         # Uses a quick search on SoundCloud to get suggestions.
         # "extract_flat": True is crucial for the search to be very fast.
@@ -4568,7 +4575,7 @@ async def play_autocomplete(interaction: discord.Interaction, current: str) -> l
     except Exception as e:
         logger.error(f"Autocomplete search for '{current}' failed: {e}")
         return [] # Returns an empty list on error
-
+    
 @bot.tree.command(name="play", description="Play a link or search for a song")
 @app_commands.describe(query="Link or title of the song/video to play")
 @app_commands.autocomplete(query=play_autocomplete)
