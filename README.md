@@ -53,7 +53,7 @@ Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers,
 * **100% free**: All features unlocked for everyone.
 * **Unlimited playback**: Giant playlists, endless queues, eternal tunes!
 
-**Supports YouTube, YouTube Music, SoundCloud, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music, direct audio links, and local files.**
+**Supports YouTube, YouTube Music, SoundCloud, Twitch, Spotify, Deezer, Bandcamp, Apple Music, Tidal, Amazon Music, direct audio links, and local files.**
 Type `/play <url or query>` and let the music flow~
 
 <a id="spotify-support"></a>
@@ -68,7 +68,7 @@ Type `/play <url or query>` and let the music flow~
 <a id="key-features"></a>
 ## (≧◡≦) Key Features
 
-* Play from **10+ sources**: YouTube • SoundCloud • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music • **Direct Audio Links** • **Local Files**
+* Play from **10+ sources**: YouTube • SoundCloud • Twitch • Spotify • Deezer • Bandcamp • Apple Music • Tidal • Amazon Music • **Direct Audio Links** • **Local Files**
 * Slash commands: `/play`, `/search`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
 * **Play Local Files**: Directly upload and play your own audio/video files.
 * **Direct Audio Links**: Stream music directly from any audio URL (MP3, FLAC, WAV, etc.)
