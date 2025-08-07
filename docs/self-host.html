@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playify for Windows - Self-Host for YouTube</title>
+  <link rel="icon" type="image/x-icon" href="playify.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    /* === Custom Font === */
+    @font-face {
+      font-family: 'SequelGeoWide';
+      src: url('SequelGeoWide.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    /* === CSS Variables === */
+    :root {
+      --primary: #8A2BE2;
+      --secondary: #9932CC;
+      --accent: #9370DB;
+      --dark: #0a0a0a;
+      --darker: #000000;
+      --text: #ffffff;
+      --text-secondary: #cccccc;
+    }
+
+    /* === Reset & Base Styles === */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      background: var(--darker);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    /* === Particle Background === */
+    #particles-js {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      background: radial-gradient(circle at center, var(--dark) 0%, var(--darker) 100%);
+    }
+
+    /* === Navigation Bar (FROM INDEX.HTML) === */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 20px 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      background: rgba(0, 0, 0, 0.4);
+      border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+      border-bottom-left-radius: 25px;
+      border-bottom-right-radius: 25px;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+      transition: all 0.3s ease-in-out;
+    }
+    .logo {
+      font-family: 'SequelGeoWide', sans-serif;
+      font-weight: normal;
+      font-size: 2rem;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(138, 43, 226, 0.7), 0 0 35px rgba(138, 43, 226, 0.3);
+      white-space: nowrap;
+      padding: 0 10px;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      cursor: pointer; /* Changed from default to pointer */
+      user-select: none;
+      text-decoration: none; /* Ensure no underline */
+    }
+    .logo:hover {
+      transform: scale(1.05);
+      text-shadow: 0 0 25px rgba(138, 43, 226, 0.9), 0 0 45px rgba(138, 43, 226, 0.5);
+    }
+    .nav-links {
+      display: flex;
+      gap: 30px;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1.1rem;
+      transition: all 0.4s ease-out;
+      position: relative;
+      padding: 5px 0;
+    }
+    .nav-links a:hover {
+      color: var(--text);
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: -5px;
+      left: 0;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .nav-links a:hover::after {
+      width: 100%;
+      box-shadow: 0 0 15px rgba(138, 43, 226, 0.6);
+    }
+
+    /* === Mobile Menu Styles (FROM INDEX.HTML) === */
+    .menu-toggle {
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 30px;
+      height: 20px;
+      cursor: pointer;
+      z-index: 1001;
+      position: relative;
+    }
+    .menu-toggle .bar {
+      width: 100%;
+      height: 3px;
+      background-color: var(--text);
+      transition: all 0.3s ease;
+      border-radius: 5px;
+    }
+    .menu-toggle.active .bar:nth-child(2) { opacity: 0; }
+    .menu-toggle.active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    .menu-toggle.active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+    
+    /* === Main Content Wrapper for this page === */
+    .main-container {
+      padding: 120px 5% 60px; /* Add top/bottom padding */
+    }
+
+    /* === Page Header Section === */
+    .page-header {
+      text-align: center;
+      padding: 60px 20px;
+      border-bottom: 1px solid rgba(138, 43, 226, 0.2);
+    }
+    .page-header h1 {
+      font-family: 'SequelGeoWide', sans-serif;
+      font-size: 4rem;
+      margin-bottom: 15px;
+      background: linear-gradient(90deg, var(--accent), var(--primary));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .page-header p {
+      font-size: 1.4rem;
+      max-width: 800px;
+      margin: 0 auto 30px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .button {
+      padding: 18px 45px; border-radius: 50px; font-size: 1.2rem; font-weight: 600;
+      text-decoration: none; transition: all 0.4s ease;
+      display: inline-flex; align-items: center; gap: 10px; cursor: pointer; border: none;
+      background: linear-gradient(90deg, var(--primary), var(--secondary)); color: white;
+      box-shadow: 0 0 25px rgba(138, 43, 226, 0.5);
+    }
+    .button:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(138, 43, 226, 0.4); }
+
+    /* === Content Section Layout === */
+    .content-section {
+      padding: 100px 0;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-title {
+      text-align: center; font-size: 2.5rem; margin-bottom: 60px;
+      font-family: 'SequelGeoWide', sans-serif; color: var(--text); position: relative;
+    }
+    .section-title::after {
+      content: ''; position: absolute; width: 80px; height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      bottom: -15px; left: 50%; transform: translateX(-50%); border-radius: 3px;
+    }
+
+    /* === Benefits Grid === */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+    .benefit-card {
+      background: rgba(20, 20, 20, 0.6);
+      border: 1px solid rgba(138, 43, 226, 0.1);
+      border-radius: 15px;
+      padding: 30px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .benefit-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 10px 30px rgba(138, 43, 226, 0.2);
+    }
+    .benefit-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 15px; }
+    .benefit-card h3 { font-size: 1.5rem; margin-bottom: 10px; }
+    .benefit-card p { color: var(--text-secondary); line-height: 1.6; }
+
+    /* === Installation Timeline === */
+    .timeline { position: relative; padding: 20px 0; }
+    .timeline::before {
+      content: ''; position: absolute; top: 0; left: 30px; height: 100%; width: 4px;
+      background: linear-gradient(to bottom, var(--dark), var(--primary), var(--dark));
+      border-radius: 2px; opacity: 0.3;
+    }
+    .timeline-item { margin-bottom: 50px; position: relative; padding-left: 80px; }
+    .timeline-item:last-child { margin-bottom: 0; }
+    .timeline-dot {
+      position: absolute; left: 10px; top: 0; width: 44px; height: 44px;
+      border-radius: 50%; background: var(--secondary); border: 4px solid var(--darker);
+      box-shadow: 0 0 20px rgba(138, 43, 226, 0.8); display: flex; align-items: center;
+      justify-content: center; font-size: 1.5rem; font-weight: bold; color: white;
+    }
+    .timeline-content h3 { font-family: 'SequelGeoWide', sans-serif; font-size: 1.8rem; margin-bottom: 10px; }
+    .timeline-content p { color: var(--text-secondary); line-height: 1.7; max-width: 600px; }
+    .timeline-content p a { color: var(--accent); text-decoration: none; font-weight: 600; transition: color 0.3s ease; }
+    .timeline-content p a:hover { color: var(--text); text-decoration: underline; }
+
+    /* === FAQ Section === */
+    .faq-item details {
+        background: rgba(20, 20, 20, 0.6);
+        border: 1px solid rgba(138, 43, 226, 0.1);
+        border-radius: 10px; margin-bottom: 15px; transition: background-color 0.3s ease;
+    }
+    .faq-item details[open] { background: rgba(138, 43, 226, 0.1); }
+    .faq-item summary {
+        padding: 20px; font-size: 1.2rem; font-weight: 600;
+        cursor: pointer; list-style: none; position: relative;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after {
+        content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+        position: absolute; right: 20px; transition: transform 0.3s ease;
+    }
+    .faq-item details[open] summary::after { transform: rotate(180deg); }
+    .faq-item .faq-answer { padding: 0 20px 20px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* === Footer (FROM INDEX.HTML) === */
+    footer {
+      background: linear-gradient(to bottom, rgba(10, 10, 10, 0.8), var(--darker));
+      padding: 60px 5% 30px;
+      text-align: center;
+      position: relative;
+    }
+    .footer-content {
+      max-width: 1200px; margin: 0 auto; display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px; text-align: left;
+    }
+    .footer-column h3 { font-size: 1.3rem; margin-bottom: 20px; font-family: 'SequelGeoWide', sans-serif; }
+    .footer-column ul { list-style: none; }
+    .footer-column ul li { margin-bottom: 10px; }
+    .footer-column ul li a { color: var(--text-secondary); text-decoration: none; transition: all 0.3s ease; }
+    .footer-column ul li a:hover { color: var(--text); padding-left: 5px; }
+    .social-links { display: flex; gap: 15px; margin-top: 20px; }
+    .social-links a {
+      display: flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: 50%; background: transparent;
+      color: var(--text); transition: all 0.3s ease; border: 1px solid rgba(138, 43, 226, 0.2);
+    }
+    .social-links a:hover {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      transform: translateY(-3px); border-color: transparent;
+      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
+    }
+    .copyright {
+      margin-top: 60px; padding-top: 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary); font-size: 0.9rem;
+    }
+
+    /* === Animations === */
+    .smooth-fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    .smooth-fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .delay-1 { transition-delay: 0.2s; }
+    .delay-2 { transition-delay: 0.4s; }
+
+    /* === Responsive Design === */
+    @media (max-width: 768px) {
+        .page-header h1 { font-size: 3rem; }
+        .timeline::before { left: 22px; }
+        .timeline-item { padding-left: 65px; }
+        .timeline-dot { left: 0; }
+
+        .nav { padding: 15px 20px; }
+        .logo { font-size: 1.5rem; }
+        .nav-links {
+          position: fixed; top: 0; right: 0; width: 70%; height: 100vh;
+          background: rgba(0, 0, 0, 0.9);
+          flex-direction: column; justify-content: center; align-items: center;
+          transform: translateX(100%); transition: transform 0.5s ease-in-out;
+          box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5); padding-top: 60px;
+        }
+        .nav-links.active { transform: translateX(0); }
+        .nav-links a { margin: 20px 0; font-size: 1.5rem; }
+        .menu-toggle { display: flex; }
+        
+        .footer-column { text-align: center; }
+        .footer-column ul { display: block; text-align: center; padding: 0; }
+        .footer-column ul li a:hover { padding-left: 0; }
+        .social-links { justify-content: center; }
+    }
+    @media (max-width: 520px) {
+        .page-header h1 { font-size: 2.5rem; }
+        .page-header p { font-size: 1.2rem; }
+         .nav { padding: 12px 15px; }
+         .logo { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="particles-js"></div>
+
+  <!-- === Navigation Bar (Copied from index.html with link adjustments) === -->
+  <nav class="nav">
+    <a href="index.html" class="logo">PLAYIFY</a>
+    <div class="menu-toggle">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#platforms">Platforms</a>
+      <a href="index.html#how-it-works">How It Works</a>
+      <a href="commands.html">Commands</a>
+      <a href="self-host.html">Self-Host</a>
+      <a href="https://github.com/alan7383/playify" target="_blank">GitHub</a>
+      <a href="https://discord.gg/JeH8g6g3cG" target="_blank">Discord</a>
+    </div>
+  </nav>
+
+  <div class="main-container">
+
+    <header class="page-header smooth-fade-in">
+      <h1>Unlock YouTube with Playify</h1>
+      <p class="smooth-fade-in delay-1">
+        Simple, powerful, and yours to control. Download the self-hosted Windows application to enable full YouTube playback and get the best performance.
+      </p>
+      <a href="https://github.com/alan7383/playify/releases/download/1.1.0/Playify_Setup_v1.1.0.exe" class="button smooth-fade-in delay-2">
+        <i class="fab fa-windows"></i> Download Installer for Windows
+      </a>
+    </header>
+
+    <section id="why-self-host" class="content-section">
+      <h2 class="section-title smooth-fade-in">Your Bot, Your Rules</h2>
+      <div class="benefits-grid">
+        <div class="benefit-card smooth-fade-in">
+          <div class="benefit-icon"><i class="fab fa-youtube"></i></div>
+          <h3>Unlimited YouTube Access</h3>
+          <p>By running the bot with your own API keys, you bypass public restrictions and can play any song or playlist from YouTube without limits.</p>
+        </div>
+        <div class="benefit-card smooth-fade-in delay-1">
+          <div class="benefit-icon"><i class="fas fa-arrows-rotate"></i></div>
+          <h3>Automatic Updates</h3>
+          <p>The application has a built-in updater. You'll be notified of new features and fixes, ensuring your bot is always running the latest version effortlessly.</p>
+        </div>
+        <div class="benefit-card smooth-fade-in delay-2">
+          <div class="benefit-icon"><i class="fas fa-user-shield"></i></div>
+          <h3>Full Control & Privacy</h3>
+          <p>You manage the bot on your own machine. This means you control its uptime and your usage data remains completely private.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="setup-guide" class="content-section">
+      <h2 class="section-title smooth-fade-in">Simple Windows Installation Guide</h2>
+      <div class="timeline">
+        <div class="timeline-item smooth-fade-in"><div class="timeline-dot">1</div><div class="timeline-content"><h3>Download the Installer</h3><p>Click the download button on this page to get the `Playify_Setup.exe` file. It's a standard Windows installer, so it's safe and easy to use.</p></div></div>
+        <div class="timeline-item smooth-fade-in"><div class="timeline-dot">2</div><div class="timeline-content"><h3>Run the Setup Wizard</h3><p>Once downloaded, run the installer. It will install Playify on your computer and automatically launch the configuration wizard when it's finished.</p></div></div>
+        <div class="timeline-item smooth-fade-in"><div class="timeline-dot">3</div><div class="timeline-content"><h3>Follow the Guided Configuration</h3><p>The app will guide you through getting the necessary API keys (like your Discord Bot Token). It provides videos and links directly in the app, so no coding is required.</p></div></div>
+        <div class="timeline-item smooth-fade-in"><div class="timeline-dot">4</div><div class="timeline-content"><h3>Invite & Enjoy YouTube!</h3><p>At the end of the setup, you'll get a unique invite link for your bot. Use it to add the bot to your Discord server, and you're ready to play music from YouTube!</p></div></div>
+      </div>
+    </section>
+
+    <section id="faq" class="content-section">
+        <h2 class="section-title smooth-fade-in">Frequently Asked Questions</h2>
+        <div class="faq-list">
+            <div class="faq-item smooth-fade-in"><details><summary>Is the self-hosted version also free?</summary><div class="faq-answer"><p>Yes, absolutely. Playify is 100% free and open-source. The only "cost" is that it runs on your own computer's resources, which are typically minimal.</p></div></details></div>
+            <div class="faq-item smooth-fade-in delay-1"><details><summary>What are the system requirements?</summary><div class="faq-answer"><p>Any modern computer running Windows 10 or Windows 11 will work perfectly. The application is lightweight and doesn't require a powerful machine.</p></div></details></div>
+            <div class="faq-item smooth-fade-in delay-2"><details><summary>Do I need to keep my computer on for the bot to work?</summary><div class="faq-answer"><p>Yes. Since the bot runs on your computer, it must be on for the bot to be online. To make this seamless, the app includes a "Start with Windows" option (enabled by default during setup), so you don't have to manually open it every time you restart.</p></div></details></div>
+             <div class="faq-item smooth-fade-in delay-2"><details><summary>Where can I get help if I'm stuck during setup?</summary><div class="faq-answer"><p>The best place for support is our official <a href="https://discord.gg/JeH8g6g3cG" target="_blank">Discord server</a>. We have a dedicated support channel where the community and developers can help you out.</p></div></details></div>
+        </div>
+    </section>
+
+  </div>
+
+  <!-- === Footer (Copied from index.html with link adjustments) === -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-column">
+        <h3>PLAYIFY</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">The music bot for Discord that delivers premium quality with a sleek interface.</p>
+        <div class="social-links">
+          <a href="https://github.com/alan7383/playify" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+          <a href="https://x.com/PlayifyBot" target="_blank"><i class="fa-brands fa-twitter"></i></a>
+          <a href="https://discord.gg/JeH8g6g3cG" target="_blank"><i class="fab fa-discord"></i></a>
+        </div>
+      </div>
+      <div class="footer-column" style="text-align: center;">
+        <h3>Links</h3>
+        <ul style="display: inline-block; text-align: left;">
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#platforms">Platforms</a></li>
+          <li><a href="index.html#how-it-works">How It Works</a></li>
+          <li><a href="commands.html">Commands</a></li>
+          <li><a href="self-host.html">Self-Host</a></li>
+          <li><a href="https://github.com/alan7383/playify" target="_blank">GitHub</a></li>
+          <li><a href="https://discord.gg/JeH8g6g3cG" target="_blank">Discord</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h3>Support</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">Help us keep Playify running and improving!</p>
+        <a href="https://www.paypal.com/paypalme/alanmussot1" target="_blank" class="button primary-button" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fab fa-paypal"></i> Support on PayPal
+        </a>
+      </div>
+    </div>
+    <div class="copyright">
+      © 2025 Playify by @alananasssss. All rights reserved.
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize particles.js
+      particlesJS("particles-js", { particles: { number: { value: 25, density: { enable: true, value_area: 800 } }, color: { value: "#8A2BE2" }, shape: { type: "circle" }, opacity: { value: 0.3, random: true }, size: { value: 3, random: true }, line_linked: { enable: false }, move: { enable: true, speed: 2, direction: "none", random: true, straight: false, out_mode: "out" } }, interactivity: { detect_on: "canvas", events: { onhover: { enable: false }, onclick: { enable: false } } }, retina_detect: true });
+
+      // Intersection Observer for smooth fade-in animations
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.smooth-fade-in').forEach(el => observer.observe(el));
+      
+      // === Mobile Menu Toggle ===
+      const menuToggle = document.querySelector('.menu-toggle');
+      const navLinks = document.querySelector('.nav-links');
+      if (menuToggle && navLinks) {
+          menuToggle.addEventListener('click', () => { 
+            navLinks.classList.toggle('active'); 
+            menuToggle.classList.toggle('active'); 
+          });
+          navLinks.querySelectorAll('a').forEach(link => { 
+            link.addEventListener('click', () => { 
+              navLinks.classList.remove('active'); 
+              menuToggle.classList.remove('active'); 
+            }); 
+          });
+      }
+    });
+  </script>
+</body>
+</html>
