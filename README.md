@@ -16,6 +16,7 @@
 
 ## Table of Contents
 
+* [Easy Windows Setup](#easy-setup)
 * [What is Playify?](#what-is-playify)
 * [Spotify Support](#spotify-support)
 * [Key Features](#key-features)
