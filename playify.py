@@ -49,7 +49,7 @@ except NotImplementedError: # Some systems may not support logical=False
     process_pool = ProcessPoolExecutor(max_workers=os.cpu_count())
 
 SILENT_MESSAGES = True
-IS_PUBLIC_VERSION = False
+IS_PUBLIC_VERSION = True
 
 # --- Logging ---
 
@@ -1598,12 +1598,14 @@ async def create_controller_embed(bot, guild_id):
     PLATFORM_DISPLAY = {
         "Spotify": "Spotify 🟢", "Deezer": "Deezer 🎵", "Apple Music": "Apple Music 🍎",
         "Tidal": "Tidal 🌊", "Amazon Music": "Amazon Music 📦", "SoundCloud": "SoundCloud ☁️",
-        "YouTube": "YouTube ▶️"
+        "YouTube": "YouTube ▶️",
+        "Twitch": "Twitch 🟣" 
     }
     KAOMOJI_PLATFORM_DISPLAY = {
         "Spotify": "Spotify ヾ(⌐■_■)ノ♪", "Deezer": "Deezer (つ◕_◕)つ", "Apple Music": "Apple Music (≧◡≦)",
         "Tidal": "Tidal (〜￣▽￣)〜", "Amazon Music": "Amazon Music (b ᵔ▽ᵔ)b", "SoundCloud": "SoundCloud (ˊᵒ̴̶̷̤ ꇴ ᵒ̴̶̷̤ˋ)",
-        "YouTube": "YouTube (►_◄)"
+        "YouTube": "YouTube (►_◄)",
+        "Twitch": "Twitch (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧" 
     }
 
     if active_filters:
@@ -1624,6 +1626,8 @@ async def create_controller_embed(bot, guild_id):
             dynamic_footer_info = f"Source: {current_display_map['YouTube']}"
         elif 'soundcloud.com' in url:
             dynamic_footer_info = f"Source: {current_display_map['SoundCloud']}"
+        elif 'twitch.tv' in url: # <-- Ajout
+            dynamic_footer_info = f"Source: {current_display_map['Twitch']}" 
         elif 'bandcamp.com' in url:
             dynamic_footer_info = "Source: Bandcamp" + (" (ﾉ$ヮ$)ﾉ" if is_kawaii else " 🎷")
         else:
@@ -4654,7 +4658,7 @@ async def play(interaction: discord.Interaction, query: str):
         amazon_music_regex = re.compile(r'^(https?://)?(music\.amazon\.(fr|com|co\.uk|de|es|it|jp))/.+$')
 
         # Regex for direct platforms (those that yt-dlp handles natively)
-        direct_platform_regex = re.compile(r'^(https?://)?((www|m)\.)?(youtube\.com|youtu\.be|music\.youtube\.com|soundcloud\.com)|([^\.]+)\.bandcamp\.com/.+$')
+        direct_platform_regex = re.compile(r'^(https?://)?((www|m)\.)?(youtube\.com|youtu\.be|music\.youtube\.com|soundcloud\.com|twitch\.tv)|([^\.]+)\.bandcamp\.com/.+$')
         direct_link_regex = re.compile(r'^(https?://).+\.(mp3|wav|ogg|m4a|mp4|webm|flac)(\?.+)?$', re.IGNORECASE)
 
         # Blocking logic for the public version
@@ -6265,4 +6269,3 @@ async def on_ready():
 if __name__ == '__main__':
     bot.start_time = time.time()
     bot.run(os.getenv("DISCORD_TOKEN"))
-
