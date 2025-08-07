@@ -26,7 +26,7 @@ APP_NAME = "Playify"
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
 # The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.1.1).
 # ==============================================================================
-CURRENT_VERSION = "1.1.0"
+CURRENT_VERSION = "1.1.1"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
@@ -434,11 +434,19 @@ class UpdatePromptWindow(ctk.CTkToplevel):
     def download_and_install(self):
         try:
             temp_dir = tempfile.gettempdir()
-            setup_path = os.path.join(temp_dir, self.download_url.split('/')[-1])
-            with requests.get(self.download_url, stream=True, timeout=30) as r:
+            filename = self.download_url.split('/')[-1]
+            if not filename:
+                filename = "playify_setup_update.exe"
+            setup_path = os.path.join(temp_dir, filename)
+
+            print(f"Starting download of {self.download_url} to {setup_path}")
+
+            with requests.get(self.download_url, stream=True, timeout=60) as r:
                 r.raise_for_status()
                 total_size = int(r.headers.get('content-length', 0))
                 bytes_downloaded = 0
+                last_progress_int = -1  # Pour optimiser les mises à jour de l'UI
+
                 with open(setup_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         if chunk:
@@ -446,16 +454,71 @@ class UpdatePromptWindow(ctk.CTkToplevel):
                             bytes_downloaded += len(chunk)
                             if total_size > 0:
                                 progress = (bytes_downloaded / total_size) * 100
-                                downloaded_mb, total_mb_float = bytes_downloaded / 1e6, total_size / 1e6
-                                self.after(0, self.update_progress, progress, downloaded_mb, total_mb_float)
-            self.after(0, self.progress_title.configure, text="Download complete. Starting installer...")
-            subprocess.Popen([setup_path, '/SILENT', '/NORESTART'])
-            self.after(1000, self.controller._perform_shutdown)
+                                current_progress_int = int(progress)
+                                if current_progress_int > last_progress_int:
+                                    downloaded_mb = bytes_downloaded / 1e6
+                                    total_mb_float = total_size / 1e6
+                                    self.after(0, self.update_progress, progress, downloaded_mb, total_mb_float)
+                                    last_progress_int = current_progress_int
+
+            print("Download complete. Scheduling installer launch.")
+            self.after(100, self._launch_installer_and_exit, setup_path)
+
         except Exception as e:
-            print(f"Failed to download or run update: {e}")
-            self.after(0, self.progress_title.configure, text="Error: Could not download update.", text_color="red")
-            self.after(0, self.progress_details.configure, text="Please try again later or check logs.")
-            self.after(0, self.remind_later_button.configure, state="normal")
+            print(f"Failed to download update: {e}")
+            self.after(0, self._handle_update_error, f"Download Error: {e}")
+
+    def _launch_installer_and_exit(self, setup_path):
+        """
+        Final production version. Creates and launches a silent batch script
+        to handle the update process invisibly.
+        """
+        try:
+            self.progress_title.configure(text="Update downloaded. Closing to install...")
+            print("Creating final, silent update script...")
+
+            updater_bat_path = os.path.join(tempfile.gettempdir(), "playify_silent_updater.bat")
+
+            batch_script_content = f"""
+    @echo off
+    rem This script waits for the main app to close, then runs the installer.
+
+    rem Wait for 3 seconds to ensure the main application has fully closed.
+    timeout /t 3 /nobreak > NUL
+
+    rem Launch the installer silently and in the background.
+    start "" "{setup_path}" /SILENT /NORESTART
+
+    rem A trick to make the script delete itself after execution.
+    (goto) 2>nul & del "%~f0"
+    """
+            with open(updater_bat_path, "w", encoding='utf-8') as f:
+                f.write(batch_script_content)
+
+            print(f"Silent update script created at: {updater_bat_path}")
+
+            # ======================================================================
+            # === CORRECTION FINALE POUR RENDRE LA FENÊTRE INVISIBLE ===
+            # Using 'start /b' is the definitive way to run a background task
+            # from the shell without flashing a window.
+            command_string = f'start /b "" "{updater_bat_path}"'
+            subprocess.Popen(command_string, shell=True)
+            # ======================================================================
+
+            print("Silent update script launched. Playify will now exit.")
+            self.controller._perform_shutdown()
+
+        except Exception as e:
+            print(f"Failed to create or launch the silent update script: {e}")
+            self._handle_update_error(f"Launch Error: {e}")
+
+    def _handle_update_error(self, error_message):
+        """Affiche un message d'erreur clair dans la fenêtre de mise à jour."""
+        self.progress_title.configure(text="Error: Could not complete update.", text_color="red")
+        # Limiter la longueur du message d'erreur pour l'affichage
+        error_text = (error_message[:100] + '...') if len(error_message) > 100 else error_message
+        self.progress_details.configure(text=error_text)
+        self.remind_later_button.configure(state="normal")
 
 
 class StylishTutorialPage(ctk.CTkFrame):
