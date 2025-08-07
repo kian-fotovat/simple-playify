@@ -509,6 +509,7 @@
   </style>
 </head>
 <body>
+  <div id="particles-js"></div>
   <nav class="nav">
     <div class="logo">PLAYIFY</div>
     <div class="menu-toggle">
@@ -529,7 +530,6 @@
   </nav>
 
   <section class="commands">
-    <!-- Music Controls Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-play-circle"></i>
@@ -544,7 +544,7 @@
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-play"></i></div>
           <div class="command-name"><h3 class="command-title">/play [query]</h3></div>
-          <p class="command-desc">Plays songs by title or link from various platforms. <a href="index.html#platforms">See supported platforms</a></p>
+          <p class="command-desc">Play a link or search for a song. Supports various platforms.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-search"></i></div>
@@ -559,17 +559,22 @@
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-pause"></i></div>
           <div class="command-name"><h3 class="command-title">/pause</h3></div>
-          <p class="command-desc">Pauses the current song.</p>
+          <p class="command-desc">Pauses the current playback.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-play"></i></div>
           <div class="command-name"><h3 class="command-title">/resume</h3></div>
-          <p class="command-desc">Resumes the paused song.</p>
+          <p class="command-desc">Resumes the paused playback.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-forward"></i></div>
           <div class="command-name"><h3 class="command-title">/skip</h3></div>
-          <p class="command-desc">Skips to the next song in the queue. Replays the current song if loop is enabled.</p>
+          <p class="command-desc">Skips to the next song in the queue.</p>
+        </div>
+        <div class="command-row">
+          <div class="command-icon"><i class="fas fa-backward"></i></div>
+          <div class="command-name"><h3 class="command-title">/previous</h3></div>
+          <p class="command-desc">Plays the previous song in the history.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-stop"></i></div>
@@ -589,7 +594,6 @@
       </div>
     </div>
 
-    <!-- Queue Management Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-list-ol"></i>
@@ -621,6 +625,11 @@
           <div class="command-name"><h3 class="command-title">/remove</h3></div>
           <p class="command-desc">Opens an interactive menu to remove one or more songs from the queue.</p>
         </div>
+         <div class="command-row">
+          <div class="command-icon"><i class="fas fa-arrow-right-to-bracket"></i></div>
+          <div class="command-name"><h3 class="command-title">/jumpto</h3></div>
+          <p class="command-desc">Opens a menu to jump to a specific song in the queue.</p>
+        </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-trash"></i></div>
           <div class="command-name"><h3 class="command-title">/clearqueue</h3></div>
@@ -629,7 +638,6 @@
       </div>
     </div>
 
-    <!-- Playback Modes Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-infinity"></i>
@@ -659,7 +667,6 @@
       </div>
     </div>
 
-    <!-- Lyrics & Karaoke Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-microphone-alt"></i>
@@ -674,17 +681,16 @@
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-book-open"></i></div>
           <div class="command-name"><h3 class="command-title">/lyrics</h3></div>
-          <p class="command-desc">Displays the lyrics of the current song.</p>
+          <p class="command-desc">Displays the lyrics of the current song from Genius.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-microphone"></i></div>
           <div class="command-name"><h3 class="command-title">/karaoke</h3></div>
-          <p class="command-desc">Starts a karaoke session with synced lyrics. For best results, add <code>topic</code> or <code>audio</code> to your search.</p>
+          <p class="command-desc">Starts a karaoke session with synced lyrics.</p>
         </div>
       </div>
     </div>
 
-    <!-- Settings & Utilities Category -->
     <div class="category-section fade-in">
       <h3 class="category-title">
         <i class="fas fa-tools"></i>
@@ -702,9 +708,17 @@
           <p class="command-desc">Applies audio filters (e.g., slowed, nightcore, bassboost) in real time.</p>
         </div>
         <div class="command-row">
+            <div class="command-icon"><i class="fas fa-volume-up"></i></div>
+            <div class="command-name">
+                <h3 class="command-title">/volume [level]</h3>
+                <span class="admin-badge">MOD</span>
+            </div>
+            <p class="command-desc">Adjusts the music volume for everyone (0-200%).</p>
+        </div>
+        <div class="command-row">
           <div class="command-icon"><i class="fas fa-sync-alt"></i></div>
           <div class="command-name"><h3 class="command-title">/reconnect</h3></div>
-          <p class="command-desc">Refreshes the voice connection to fix lag or audio issues without losing the queue.</p>
+          <p class="command-desc">Refreshes the voice connection to fix lag without losing the queue.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-chart-line"></i></div>
@@ -712,9 +726,22 @@
           <p class="command-desc">Displays the bot's full performance and diagnostic stats.</p>
         </div>
         <div class="command-row">
+          <div class="command-icon"><i class="fas fa-heart"></i></div>
+          <div class="command-name"><h3 class="command-title">/support</h3></div>
+          <p class="command-desc">Shows ways to support the creator of Playify.</p>
+        </div>
+        <div class="command-row">
           <div class="command-icon"><i class="fab fa-discord"></i></div>
           <div class="command-name"><h3 class="command-title">/discord</h3></div>
           <p class="command-desc">Get an invite to the official Playify community and support server.</p>
+        </div>
+         <div class="command-row">
+            <div class="command-icon"><i class="fas fa-cogs"></i></div>
+            <div class="command-name">
+                <h3 class="command-title">/setup controller</h3>
+                <span class="admin-badge">ADMIN</span>
+            </div>
+            <p class="command-desc">Sets a channel for the persistent music controller.</p>
         </div>
         <div class="command-row">
           <div class="command-icon"><i class="fas fa-smile-beam"></i></div>
@@ -766,6 +793,24 @@
 
   <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
   <script>
+    particlesJS("particles-js", {
+        "particles": {
+            "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+            "color": { "value": "#8A2BE2" },
+            "shape": { "type": "circle" },
+            "opacity": { "value": 0.4, "random": true, "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false } },
+            "size": { "value": 3, "random": true, "anim": { "enable": false } },
+            "line_linked": { "enable": true, "distance": 150, "color": "#9932CC", "opacity": 0.2, "width": 1 },
+            "move": { "enable": true, "speed": 2, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+            "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 0.5 } }, "push": { "particles_nb": 4 } }
+        },
+        "retina_detect": true
+    });
+
     // Fade-in on scroll
     const fadeElements = document.querySelectorAll('.fade-in');
     const appearOptions = { threshold: 0.1, rootMargin: "0px 0px -50px 0px" };
@@ -784,7 +829,7 @@
         appearOnScroll.observe(fadeElement);
       }
     });
-  
+ 
     // Mobile menu logic
     const menuToggle = document.querySelector('.menu-toggle');
     const navLinks = document.querySelector('.nav-links');
@@ -798,7 +843,7 @@
         menuToggle.classList.remove('active');
       });
     });
-  
+ 
     // Only keep the "scrolled" logic for nav style (not for hiding nav)
     window.addEventListener('scroll', () => {
       if (window.scrollY > 50) {
