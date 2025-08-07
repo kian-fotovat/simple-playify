@@ -49,7 +49,7 @@ except NotImplementedError: # Some systems may not support logical=False
     process_pool = ProcessPoolExecutor(max_workers=os.cpu_count())
 
 SILENT_MESSAGES = True
-IS_PUBLIC_VERSION = True
+IS_PUBLIC_VERSION = False
 
 # --- Logging ---
 
