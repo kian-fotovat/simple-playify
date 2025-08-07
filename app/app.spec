@@ -20,7 +20,7 @@ hiddenimports = [
 
 
 a = Analysis(
-    ['app.py'],  # Votre script principal
+    ['app.py'], 
     pathex=[],
     binaries=binaries,
     datas=datas,
