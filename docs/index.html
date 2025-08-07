@@ -74,12 +74,6 @@
       box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
       transition: all 0.3s ease-in-out;
     }
-    body.scrolled nav {
-      padding: 15px 5%;
-      border-bottom-left-radius: 15px;
-      border-bottom-right-radius: 15px;
-      background: rgba(0, 0, 0, 0.6);
-    }
     .logo {
       font-family: 'SequelGeoWide', sans-serif;
       font-weight: normal;
@@ -1025,14 +1019,13 @@
       .nav { padding: 15px 20px; }
       .logo { font-size: 1.5rem; }
       .nav-links { gap: 15px; }
-      .nav-links a { font-size: 0.9rem; }
+      /* .nav-links a { font-size: 0.9rem; } */ /* Commented out to match commands.html */
       .stats-content { grid-template-columns: 1fr; gap: 30px; }
       .stat-divider { display: none; }
       .stat-number { font-size: 5rem; }
       .stat-label { font-size: 1.2rem; }
       #permission-popup { padding: 25px; }
-    }
-    @media (max-width: 768px) {
+      
       .nav-links {
         position: fixed; top: 0; right: 0; width: 70%; height: 100vh;
         background: rgba(0, 0, 0, 0.9);
@@ -1068,6 +1061,10 @@
         .stat-label { font-size: 1.1rem; }
         .tab-content .tab-pane.active { grid-template-columns: 1fr; }
     }
+     @media (max-width: 480px) {
+      .nav { padding: 12px 15px; }
+      .logo { font-size: 1.3rem; }
+    }
   </style>
 </head>
 <body>
@@ -1088,6 +1085,7 @@
       <a href="#platforms">Platforms</a>
       <a href="#how-it-works">How It Works</a>
       <a href="commands.html">Commands</a>
+      <a href="self-host.html">Self-Host</a>
       <a href="https://github.com/alan7383/playify" target="_blank">GitHub</a>
       <a href="https://discord.gg/JeH8g6g3cG" target="_blank">Discord</a>
     </div>
@@ -1144,11 +1142,11 @@
         <h3 class="feature-title">Upload & Play Files</h3>
         <p class="feature-desc">Drag and drop your own audio or video files — Playify handles the rest.</p>
       </div>
-      <div class="feature-card fade-in">
-        <div class="feature-icon"><i class="fas fa-microphone-lines"></i></div>
-        <h3 class="feature-title">Synced Karaoke & Lyrics</h3>
-        <p class="feature-desc">Sing along with perfectly timed lyrics — no setup, just /karaoke.</p>
-      </div>
+      <a href="self-host.html" class="feature-card fade-in delay-2" style="text-decoration: none; color: inherit;">
+        <div class="feature-icon"><i class="fas fa-house-user"></i></div>
+        <h3 class="feature-title">Self-Host for YouTube</h3>
+        <p class="feature-desc">Enable full YouTube support by running your own private version of the bot. Our simple Windows installer makes it easy.</p>
+      </a>
     </div>
   </section>
 
@@ -1218,7 +1216,7 @@
       </a>
     </div>
   </section>
-
+  
   <!-- === How It Works Section === -->
   <section id="how-it-works" class="how-it-works">
     <h2 class="section-title fade-in">HOW IT WORKS</h2>
@@ -1347,6 +1345,7 @@
           <li><a href="#platforms">Platforms</a></li>
           <li><a href="#how-it-works">How It Works</a></li>
           <li><a href="commands.html">Commands</a></li>
+          <li><a href="self-host.html">Self-Host</a></li>
           <li><a href="https://github.com/alan7383/playify" target="_blank">GitHub</a></li>
           <li><a href="https://discord.gg/JeH8g6g3cG" target="_blank">Discord</a></li>
         </ul>
@@ -1410,7 +1409,7 @@
         createParticles();
       }
 
-      // === [NOUVEAU] Stats Hover Glow Effect ===
+      // === Stats Hover Glow Effect ===
       const statBlocks = document.querySelectorAll('.stat-block');
       statBlocks.forEach(block => {
           block.addEventListener('mousemove', (e) => {
@@ -1430,7 +1429,7 @@
             if (entry.target.classList.contains('stat-number')) {
               const counter = entry.target;
               const target = parseInt(counter.dataset.target, 10);
-              const suffix = counter.dataset.suffix || ''; // Récupère le suffixe, ou une chaîne vide
+              const suffix = counter.dataset.suffix || '';
               let startTime = null;
 
               const updateCounter = (currentTime) => {
@@ -1438,12 +1437,11 @@
                 const progress = Math.min((currentTime - startTime) / 2500, 1);
                 const currentNum = Math.floor((1 - Math.pow(1 - progress, 3)) * target);
 
-                counter.innerText = currentNum.toLocaleString('en-US'); // Formate le nombre pendant l'animation
+                counter.innerText = currentNum.toLocaleString('en-US');
                 
                 if (progress < 1) {
                     requestAnimationFrame(updateCounter);
                 } else {
-                    // Une fois terminé, formate le nombre final ET ajoute le suffixe
                     counter.innerText = target.toLocaleString('en-US') + suffix;
                 }
               };
