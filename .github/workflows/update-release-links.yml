@@ -1,0 +1,81 @@
+# Name of the GitHub Actions workflow
+name: Update Release Links on Publish
+
+# -----------------
+# --- TRIGGER ---
+# -----------------
+# This workflow runs automatically ONLY when a new release is "published".
+# It will not run on draft or pre-releases.
+on:
+  release:
+    types: [published]
+
+# -----------------
+# --- JOB ---
+# -----------------
+# A job is a set of steps that execute on a virtual machine.
+jobs:
+  update-links:
+    # Use the latest version of Ubuntu as the operating system
+    runs-on: ubuntu-latest
+    
+    # Grant permissions for the job to write content back to the repository
+    permissions:
+      contents: write
+
+    # -----------------
+    # --- STEPS ---
+    # -----------------
+    # These are the individual commands the job will run in sequence.
+    steps:
+      # Step 1: Check out your repository's code
+      # This allows the workflow to access your files (README.md, etc.)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Get the release version from the tag (e.g., "v1.2.1")
+      # This saves the tag name into an environment variable for later use.
+      - name: Get the release version tag
+        id: get_version
+        run: echo "VERSION_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+
+      # Step 3: Update the download links in your files
+      - name: Update README.md and website file
+        run: |
+          # Prepare version numbers. One with the 'v' (VERSION_TAG) and one without (VERSION_NUMBER).
+          # This makes the script robust whether your tag is "1.2.1" or "v1.2.1".
+          VERSION_TAG="${{ env.VERSION_TAG }}"
+          VERSION_NUMBER="${VERSION_TAG#v}"
+          
+          echo "New release detected. Tag: ${VERSION_TAG}, Number: ${VERSION_NUMBER}"
+
+          # Use `sed` (a stream editor) to find and replace the download links.
+          # The `|` is used as a separator because the URL contains slashes (`/`).
+          # This command looks for the pattern `/releases/download/.../Playify_Setup_v...exe` and replaces it.
+          sed -i "s|/releases/download/.*/Playify_Setup_v.*\.exe|/releases/download/${VERSION_TAG}/Playify_Setup_v${VERSION_NUMBER}.exe|g" README.md
+          echo "README.md has been updated."
+          
+          sed -i "s|/releases/download/.*/Playify_Setup_v.*\.exe|/releases/download/${VERSION_TAG}/Playify_Setup_v${VERSION_NUMBER}.exe|g" self-host.html
+          echo "self-host.html has been updated."
+
+      # Step 4: Commit and push the changes back to the repository
+      - name: Commit and push changes
+        run: |
+          # Configure Git with a bot user identity
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Add the modified files to the staging area
+          git add README.md self-host.html
+          
+          # Check if there are any changes to commit before proceeding
+          if ! git diff --staged --quiet; then
+            # Commit the changes with a descriptive message
+            git commit -m "chore: Update download links to version ${{ env.VERSION_TAG }}"
+            
+            # Push the commit to the repository's default branch
+            git push
+            echo "Changes have been committed and pushed."
+          else
+            echo "No changes to commit. Files are already up-to-date."
+          fi
