@@ -7,17 +7,17 @@
 AppName=Playify
 ; The AppVerName is what is displayed in "Add/Remove Programs".
 ; It includes the AppName and the version.
-AppVerName=Playify v1.1.0
+AppVerName=Playify v1.2.0
 ; This version number is crucial. The auto-updater will compare against this.
 ; Remember to increment this for each new release.
-AppVersion=1.1.0
+AppVersion=1.2.0
 AppPublisher=Alan (alananasssss)
 DefaultDirName={autopf}\Playify
 
 ; --- Installation Options ---
 DisableProgramGroupPage=yes
 ; The OutputBaseFilename should also reflect the new version.
-OutputBaseFilename=Playify_Setup_v1.1.0
+OutputBaseFilename=Playify_Setup_v1.2.0
 Compression=lzma2
 SolidCompression=yes
 SetupIconFile=assets\images\playify.ico
