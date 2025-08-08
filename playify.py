@@ -867,16 +867,16 @@ messages = {
         "kawaii": "(´• ω •`) YouTube is a No-Go!"
     },
     "youtube_blocked_description": {
-        "normal": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo enable YouTube playback, please consider self-hosting the bot. It's free and gives you full control!",
-        "kawaii": "Sowwy... I can't play YouTube links because of the big meanie Google... (｡•́︿•̀｡)\n\nIf you want me to play them, you can give me my own little home by self-hosting me! It's free and fun!~"
+        "normal": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo get full YouTube playback, I made a super simple Windows app that sets up self-hosting for you — it’s free and gives you full control!",
+        "kawaii": "Sowwy... I can't play YouTube links because of the big meanie Google... (｡•́︿•̀｡)\n\nBut you can give me my own little home with an easy Windows app I made for self-hosting! It's free and fun, and then YouTube works perfectly!~"
     },
     "youtube_blocked_repo_field": {
-        "normal": "Get the Code on GitHub",
+        "normal": "Get the Code & Setup",
         "kawaii": "Find my home here! ♡"
     },
     "youtube_blocked_repo_value": {
-        "normal": "You can find the full source code and instructions here:\n**https://github.com/alan7383/playify**",
-        "kawaii": "Everything you need is right here! Come find me!\n**https://github.com/alan7383/playify**"
+        "normal": "GitHub repo: https://github.com/alan7383/playify\nWindows setup & instructions: https://alan7383.github.io/playify/self-host.html",
+        "kawaii": "GitHub repo: https://github.com/alan7383/playify\nCome grab the Windows setup app here:\nhttps://alan7383.github.io/playify/self-host.html"
     },
     "queue_last_song": {
         "normal": "No other songs are in the queue.",
@@ -1613,26 +1613,28 @@ async def create_controller_embed(bot, guild_id):
         display_name = FILTER_DISPLAY_NAMES.get(filter_name, filter_name.capitalize())
         dynamic_footer_info = f"Filter: {display_name}" + (" ✨" if is_kawaii else "")
     elif music_player.current_info:
-        url = music_player.current_info.get('webpage_url', '').lower()
-        original_platform = music_player.current_info.get('original_platform')
         source_type = music_player.current_info.get('source_type')
         current_display_map = KAOMOJI_PLATFORM_DISPLAY if is_kawaii else PLATFORM_DISPLAY
 
-        if original_platform and original_platform in current_display_map:
-            dynamic_footer_info = f"Source: {current_display_map[original_platform]}"
-        elif source_type == 'file':
+        if source_type == 'file':
             dynamic_footer_info = "Source: Local File" + (" (`•ω•´)" if is_kawaii else " 💿")
-        elif 'youtube.com' in url or 'youtu.be' in url:
-            dynamic_footer_info = f"Source: {current_display_map['YouTube']}"
-        elif 'soundcloud.com' in url:
-            dynamic_footer_info = f"Source: {current_display_map['SoundCloud']}"
-        elif 'twitch.tv' in url: # <-- Ajout
-            dynamic_footer_info = f"Source: {current_display_map['Twitch']}" 
-        elif 'bandcamp.com' in url:
-            dynamic_footer_info = "Source: Bandcamp" + (" (ﾉ$ヮ$)ﾉ" if is_kawaii else " 🎷")
         else:
-            ping_ms = round(bot.latency * 1000)
-            dynamic_footer_info = f"Ping: {ping_ms}ms" + ("!~" if is_kawaii else "")
+            url = music_player.current_info.get('webpage_url', '').lower()
+            original_platform = music_player.current_info.get('original_platform')
+
+            if original_platform and original_platform in current_display_map:
+                dynamic_footer_info = f"Source: {current_display_map[original_platform]}"
+            elif 'youtube.com' in url or 'youtu.be' in url:
+                dynamic_footer_info = f"Source: {current_display_map['YouTube']}"
+            elif 'soundcloud.com' in url:
+                dynamic_footer_info = f"Source: {current_display_map['SoundCloud']}"
+            elif 'twitch.tv' in url:
+                dynamic_footer_info = f"Source: {current_display_map['Twitch']}"
+            elif 'bandcamp.com' in url:
+                dynamic_footer_info = "Source: Bandcamp" + (" (ﾉ$ヮ$)ﾉ" if is_kawaii else " 🎷")
+            else:
+                ping_ms = round(bot.latency * 1000)
+                dynamic_footer_info = f"Ping: {ping_ms}ms" + ("!~" if is_kawaii else "")
     else:
         ping_ms = round(bot.latency * 1000)
         dynamic_footer_info = f"Ping: {ping_ms}ms" + ("!~" if is_kawaii else "")
