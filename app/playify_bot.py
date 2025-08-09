@@ -74,6 +74,7 @@ karaoke_disclaimer_shown = set()
 _24_7_active = {}  # {guild_id: bool}
 controller_channels = {} # {guild_id: channel_id}
 controller_messages = {} # {guild_id: message_id}
+allowed_channels_map = {} # {guild_id: set(channel_id, ...)}
 
 
 # This global variable will be initialized inside run_bot
@@ -853,20 +854,44 @@ messages = {
             "kawaii": "(´• ω •`) YouTube is a No-Go!"
         },
         "youtube_blocked_description": {
-            "normal": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo enable YouTube playback, please consider self-hosting the bot. It's free and gives you full control!",
-            "kawaii": "Sowwy... I can't play YouTube links because of the big meanie Google... (｡•́︿•̀｡)\n\nIf you want me to play them, you can give me my own little home by self-hosting me! It's free and fun!~"
+            "normal": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo get full YouTube playback, I made a super simple Windows app that sets up self-hosting for you — it’s free and gives you full control!",
+            "kawaii": "Sowwy... I can't play YouTube links because of the big meanie Google... (｡•́︿•̀｡)\n\nBut you can give me my own little home with an easy Windows app I made for self-hosting! It's free and fun, and then YouTube works perfectly!~"
         },
         "youtube_blocked_repo_field": {
-            "normal": "Get the Code on GitHub",
+            "normal": "Get the Code & Setup",
             "kawaii": "Find my home here! ♡"
         },
         "youtube_blocked_repo_value": {
-            "normal": "You can find the full source code and instructions here:\n**https://github.com/alan7383/playify**",
-            "kawaii": "Everything you need is right here! Come find me!\n**https://github.com/alan7383/playify**"
+            "normal": "GitHub repo: https://github.com/alan7383/playify\nWindows setup & instructions: https://alan7383.github.io/playify/self-host.html",
+            "kawaii": "GitHub repo: https://github.com/alan7383/playify\nCome grab the Windows setup app here:\nhttps://alan7383.github.io/playify/self-host.html"
         },
         "queue_last_song": {
             "normal": "No other songs are in the queue.",
             "kawaii": "This is the last song!~ (´• ω •`)"
+        },
+        "command_restricted_title": {
+            "normal": "🚫 Command Disabled Here",
+            "kawaii": "(>_<) Not here!"
+        },
+        "command_restricted_description": {
+            "normal": "Sorry, Playify commands can only be used in specific channels on this server.",
+            "kawaii": "Aww... sowwy! I can only listen for commands in special channels here... (｡•́︿•̀｡)"
+        },
+        "command_allowed_channels_field": {
+            "normal": "Allowed Channels",
+            "kawaii": "Use me here!~"
+        },
+        "allowlist_set_success": {
+            "normal": "✅ Success! Bot commands are now restricted to the following channels: {channels}",
+            "kawaii": "Okay! I'll only listen in these channels now: {channels} (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        },
+        "allowlist_reset_success": {
+            "normal": "✅ Success! All command restrictions have been removed. The bot will now respond in any channel.",
+            "kawaii": "Yay! I can listen everywhere again!~ (´• ω •`)"
+        },
+        "allowlist_invalid_args": {
+            "normal": "Invalid usage. You must either specify at least one channel to set the allowlist, or type 'default' in the `reset` option to remove it.",
+            "kawaii": "Silly! You have to tell me which channels to listen in, or tell me to `reset` to `default`!~ (>ω<)"
         },
     }
 
@@ -1836,6 +1861,36 @@ def run_bot(status_queue, log_queue):
             self.silence_management_lock = asyncio.Lock()
             self.is_paused_by_leave = False
             self.manual_stop = False 
+
+    async def hydrate_track_info(self, track_info: dict) -> dict:
+        """
+        Takes a track dictionary and ensures it has full metadata like title and thumbnail.
+        If the track is a LazySearchItem, it resolves it.
+        If it's a dict with just a URL, it fetches the full info.
+        """
+        if isinstance(track_info, LazySearchItem):
+            if not track_info.resolved_info:
+                await track_info.resolve()
+            return track_info.resolved_info or {'title': 'Resolution Failed', 'url': '#'}
+
+        if isinstance(track_info, dict):
+            # Check if info is already complete
+            if track_info.get('title') and track_info.get('title') != 'Loading...':
+                return track_info
+            
+            # Info is incomplete, fetch it
+            try:
+                url_to_fetch = track_info.get('url')
+                if url_to_fetch:
+                    full_info = await fetch_video_info_with_retry(url_to_fetch)
+                    # Update the original dict with new info
+                    track_info.update(full_info)
+                    return track_info
+            except Exception as e:
+                logger.error(f"On-the-fly hydration for '{track_info.get('url')}' failed: {e}")
+                return track_info # Return original dict on failure
+        
+        return track_info # Return as is if type is unknown
         
     class AddSongModal(discord.ui.Modal, title="Add a Song or Playlist"):
         def __init__(self, bot: commands.Bot):
@@ -2432,20 +2487,28 @@ def run_bot(status_queue, log_queue):
             display_name = FILTER_DISPLAY_NAMES.get(filter_name, filter_name.capitalize())
             dynamic_footer_info = f"Filter: {display_name}" + (" ✨" if is_kawaii else "")
         elif music_player.current_info:
-            url = music_player.current_info.get('webpage_url', '').lower()
-            original_platform = music_player.current_info.get('original_platform')
             source_type = music_player.current_info.get('source_type')
             current_display_map = KAOMOJI_PLATFORM_DISPLAY if is_kawaii else PLATFORM_DISPLAY
 
-            if original_platform and original_platform in current_display_map: dynamic_footer_info = f"Source: {current_display_map[original_platform]}"
-            elif source_type == 'file': dynamic_footer_info = "Source: Local File" + (" (`•ω•´)" if is_kawaii else " 💿")
-            elif 'youtube.com' in url or 'youtu.be' in url: dynamic_footer_info = f"Source: {current_display_map['YouTube']}"
-            elif 'soundcloud.com' in url: dynamic_footer_info = f"Source: {current_display_map['SoundCloud']}"
-            elif 'twitch.tv' in url: dynamic_footer_info = f"Source: {current_display_map['Twitch']}"   
-            elif 'bandcamp.com' in url: dynamic_footer_info = "Source: Bandcamp" + (" (ﾉ$ヮ$)ﾉ" if is_kawaii else " 🎷")
+            if source_type == 'file':
+                dynamic_footer_info = "Source: Local File" + (" (`•ω•´)" if is_kawaii else " 💿")
             else:
-                ping_ms = round(bot.latency * 1000)
-                dynamic_footer_info = f"Ping: {ping_ms}ms" + ("!~" if is_kawaii else "")
+                url = music_player.current_info.get('webpage_url', '').lower()
+                original_platform = music_player.current_info.get('original_platform')
+
+                if original_platform and original_platform in current_display_map:
+                    dynamic_footer_info = f"Source: {current_display_map[original_platform]}"
+                elif 'youtube.com' in url or 'youtu.be' in url:
+                    dynamic_footer_info = f"Source: {current_display_map['YouTube']}"
+                elif 'soundcloud.com' in url:
+                    dynamic_footer_info = f"Source: {current_display_map['SoundCloud']}"
+                elif 'twitch.tv' in url:
+                    dynamic_footer_info = f"Source: {current_display_map['Twitch']}"
+                elif 'bandcamp.com' in url:
+                    dynamic_footer_info = "Source: Bandcamp" + (" (ﾉ$ヮ$)ﾉ" if is_kawaii else " 🎷")
+                else:
+                    ping_ms = round(bot.latency * 1000)
+                    dynamic_footer_info = f"Ping: {ping_ms}ms" + ("!~" if is_kawaii else "")
         else:
             ping_ms = round(bot.latency * 1000)
             dynamic_footer_info = f"Ping: {ping_ms}ms" + ("!~" if is_kawaii else "")
@@ -5315,14 +5378,48 @@ def run_bot(status_queue, log_queue):
             # Use followup.send because we deferred
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
-    # /skip command
-    @bot.tree.command(name="skip", description="Skip to the next song")
-    async def skip(interaction: discord.Interaction):
+    async def skip_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[int]]:
+        """Provides autocomplete for the /skip command, showing song titles for track numbers."""
+        guild_id = interaction.guild_id
+        music_player = get_player(guild_id)
+        choices = []
+        
+        # Get a snapshot of the queue to work with
+        tracks = list(music_player.queue._queue)
+
+        # We only show up to 25 choices, which is Discord's limit
+        for i, track in enumerate(tracks[:25]):
+            track_number = i + 1
+            
+            # Get a display-friendly title
+            display_info = get_track_display_info(track)
+            title = display_info.get('title', 'Unknown Title')
+            
+            # The 'name' is what the user sees, the 'value' is what the bot receives.
+            choice_name = f"{track_number}. {title}"
+            
+            # Filter choices based on what the user is typing in the 'number' field.
+            if not current or current in str(track_number):
+                # The value MUST be an integer because the command expects an integer.
+                choices.append(app_commands.Choice(name=choice_name[:100], value=track_number))
+                
+        return choices
+
+
+    # /skip command --- MODIFIED ---
+    @bot.tree.command(name="skip", description="Skips to the next song, or to a specific track number in the queue.")
+    @app_commands.describe(number="[Optional] The track number in the queue to jump to.")
+    @app_commands.autocomplete(number=skip_autocomplete)
+    async def skip(interaction: discord.Interaction, number: Optional[app_commands.Range[int, 1]] = None):
+        """
+        Skips to the next track. If a number is provided, it skips to that
+        specific track in the queue, removing all preceding tracks.
+        """
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
             return
 
-        guild_id = interaction.guild.id
+        guild_id = interaction.guild_id
         is_kawaii = get_mode(guild_id)
         music_player = get_player(guild_id)
         voice_client = interaction.guild.voice_client
@@ -5335,16 +5432,58 @@ def run_bot(status_queue, log_queue):
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             return
 
+        # Defer the response as the action might take a moment.
         await interaction.response.defer()
 
         if music_player.lyrics_task and not music_player.lyrics_task.done():
             music_player.lyrics_task.cancel()
+            
+        # --- NEW LOGIC: JUMP TO A SPECIFIC SONG NUMBER ---
+        if number is not None:
+            async with music_player.queue_lock:
+                queue_size = music_player.queue.qsize()
+                if not (1 <= number <= queue_size):
+                    await interaction.followup.send(f"Invalid number. Please provide a track number between 1 and {queue_size}.", ephemeral=True, silent=SILENT_MESSAGES)
+                    return
+                
+                # Convert to 0-based index
+                index_to_jump_to = number - 1
+                
+                queue_list = list(music_player.queue._queue)
+                
+                # Add the tracks that are being skipped to the history
+                tracks_to_skip = queue_list[:index_to_jump_to]
+                music_player.history.extend(tracks_to_skip)
+                
+                # The target song and the rest of the queue
+                new_queue_list = queue_list[index_to_jump_to:]
+                
+                # Rebuild the queue
+                new_queue = asyncio.Queue()
+                for item in new_queue_list:
+                    await new_queue.put(item)
+                music_player.queue = new_queue
 
+            jumped_to_track_info = get_track_display_info(new_queue_list[0])
+            title_to_announce = jumped_to_track_info.get('title', 'the selected song')
+
+            embed = Embed(
+                description=f"⏭️ Jumped to track **#{number}**: `{title_to_announce}`",
+                color=0xB5EAD7 if is_kawaii else discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
+            
+            # Stop the current song to trigger the new one
+            music_player.manual_stop = True
+            await safe_stop(voice_client)
+            return
+
+        # --- ORIGINAL LOGIC: SKIP TO THE NEXT SONG ---
         if music_player.loop_current:
+            # Replaying the current song
             title = music_player.current_info.get("title", "Unknown Title")
             url = music_player.current_info.get("webpage_url", music_player.current_url)
             description_text = get_messages("replay_success_desc", guild_id).format(title=title, url=url)
-
             embed = Embed(
                 title=get_messages("replay_success_title", guild_id),
                 description=description_text,
@@ -5352,33 +5491,20 @@ def run_bot(status_queue, log_queue):
             )
             if music_player.current_info.get("thumbnail"):
                 embed.set_thumbnail(url=music_player.current_info["thumbnail"])
-
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
             await safe_stop(voice_client)
             return
 
+        # Announcing the next song in queue
         queue_snapshot = list(music_player.queue._queue)
         next_song_info = queue_snapshot[0] if queue_snapshot else None
-
-        music_player.suppress_next_now_playing = True
         
         embed = None 
-
         if next_song_info:
-            hydrated_next_info = next_song_info.copy()
-
-            if (not hydrated_next_info.get('title') or hydrated_next_info.get('title') == 'Unknown Title' or not hydrated_next_info.get('thumbnail')) and not hydrated_next_info.get('source_type') == 'file':
-                try:
-                    logger.info(f"[{guild_id}] Skip: Hydrating next track on-the-fly: {hydrated_next_info['url']}")
-                    full_info = await fetch_video_info_with_retry(hydrated_next_info['url'])
-                    if full_info:
-                        hydrated_next_info['title'] = full_info.get('title', 'Unknown Title')
-                        hydrated_next_info['thumbnail'] = full_info.get('thumbnail')
-                        hydrated_next_info['webpage_url'] = full_info.get('webpage_url', hydrated_next_info['url'])
-                except Exception as e:
-                    logger.error(f"[{guild_id}] On-the-fly hydration during skip failed: {e}")
-
+            # Hydrate info for a better announcement message
+            hydrated_next_info = await music_player.hydrate_track_info(next_song_info)
             next_title = hydrated_next_info.get("title", "Unknown Title")
+            
             description_text = ""
             if hydrated_next_info.get('source_type') == 'file':
                 description_text = f"💿 `{next_title}`"
@@ -5395,8 +5521,8 @@ def run_bot(status_queue, log_queue):
             
             if hydrated_next_info.get("thumbnail"):
                 embed.set_thumbnail(url=hydrated_next_info["thumbnail"])
-
         else:
+            # Queue is now empty
             embed = Embed(
                 title=get_messages("skip_confirmation", guild_id),
                 color=0xE2F0CB if is_kawaii else discord.Color.blue()
@@ -5404,6 +5530,9 @@ def run_bot(status_queue, log_queue):
             embed.set_footer(text=get_messages("skip_queue_empty", guild_id))
 
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
+        
+        # Stop the player, the `after_playing` callback will handle the rest
+        music_player.manual_stop = True # Ensure loop/247 logic is bypassed for this skip
         await safe_stop(voice_client)
 
     # /loop command
@@ -6194,6 +6323,64 @@ def run_bot(status_queue, log_queue):
         )
         
         await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
+
+    @app_commands.command(name="allowlist", description="Restricts bot commands to specific channels.")
+    @app_commands.describe(
+        reset="Type 'default' to allow commands in all channels again.",
+        channel1="The first channel to allow.",
+        channel2="An optional second channel to allow.",
+        channel3="An optional third channel to allow.",
+        channel4="An optional fourth channel to allow.",
+        channel5="An optional fifth channel to allow."
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def allowlist(self, interaction: discord.Interaction,
+                        reset: Optional[str] = None,
+                        channel1: Optional[discord.TextChannel] = None,
+                        channel2: Optional[discord.TextChannel] = None,
+                        channel3: Optional[discord.TextChannel] = None,
+                        channel4: Optional[discord.TextChannel] = None,
+                        channel5: Optional[discord.TextChannel] = None):
+        
+        guild_id = interaction.guild.id
+        is_kawaii = get_mode(guild_id)
+
+        # Case 1: Reset the allowlist
+        if reset and reset.lower() == 'default':
+            if guild_id in allowed_channels_map:
+                del allowed_channels_map[guild_id]
+                logger.info(f"Command channel allowlist has been RESET for guild {guild_id}.")
+            
+            embed = discord.Embed(
+                description=get_messages("allowlist_reset_success", guild_id),
+                color=0xB5EAD7 if is_kawaii else discord.Color.green()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
+            return
+
+        # Case 2: Set the allowlist
+        channels = [ch for ch in [channel1, channel2, channel3, channel4, channel5] if ch is not None]
+        
+        if channels:
+            allowed_ids = {ch.id for ch in channels}
+            allowed_channels_map[guild_id] = allowed_ids
+            
+            channel_mentions = ", ".join([ch.mention for ch in channels])
+            logger.info(f"Command channel allowlist for guild {guild_id} set to: {allowed_ids}")
+
+            embed = discord.Embed(
+                description=get_messages("allowlist_set_success", guild_id).format(channels=channel_mentions),
+                color=0xB5EAD7 if is_kawaii else discord.Color.green()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
+            return
+
+        # Case 3: Invalid arguments
+        embed = discord.Embed(
+            description=get_messages("allowlist_invalid_args", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.orange()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
             
     # ==============================================================================
     # 6. DISCORD EVENTS
@@ -6321,6 +6508,49 @@ def run_bot(status_queue, log_queue):
                     else:
                         logger.info(f"Resuming track '{music_player.current_info.get('title')}' at {current_timestamp:.2f}s.")
                         bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
+
+    @bot.tree.interaction_check
+    async def global_interaction_check(interaction: discord.Interaction) -> bool:
+        """
+        This global check runs before any slash command. It verifies if the
+        command is being used in an allowed channel based on the server's configuration.
+        """
+        # Always allow commands in DMs (where guild is None)
+        if not interaction.guild:
+            return True
+
+        guild_id = interaction.guild.id
+
+        # If the guild has no entry in the map, restrictions are off. Allow command.
+        if guild_id not in allowed_channels_map:
+            return True
+
+        # Check for bypass permission. Users with "Manage Server" can use commands anywhere.
+        if interaction.user.guild_permissions.manage_guild:
+            return True
+
+        # Check if the command is being used in one of the allowed channels.
+        if interaction.channel_id in allowed_channels_map[guild_id]:
+            return True
+
+        # --- If we reach this point, the user is restricted ---
+        allowed_list = allowed_channels_map.get(guild_id, set())
+        channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_list]) if allowed_list else "None"
+
+        is_kawaii = get_mode(guild_id)
+        embed = discord.Embed(
+            title=get_messages("command_restricted_title", guild_id),
+            description=get_messages("command_restricted_description", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.red()
+        )
+        embed.add_field(
+            name=get_messages("command_allowed_channels_field", guild_id),
+            value=channel_mentions
+        )
+
+        # Send the ephemeral warning and block the command from running.
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
+        return False
                         
     @bot.event
     async def on_ready():
@@ -6333,35 +6563,58 @@ def run_bot(status_queue, log_queue):
             synced = await bot.tree.sync()
             logger.info(f"Synced {len(synced)} slash commands.")
 
+            # --- DYNAMIC PRESENCE FUNCTION ---
             async def rotate_presence():
-                while True:
-                    if not bot.is_ready() or bot.is_closed():
-                        return
+                await bot.wait_until_ready()
 
-                    statuses = [
-                        ("/volume", discord.ActivityType.listening),
-                        ("/play [link] ", discord.ActivityType.listening),
-                        (f"{len(bot.guilds)} servers", discord.ActivityType.playing)
-                    ]
+                # Map string names to discord.ActivityType objects
+                activity_type_map = {
+                    "Playing": discord.ActivityType.playing,
+                    "Listening": discord.ActivityType.listening,
+                    "Watching": discord.ActivityType.watching,
+                    "Competing": discord.ActivityType.competing
+                }
+                
+                while not bot.is_closed():
+                    try:
+                        # Load all presence settings from environment variables (set by the app)
+                        presence_type_str = os.getenv("PRESENCE_TYPE", "Playing")
+                        rotation_count = int(os.getenv("PRESENCE_ROTATION_COUNT", "3"))
+                        delay = int(os.getenv("PRESENCE_ROTATION_DELAY", "15"))
+                        
+                        custom_statuses = []
+                        for i in range(1, rotation_count + 1):
+                            status_text = os.getenv(f"PRESENCE_{i}")
+                            if status_text: # Ensure the status is not empty
+                                custom_statuses.append(status_text)
+                        
+                        # Use default statuses if none are configured
+                        if not custom_statuses:
+                             custom_statuses = [f"Serving {len(bot.guilds)} servers", "/play", "alan7383.github.io/playify"]
 
-                    for status_text, status_type in statuses:
-                        try:
+                        # Get the correct activity type object, defaulting to 'playing'
+                        activity_type = activity_type_map.get(presence_type_str, discord.ActivityType.playing)
+
+                        for status in custom_statuses:
+                            # Check if the bot is still running before changing presence
+                            if bot.is_closed():
+                                return
+                                
                             await bot.change_presence(
-                                activity=discord.Activity(
-                                    name=status_text,
-                                    type=status_type
-                                )
+                                activity=discord.Activity(name=status, type=activity_type)
                             )
-                            await asyncio.sleep(10)
-                        except Exception as e:
-                            logger.error(f"Error changing presence: {e}")
-                            await asyncio.sleep(5)
+                            # Use the custom delay from settings
+                            await asyncio.sleep(delay)
+
+                    except Exception as e:
+                        logger.error(f"Error changing presence: {e}")
+                        await asyncio.sleep(60) # Wait longer if an error occurs
 
             bot.loop.create_task(rotate_presence())
 
         except Exception as e:
-            logger.error(f"Error during command synchronization: {e}")
-
+            logger.error(f"Error during on_ready tasks: {e}", exc_info=True)
+                        
     status_queue.put("ONLINE")
 
     # ==============================================================================
