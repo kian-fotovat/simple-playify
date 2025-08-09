@@ -54,3 +54,4 @@ jobs:
             echo "Changes have been committed and pushed."
           else
             echo "No changes to commit. Files are already up-to-date."
+          fi
