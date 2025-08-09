@@ -6252,6 +6252,65 @@ def run_bot(status_queue, log_queue):
             # Create the initial controller message in the new channel
             await update_controller(self.bot, guild_id)
 
+    @app_commands.command(name="allowlist", description="Restricts bot commands to specific channels.")
+    @app_commands.describe(
+        reset="Type 'default' to allow commands in all channels again.",
+        channel1="The first channel to allow.",
+        channel2="An optional second channel to allow.",
+        channel3="An optional third channel to allow.",
+        channel4="An optional fourth channel to allow.",
+        channel5="An optional fifth channel to allow."
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def allowlist(interaction: discord.Interaction,
+                        reset: Optional[str] = None,
+                        channel1: Optional[discord.TextChannel] = None,
+                        channel2: Optional[discord.TextChannel] = None,
+                        channel3: Optional[discord.TextChannel] = None,
+                        channel4: Optional[discord.TextChannel] = None,
+                        channel5: Optional[discord.TextChannel] = None):
+        
+        guild_id = interaction.guild.id
+        is_kawaii = get_mode(guild_id)
+
+        # Case 1: Reset the allowlist
+        if reset and reset.lower() == 'default':
+            if guild_id in allowed_channels_map:
+                del allowed_channels_map[guild_id]
+                logger.info(f"Command channel allowlist has been RESET for guild {guild_id}.")
+            
+            embed = discord.Embed(
+                description=get_messages("allowlist_reset_success", guild_id),
+                color=0xB5EAD7 if is_kawaii else discord.Color.green()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
+            return
+
+        # Case 2: Set the allowlist
+        channels = [ch for ch in [channel1, channel2, channel3, channel4, channel5] if ch is not None]
+        
+        if channels:
+            allowed_ids = {ch.id for ch in channels}
+            allowed_channels_map[guild_id] = allowed_ids
+            
+            channel_mentions = ", ".join([ch.mention for ch in channels])
+            logger.info(f"Command channel allowlist for guild {guild_id} set to: {allowed_ids}")
+
+            embed = discord.Embed(
+                description=get_messages("allowlist_set_success", guild_id).format(channels=channel_mentions),
+                color=0xB5EAD7 if is_kawaii else discord.Color.green()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
+            return
+
+        # Case 3: Invalid arguments
+        embed = discord.Embed(
+            description=get_messages("allowlist_invalid_args", guild_id),
+            color=0xFF9AA2 if is_kawaii else discord.Color.orange()
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
+
+
     @bot.tree.command(name="previous", description="Plays the previous song in the history.")
     async def previous(interaction: discord.Interaction):
         guild_id = interaction.guild.id
@@ -6323,64 +6382,6 @@ def run_bot(status_queue, log_queue):
         )
         
         await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
-
-    @app_commands.command(name="allowlist", description="Restricts bot commands to specific channels.")
-    @app_commands.describe(
-        reset="Type 'default' to allow commands in all channels again.",
-        channel1="The first channel to allow.",
-        channel2="An optional second channel to allow.",
-        channel3="An optional third channel to allow.",
-        channel4="An optional fourth channel to allow.",
-        channel5="An optional fifth channel to allow."
-    )
-    @app_commands.default_permissions(manage_guild=True)
-    async def allowlist(self, interaction: discord.Interaction,
-                        reset: Optional[str] = None,
-                        channel1: Optional[discord.TextChannel] = None,
-                        channel2: Optional[discord.TextChannel] = None,
-                        channel3: Optional[discord.TextChannel] = None,
-                        channel4: Optional[discord.TextChannel] = None,
-                        channel5: Optional[discord.TextChannel] = None):
-        
-        guild_id = interaction.guild.id
-        is_kawaii = get_mode(guild_id)
-
-        # Case 1: Reset the allowlist
-        if reset and reset.lower() == 'default':
-            if guild_id in allowed_channels_map:
-                del allowed_channels_map[guild_id]
-                logger.info(f"Command channel allowlist has been RESET for guild {guild_id}.")
-            
-            embed = discord.Embed(
-                description=get_messages("allowlist_reset_success", guild_id),
-                color=0xB5EAD7 if is_kawaii else discord.Color.green()
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
-            return
-
-        # Case 2: Set the allowlist
-        channels = [ch for ch in [channel1, channel2, channel3, channel4, channel5] if ch is not None]
-        
-        if channels:
-            allowed_ids = {ch.id for ch in channels}
-            allowed_channels_map[guild_id] = allowed_ids
-            
-            channel_mentions = ", ".join([ch.mention for ch in channels])
-            logger.info(f"Command channel allowlist for guild {guild_id} set to: {allowed_ids}")
-
-            embed = discord.Embed(
-                description=get_messages("allowlist_set_success", guild_id).format(channels=channel_mentions),
-                color=0xB5EAD7 if is_kawaii else discord.Color.green()
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
-            return
-
-        # Case 3: Invalid arguments
-        embed = discord.Embed(
-            description=get_messages("allowlist_invalid_args", guild_id),
-            color=0xFF9AA2 if is_kawaii else discord.Color.orange()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
             
     # ==============================================================================
     # 6. DISCORD EVENTS
