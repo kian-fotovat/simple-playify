@@ -9,7 +9,7 @@ import webbrowser
 import threading
 import pystray
 import winreg as reg
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image, ImageDraw
 import subprocess
 import requests
 import tempfile
@@ -24,9 +24,9 @@ APP_NAME = "Playify"
 # VERSION MANAGEMENT:
 # Increment this version number for each new release.
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
-# The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.1.1).
+# The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.2.1).
 # ==============================================================================
-CURRENT_VERSION = "1.2.0"
+CURRENT_VERSION = "1.2.2"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
@@ -55,9 +55,11 @@ STYLE = {
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")
+        # When not bundled, the path is relative to this script's location
+        base_path = os.path.abspath(os.path.dirname(__file__))
     return os.path.join(base_path, relative_path)
 
 def show_message_dialog(parent, title, message):
@@ -170,6 +172,8 @@ class App(ctk.CTk):
         super().__init__()
 
         start_minimized = "--minimized" in sys.argv
+        if start_minimized:
+            self.withdraw()
 
         self.title(APP_NAME)
         self.geometry("960x720")
@@ -203,7 +207,10 @@ class App(ctk.CTk):
         self.settings_window = None
         self.update_window = None
 
-        if self.is_configured:
+        if self.is_configured:            
+            self.withdraw()
+            self.after(100, self.hide_to_tray)
+            
             self.show_dashboard()
             self.start_bot_process()
         else:
@@ -235,6 +242,7 @@ class App(ctk.CTk):
 
         try:
             os.environ["PLAYWRIGHT_BROWSERS_PATH"] = self.playwright_browser_path
+            # Dynamically import playify_bot to ensure it's loaded after env vars are set
             import playify_bot
             self.bot_process = multiprocessing.Process(
                 target=playify_bot.run_bot, args=(self.status_queue, self.log_queue,), daemon=False
@@ -849,6 +857,9 @@ class StylishDashboardPage(ctk.CTkFrame):
     def restart_bot(self): 
         self.add_log_message("--- Restarting bot... ---\n"); self.update_status("RESTARTING"); self.controller.start_bot_process()
 
+# =========================================================================================
+# === FULLY CORRECTED AND FUNCTIONAL SETTINGS WINDOW ======================================
+# =========================================================================================
 class SettingsWindow(ctk.CTkToplevel):
     def __init__(self, controller):
         super().__init__(controller)
@@ -862,172 +873,273 @@ class SettingsWindow(ctk.CTkToplevel):
         except Exception as e:
             print(f"Settings window icon error: {e}")
         self.geometry("600x650") 
-        self.resizable(False, False); self.configure(fg_color=STYLE["background_medium"]); self.transient(controller)
-        self.link_font = ctk.CTkFont(family="Arial", size=12, underline=True); self.desc_font = ctk.CTkFont(family="Arial", size=14)
+        self.resizable(False, False)
+        self.configure(fg_color=STYLE["background_medium"]) 
+        self.transient(controller)
+        
+        self.link_font = ctk.CTkFont(family="Arial", size=12, underline=True)
+        self.desc_font = ctk.CTkFont(family="Arial", size=14)
         
         self.config = load_config()
 
-        self.tab_view = ctk.CTkTabview(self, anchor="w", fg_color="transparent", # <--- MODIFICATION: Tabview background is now transparent
+        # Tab view setup
+        self.tab_view = ctk.CTkTabview(self,
+                                       anchor="w",
+                                       fg_color="transparent",
+                                       segmented_button_fg_color=STYLE["background_medium"],
                                        segmented_button_selected_color=STYLE["accent"],
                                        segmented_button_selected_hover_color=STYLE["accent_hover"],
-                                       segmented_button_unselected_color=STYLE["background_light"])
-        self.tab_view.grid(row=0, column=0, padx=10, pady=10, sticky="nsew") # <--- MODIFICATION: Use grid layout
+                                       segmented_button_unselected_color=STYLE["background_medium"],
+                                       segmented_button_unselected_hover_color=STYLE["background_light"])
+        self.tab_view.grid(row=0, column=0, padx=20, pady=10, sticky="nsew")
         
+        # Add tabs
         self.tab_view.add("General")
         self.tab_view.add("Presence")
         self.tab_view.add("Credentials")
         self.tab_view.add("About")
 
+        # Create the content for each tab
         self._create_general_tab()
         self._create_presence_tab()
         self._create_credentials_tab()
         self._create_about_tab()
         
-        # --- MODIFICATION: Moved Save button to the main window ---
-        button_container = ctk.CTkFrame(self, fg_color=STYLE["background_medium"])
+        # Bottom button container using .grid()
+        button_container = ctk.CTkFrame(self, fg_color="transparent")
         button_container.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="ew")
-        
+        button_container.grid_columnconfigure(0, weight=1) # Allow status label to take space
+
         self.save_status_label = ctk.CTkLabel(button_container, text="")
-        self.save_status_label.pack(side="left", padx=5)
+        self.save_status_label.grid(row=0, column=0, sticky="w", padx=5)
         
-        ctk.CTkButton(button_container, text="Save and Restart Bot", command=self.save_all_settings, fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).pack(side="right")
+        ctk.CTkButton(button_container, text="Save and Restart Bot", command=self.save_all_settings, fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).grid(row=0, column=1, sticky="e")
         
         self.tab_view.set("General")
-    
-    def _create_general_tab(self):
-        tab = self.tab_view.tab("General"); tab.grid_columnconfigure(0, weight=1)
-        
-        startup_frame = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
-        startup_frame.pack(fill="x", padx=10, pady=10)
-        self.startup_var = ctk.BooleanVar(value=self.controller.is_in_startup())
-        ctk.CTkCheckBox(startup_frame, text="Launch Playify on startup", variable=self.startup_var, command=self.toggle_startup, text_color=STYLE["text_secondary"], checkmark_color=STYLE["text"], fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).pack(padx=15, pady=15, anchor="w")
-        
-        update_frame = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
-        update_frame.pack(fill="x", padx=10, pady=10)
-        self.update_var = ctk.BooleanVar(value=self.config.get("CHECK_FOR_UPDATES", "True").lower() == 'true')
-        ctk.CTkCheckBox(update_frame, text="Auto-check for updates", variable=self.update_var, command=self.toggle_update_check, text_color=STYLE["text_secondary"], checkmark_color=STYLE["text"], fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).pack(padx=15, pady=15, anchor="w")
 
-    def _create_presence_tab(self):
-        """Creates the UI for presence customization."""
-        tab = self.tab_view.tab("Presence")
+    def _create_general_tab(self):
+        """Creates the General settings tab using .grid() exclusively."""
+        tab = self.tab_view.tab("General")
+        tab.configure(fg_color="transparent")
         tab.grid_columnconfigure(0, weight=1)
 
+        # Startup Card
+        startup_frame = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
+        startup_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.startup_var = ctk.BooleanVar(value=self.controller.is_in_startup())
+        startup_checkbox = ctk.CTkCheckBox(startup_frame, text="Launch Playify on startup", variable=self.startup_var, command=self.toggle_startup, text_color=STYLE["text_secondary"], checkmark_color=STYLE["text"], fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"])
+        startup_checkbox.grid(row=0, column=0, padx=15, pady=15, sticky="w")
+        
+        # Update Card
+        update_frame = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
+        update_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        self.update_var = ctk.BooleanVar(value=self.config.get("CHECK_FOR_UPDATES", "True").lower() == 'true')
+        update_checkbox = ctk.CTkCheckBox(update_frame, text="Auto-check for updates", variable=self.update_var, command=self.toggle_update_check, text_color=STYLE["text_secondary"], checkmark_color=STYLE["text"], fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"])
+        update_checkbox.grid(row=0, column=0, padx=15, pady=15, sticky="w")
+
+    def _create_presence_tab(self):
+        """Creates the redesigned UI for presence customization using .grid() exclusively."""
+        tab = self.tab_view.tab("Presence")
+        tab.configure(fg_color="transparent")
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_rowconfigure(0, weight=1)
+
         scrollable_frame = ctk.CTkScrollableFrame(tab, fg_color="transparent", label_text=None)
-        scrollable_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        scrollable_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        scrollable_frame.grid_columnconfigure(0, weight=1)
 
-        # --- Activity Type ---
-        type_frame = ctk.CTkFrame(scrollable_frame, fg_color=STYLE["background_light"], corner_radius=8)
-        type_frame.pack(fill="x", padx=10, pady=(0, 10))
-        ctk.CTkLabel(type_frame, text="Activity Type", font=("Arial", 12, "bold"), text_color=STYLE["text"]).pack(anchor="w", padx=15, pady=(10, 5))
-        
+        config_card = ctk.CTkFrame(scrollable_frame, fg_color=STYLE["background_light"], corner_radius=8)
+        config_card.grid(row=0, column=0, sticky="ew", padx=10, pady=(0, 10))
+        # THE FIX - PART 1: Do NOT configure column weights here. This prevents the grid from
+        # distributing extra space, which was the root cause of the stretching.
+
+        # --- Activity Type Widgets ---
+        ctk.CTkLabel(config_card, text="Activity Type", font=("Arial", 14, "bold"), text_color=STYLE["text"]).grid(row=0, column=0, sticky="w", padx=15, pady=(10, 5))
         self.presence_type_var = ctk.StringVar(value=self.config.get("PRESENCE_TYPE", "Playing"))
-        # <--- MODIFICATION: Simplified styling to fix the visual glitch
-        self.presence_type_menu = ctk.CTkOptionMenu(type_frame, variable=self.presence_type_var,
-                                                     values=["Playing", "Listening", "Watching", "Competing"],
-                                                     fg_color=STYLE["background_medium"],
-                                                     button_color=STYLE["accent"],
-                                                     button_hover_color=STYLE["accent_hover"],
-                                                     text_color=STYLE["text"])
-        self.presence_type_menu.pack(fill="x", padx=15, pady=(0, 15), ipady=5)
-
-        # --- Number of Statuses ---
-        rotation_frame = ctk.CTkFrame(scrollable_frame, fg_color=STYLE["background_light"], corner_radius=8)
-        rotation_frame.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(rotation_frame, text="Number of Statuses to Rotate", font=("Arial", 12, "bold"), text_color=STYLE["text"]).pack(anchor="w", padx=15, pady=(10, 5))
         
+        self.presence_type_menu = ctk.CTkOptionMenu(config_card,
+                                                    variable=self.presence_type_var,
+                                                    values=["Playing", "Listening", "Watching", "Competing"],
+                                                    fg_color=STYLE["background_medium"], 
+                                                    button_color=STYLE["accent"], 
+                                                    button_hover_color=STYLE["accent_hover"], 
+                                                    text_color=STYLE["text"])
+        self.presence_type_menu.grid(row=1, column=0, sticky="w", padx=15, pady=(0, 15))
+
+        # --- Number of Statuses Widgets ---
+        ctk.CTkLabel(config_card, text="Number of Statuses", font=("Arial", 14, "bold"), text_color=STYLE["text"]).grid(row=0, column=1, sticky="w", padx=15, pady=(10, 5))
         self.rotation_count_var = ctk.StringVar(value=self.config.get("PRESENCE_ROTATION_COUNT", "3"))
-        self.rotation_segment = ctk.CTkSegmentedButton(rotation_frame,
-                                                       values=["1", "2", "3"],
-                                                       variable=self.rotation_count_var,
-                                                       command=self.toggle_presence_entries,
-                                                       selected_color=STYLE["accent"],
-                                                       selected_hover_color=STYLE["accent_hover"],
-                                                       unselected_color=STYLE["background_medium"])
-        self.rotation_segment.pack(fill="x", padx=15, pady=(0, 15), ipady=5)
 
-        # --- Rotation Delay ---
-        delay_frame = ctk.CTkFrame(scrollable_frame, fg_color=STYLE["background_light"], corner_radius=8)
-        delay_frame.pack(fill="x", padx=10, pady=10)
-        delay_frame.grid_columnconfigure(0, weight=1)
+        button_group_frame = ctk.CTkFrame(config_card, fg_color=STYLE["background_medium"], corner_radius=8)
+        button_group_frame.grid(row=1, column=1, sticky="w", padx=15, pady=(0, 15))
+
+        self.status_buttons = {}
+        for i, count in enumerate(["1", "2", "3"]):
+            btn = ctk.CTkButton(button_group_frame,
+                                text=count,
+                                command=lambda c=count: self.select_status_count(c),
+                                border_width=0,
+                                corner_radius=6,
+                                fg_color=STYLE["background_medium"],
+                                hover_color=STYLE["background_light"],
+                                # THE FIX - PART 2: Explicitly set a small, fixed width for the buttons.
+                                width=40)
+            btn.grid(row=0, column=i, sticky="", padx=2, pady=2)
+            self.status_buttons[count] = btn
         
-        delay_label_frame = ctk.CTkFrame(delay_frame, fg_color="transparent")
-        delay_label_frame.grid(row=0, column=0, columnspan=2, padx=15, pady=(10, 5), sticky="ew")
+        self._update_status_button_styles(self.rotation_count_var.get())
 
-        ctk.CTkLabel(delay_label_frame, text="Rotation Delay", font=("Arial", 12, "bold"), text_color=STYLE["text"]).pack(side="left")
+        # The rest of the tab content remains unchanged
+        delay_card = ctk.CTkFrame(scrollable_frame, fg_color=STYLE["background_light"], corner_radius=8)
+        delay_card.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        delay_card.grid_columnconfigure(0, weight=1)
+        
+        delay_label_frame = ctk.CTkFrame(delay_card, fg_color="transparent")
+        delay_label_frame.grid(row=0, column=0, padx=15, pady=(10, 0), sticky="ew")
+        ctk.CTkLabel(delay_label_frame, text="Rotation Speed", font=("Arial", 14, "bold"), text_color=STYLE["text"]).pack(side="left")
         self.delay_label = ctk.CTkLabel(delay_label_frame, text=f"{self.config.get('PRESENCE_ROTATION_DELAY', '15')} seconds", text_color=STYLE["text_secondary"])
         self.delay_label.pack(side="right")
+        
+        ctk.CTkLabel(delay_card, text="Delay in seconds between each status change.", font=("Arial", 11), text_color=STYLE["text_secondary"]).grid(row=1, column=0, sticky="w", padx=15)
 
         initial_delay = int(self.config.get("PRESENCE_ROTATION_DELAY", 15))
-        self.delay_slider = ctk.CTkSlider(delay_frame, from_=5, to=60, number_of_steps=55, command=self.update_delay_label,
-                                          button_color=STYLE["accent"], button_hover_color=STYLE["accent_hover"],
-                                          progress_color=STYLE["accent"])
+        self.delay_slider = ctk.CTkSlider(delay_card, from_=5, to=60, number_of_steps=55, command=self.update_delay_label, button_color=STYLE["accent"], button_hover_color=STYLE["accent_hover"], progress_color=STYLE["accent"])
         self.delay_slider.set(initial_delay)
-        self.delay_slider.grid(row=1, column=0, columnspan=2, padx=15, pady=(0, 15), sticky="ew")
+        self.delay_slider.grid(row=2, column=0, padx=15, pady=(5, 15), sticky="ew")
 
-        # --- Status Text Entries ---
-        self.entries_frame = ctk.CTkFrame(scrollable_frame, fg_color="transparent")
-        self.entries_frame.pack(fill="x", expand=True, pady=10)
+        ctk.CTkLabel(scrollable_frame, text="Status Messages", font=("Arial", 16, "bold"), text_color=STYLE["text"]).grid(row=2, column=0, sticky="w", padx=15, pady=(15, 5))
         
-        self.presence_entry_1 = self._create_credential_entry(self.entries_frame, "Status 1", self.config.get("PRESENCE_1", "/play [link]"), show_button=False)
-        self.presence_entry_2 = self._create_credential_entry(self.entries_frame, "Status 2", self.config.get("PRESENCE_2", "/help"), show_button=False)
-        self.presence_entry_3 = self._create_credential_entry(self.entries_frame, "Status 3", self.config.get("PRESENCE_3", "alan7383.github.io/playify"), show_button=False)
+        self.entries_frame = ctk.CTkFrame(scrollable_frame, fg_color="transparent")
+        self.entries_frame.grid(row=3, column=0, sticky="ew")
+        self.entries_frame.grid_columnconfigure(0, weight=1)
+        
+        self.presence_entry_1, self.presence_frame_1 = self._populate_presence_entry(self.entries_frame, "Status 1", self.config.get("PRESENCE_1", "/play [link]"))
+        self.presence_entry_2, self.presence_frame_2 = self._populate_presence_entry(self.entries_frame, "Status 2", self.config.get("PRESENCE_2", "/help"))
+        self.presence_entry_3, self.presence_frame_3 = self._populate_presence_entry(self.entries_frame, "Status 3", self.config.get("PRESENCE_3", "alan7383.github.io/playify"))
         
         self.toggle_presence_entries()
 
+    def _populate_presence_entry(self, parent, label_text, value):
+        """Creates and populates a styled card for a status entry field."""
+        frame = ctk.CTkFrame(parent, fg_color=STYLE["background_light"], corner_radius=8)
+        frame.grid_columnconfigure(0, weight=1)
+
+        label = ctk.CTkLabel(frame, text=label_text, font=("Arial", 12), text_color=STYLE["text_secondary"])
+        label.grid(row=0, column=0, sticky="w", padx=15, pady=(8, 2))
+        
+        entry = ctk.CTkEntry(frame, height=35, placeholder_text="Enter your status message here...", border_color=STYLE["border"], fg_color=STYLE["background_medium"])
+        entry.insert(0, value)
+        entry.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 10))
+        
+        return entry, frame
+        
     def update_delay_label(self, value):
         self.delay_label.configure(text=f"{int(value)} seconds")
         
     def toggle_presence_entries(self, value=None):
-        """Shows or hides presence entry fields based on selected count."""
+        """Shows or hides status entry fields using grid layout."""
         count = int(self.rotation_count_var.get())
         
-        if count >= 1: self.presence_entry_1.master.pack(fill="x", padx=0, pady=8) 
-        else: self.presence_entry_1.master.pack_forget()
+        if count >= 1: self.presence_frame_1.grid(row=0, column=0, sticky="ew", padx=10, pady=8)
+        else: self.presence_frame_1.grid_remove()
 
-        if count >= 2: self.presence_entry_2.master.pack(fill="x", padx=0, pady=8) 
-        else: self.presence_entry_2.master.pack_forget()
+        if count >= 2: self.presence_frame_2.grid(row=1, column=0, sticky="ew", padx=10, pady=8)
+        else: self.presence_frame_2.grid_remove()
         
-        if count >= 3: self.presence_entry_3.master.pack(fill="x", padx=0, pady=8) 
-        else: self.presence_entry_3.master.pack_forget()
+        if count >= 3: self.presence_frame_3.grid(row=2, column=0, sticky="ew", padx=10, pady=8)
+        else: self.presence_frame_3.grid_remove()
+
+    def select_status_count(self, count):
+        """Handles click on a status number button and updates styles."""
+        self.rotation_count_var.set(count)
+        self._update_status_button_styles(count)
+        self.toggle_presence_entries() # Update the visibility of presence entry fields
+
+    def _update_status_button_styles(self, selected_count):
+        """Iterates through the buttons and applies the correct selected/unselected style."""
+        for count, button in self.status_buttons.items():
+            if count == selected_count:
+                # Style for the selected button
+                button.configure(fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"])
+            else:
+                # Style for unselected buttons
+                button.configure(fg_color=STYLE["background_medium"], hover_color=STYLE["background_light"])
 
     def _create_credentials_tab(self):
+        """Creates the Credentials tab using .grid() exclusively."""
         tab = self.tab_view.tab("Credentials")
-        container = ctk.CTkFrame(tab, fg_color="transparent"); container.pack(fill="both", expand=True, padx=5, pady=5)
-        self.discord_token_entry = self._create_credential_entry(container, "Discord Token", self.config.get("DISCORD_TOKEN", ""))
-        self.spotify_id_entry = self._create_credential_entry(container, "Spotify Client ID", self.config.get("SPOTIFY_CLIENT_ID", ""))
-        self.spotify_secret_entry = self._create_credential_entry(container, "Spotify Client Secret", self.config.get("SPOTIFY_CLIENT_SECRET", ""))
-        self.genius_token_entry = self._create_credential_entry(container, "Genius Token", self.config.get("GENIUS_TOKEN", ""))
-        # <--- MODIFICATION: Button removed from here
+        tab.configure(fg_color="transparent")
+        tab.grid_columnconfigure(0, weight=1)
+
+        # Create entry for Discord Token
+        frame1 = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
+        frame1.grid(row=0, column=0, sticky="ew", padx=10, pady=8)
+        self.discord_token_entry = self._populate_credential_frame(frame1, "Discord Token", self.config.get("DISCORD_TOKEN", ""))
+
+        # Create entry for Spotify Client ID
+        frame2 = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
+        frame2.grid(row=1, column=0, sticky="ew", padx=10, pady=8)
+        self.spotify_id_entry = self._populate_credential_frame(frame2, "Spotify Client ID", self.config.get("SPOTIFY_CLIENT_ID", ""))
+
+        # Create entry for Spotify Client Secret
+        frame3 = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
+        frame3.grid(row=2, column=0, sticky="ew", padx=10, pady=8)
+        self.spotify_secret_entry = self._populate_credential_frame(frame3, "Spotify Client Secret", self.config.get("SPOTIFY_CLIENT_SECRET", ""))
+
+        # Create entry for Genius Token
+        frame4 = ctk.CTkFrame(tab, fg_color=STYLE["background_light"], corner_radius=8)
+        frame4.grid(row=3, column=0, sticky="ew", padx=10, pady=8)
+        self.genius_token_entry = self._populate_credential_frame(frame4, "Genius Token", self.config.get("GENIUS_TOKEN", ""))
     
-    def _create_credential_entry(self, parent, label_text, value, show_button=True):
-        frame = ctk.CTkFrame(parent, fg_color=STYLE["background_light"], corner_radius=8)
-        frame.pack(fill="x", padx=10, pady=8)
-        label = ctk.CTkLabel(frame, text=label_text, font=("Arial", 12), text_color=STYLE["text"]); label.pack(anchor="w", padx=15, pady=(10, 2))
-        entry_frame = ctk.CTkFrame(frame, fg_color="transparent"); entry_frame.pack(fill="x", padx=15, pady=(0, 10))
+    def _populate_credential_frame(self, parent_frame, label_text, value, show_button=True):
+        """Populates a given frame with credential widgets using .grid()."""
+        parent_frame.grid_columnconfigure(0, weight=1)
+
+        label = ctk.CTkLabel(parent_frame, text=label_text, font=("Arial", 12), text_color=STYLE["text"])
+        label.grid(row=0, column=0, columnspan=2, sticky="w", padx=15, pady=(10, 2))
         
         show_char = "*" if show_button else ""
-        entry = ctk.CTkEntry(entry_frame, height=35, show=show_char, border_color=STYLE["border"], fg_color=STYLE["background_medium"]); entry.insert(0, value); entry.pack(side="left", fill="x", expand=True)
+        entry = ctk.CTkEntry(parent_frame, height=35, show=show_char, border_color=STYLE["border"], fg_color=STYLE["background_medium"])
+        entry.insert(0, value)
+        entry.grid(row=1, column=0, sticky="ew", padx=(15, 5), pady=(0, 10))
         
         if show_button:
-            show_button_widget = ctk.CTkButton(entry_frame, text="Show", width=60, command=lambda e=entry: e.configure(show="" if e.cget("show") == "*" else "*"), fg_color="transparent", border_color=STYLE["border"], border_width=1); show_button_widget.pack(side="right", padx=(10,0))
+            button = ctk.CTkButton(parent_frame, text="Show", width=60, command=lambda e=entry: e.configure(show="" if e.cget("show") == "*" else "*"), fg_color="transparent", border_color=STYLE["border"], border_width=1)
+            button.grid(row=1, column=1, sticky="w", padx=(0, 15), pady=(0, 10))
         
         return entry
     
     def _create_about_tab(self):
-        tab = self.tab_view.tab("About"); tab.grid_columnconfigure(0, weight=1); container = ctk.CTkFrame(tab, fg_color="transparent"); container.pack(fill="both", expand=True, padx=10, pady=10)
-        ctk.CTkLabel(container, text=f"{APP_NAME} v{CURRENT_VERSION}", font=(TITLE_FONT_FAMILY, 32, "bold"), text_color=STYLE["text"]).pack(pady=10)
-        ctk.CTkLabel(container, text="Made by @alananasssss", font=self.desc_font, text_color=STYLE["text_secondary"]).pack(pady=(0, 10))
-        ctk.CTkButton(container, text="Check for Updates", command=lambda: self.controller.check_for_updates(manual_check=True), fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).pack(pady=(0,20))
-        support_frame = ctk.CTkFrame(container, fg_color=STYLE["background_light"], corner_radius=8); support_frame.pack(fill="x", pady=10, padx=10)
-        ctk.CTkLabel(support_frame, text="(ง＾◡＾)ง Contributing & Support", font=("Arial", 16, "bold"), text_color=STYLE["text"]).pack(pady=(15,10))
-        self._create_link(support_frame, "Star on GitHub", "https://github.com/alan7383/playify/")
-        self._create_link(support_frame, "Join our Discord Server", "https://discord.gg/JeH8g6g3cG")
-        self._create_link(support_frame, "Support on Patreon", "https://www.patreon.com/Playify")
-        self._create_link(support_frame, "Donate via PayPal", "https://paypal.com/paypalme/alanmussot1")
-        ctk.CTkLabel(support_frame, text="Fork the repo, open an issue or pull request—all contributions are welcome!", wraplength=450, text_color=STYLE["text_secondary"]).pack(pady=(10, 20))
+        """Creates the About tab using .grid() exclusively."""
+        tab = self.tab_view.tab("About")
+        tab.configure(fg_color="transparent")
+        tab.grid_columnconfigure(0, weight=1)
+        
+        container = ctk.CTkFrame(tab, fg_color="transparent")
+        container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        container.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(container, text=f"{APP_NAME} v{CURRENT_VERSION}", font=(TITLE_FONT_FAMILY, 32, "bold"), text_color=STYLE["text"]).grid(row=0, column=0, pady=10)
+        ctk.CTkLabel(container, text="Made by @alananasssss", font=self.desc_font, text_color=STYLE["text_secondary"]).grid(row=1, column=0, pady=(0, 10))
+        ctk.CTkButton(container, text="Check for Updates", command=lambda: self.controller.check_for_updates(manual_check=True), fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).grid(row=2, column=0, pady=(0,20))
+        
+        support_frame = ctk.CTkFrame(container, fg_color=STYLE["background_light"], corner_radius=8)
+        support_frame.grid(row=3, column=0, sticky="ew", pady=10, padx=10)
+        support_frame.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(support_frame, text="(ง＾◡＾)ง Contributing & Support", font=("Arial", 16, "bold"), text_color=STYLE["text"]).grid(row=0, column=0, pady=(15,10), padx=20)
+        
+        self._create_link(support_frame, 1, "Star on GitHub", "https://github.com/alan7383/playify/")
+        self._create_link(support_frame, 2, "Join our Discord Server", "https://discord.gg/JeH8g6g3cG")
+        self._create_link(support_frame, 3, "Support on Patreon", "https://www.patreon.com/Playify")
+        self._create_link(support_frame, 4, "Donate via PayPal", "https://paypal.com/paypalme/alanmussot1")
+
+        ctk.CTkLabel(support_frame, text="Fork the repo, open an issue or pull request—all contributions are welcome!", wraplength=450, text_color=STYLE["text_secondary"], justify="center").grid(row=5, column=0, pady=(10, 20), padx=20)
     
-    def _create_link(self, parent, text, url):
-        link = ctk.CTkLabel(parent, text=text, font=self.link_font, text_color="#3498db", cursor="hand2"); link.pack(anchor="w", padx=20, pady=5); link.bind("<Button-1>", lambda e, u=url: webbrowser.open_new_tab(u))
+    def _create_link(self, parent, row_index, text, url):
+        link = ctk.CTkLabel(parent, text=text, font=self.link_font, text_color="#3498db", cursor="hand2")
+        link.grid(row=row_index, column=0, sticky="w", padx=20, pady=5)
+        link.bind("<Button-1>", lambda e, u=url: webbrowser.open_new_tab(u))
     
     def toggle_startup(self):
         if self.startup_var.get(): self.controller.add_to_startup()
@@ -1055,7 +1167,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         if save_config(self.config): 
             self.save_status_label.configure(text="Saved! Restarting...", text_color=STYLE["success"])
-            self.controller.config = self.config # Update the main controller's config
+            self.controller.config = self.config
             self.controller.start_bot_process()
         else: 
             self.save_status_label.configure(text="Error saving!", text_color=STYLE["danger"])
