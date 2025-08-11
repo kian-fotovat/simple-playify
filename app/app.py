@@ -13,6 +13,7 @@ from PIL import ImageTk, Image, ImageDraw
 import subprocess
 import requests
 import tempfile
+import socket
 from packaging.version import parse as parse_version
 
 # OpenCV is used for video playback in the tutorial
@@ -26,7 +27,7 @@ APP_NAME = "Playify"
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
 # The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.2.1).
 # ==============================================================================
-CURRENT_VERSION = "1.2.2"
+CURRENT_VERSION = "1.2.3"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
@@ -270,28 +271,41 @@ class App(ctk.CTk):
         self.after(1000, self.check_bot_status)
 
     def hide_to_tray(self):
-        self.withdraw()
-        icon_path = resource_path("assets/images/playify.ico")
-        if not os.path.exists(icon_path):
-            print("Error: Tray icon 'playify.ico' not found.")
-            return
+            """Hides the window and ensures the taskbar icon is visible."""
+            # Always hide the window.
+            self.withdraw()
+    
+            # If a tray icon already exists and is visible, no further action is needed.
+            if self.tray_icon and self.tray_icon.visible:
+                return
+    
+            # If we reach this point, no active tray icon exists. Create one.
+            icon_path = resource_path("assets/images/playify.ico")
+            if not os.path.exists(icon_path):
+                print("Error: Tray icon 'playify.ico' not found.")
+                return
+    
+            icon_image = Image.open(icon_path)
+            # The menu uses our NEW version of show_from_tray
+            menu = (pystray.MenuItem("Show", self.show_from_tray, default=True),
+                    pystray.MenuItem("Quit", self.quit_application))
+    
+            self.tray_icon = pystray.Icon(APP_NAME, icon_image, APP_NAME, menu)
+            self.tray_icon.run_detached()
+    
+            # Display the notification only if the application was not launched minimized.
+            if "--minimized" not in sys.argv:
+                # Add a short delay to ensure the icon is created before showing the notification bubble.
+                self.after(500, lambda: self.tray_icon.notify("Playify is running in the background.", APP_NAME))            
 
-        icon_image = Image.open(icon_path)
-        menu = (pystray.MenuItem("Show", self.show_from_tray, default=True),
-                pystray.MenuItem("Quit", self.quit_application))
-
-        self.tray_icon = pystray.Icon(APP_NAME, icon_image, APP_NAME, menu)
-        self.tray_icon.run_detached()
-
-        if "--minimized" not in sys.argv:
-            self.tray_icon.notify("Playify is running in the background.", APP_NAME)
-
-    def show_from_tray(self, icon, item):
-        if self.tray_icon:
-            self.tray_icon.stop()
-        self.deiconify()
-        self.lift()
-        self.focus_force()
+    def show_from_tray(self, icon=None, item=None):
+            """
+            Displays the main application window.
+            IMPORTANT: This version no longer destroys the taskbar icon.
+            """
+            self.deiconify()  # Displays the window
+            self.lift()       # Brings it to the foreground
+            self.focus_force()# Gives it focus     
 
     def quit_application(self, icon=None, item=None):
         """Schedules the complete and robust shutdown of the application."""
@@ -402,6 +416,14 @@ class App(ctk.CTk):
         else:
             self.update_window.focus()
 
+    def bring_to_front(self):
+            """
+            Displays the application window, brings it to the foreground,
+            without destroying or modifying the taskbar icon.
+            """
+            self.deiconify()  # Displays the window if it was minimized
+            self.lift()       # Brings it above other windows
+            self.focus_force()# Gives focus to the window
 
 class UpdatePromptWindow(ctk.CTkToplevel):
     def __init__(self, controller, new_version, download_url, release_notes):
@@ -1174,8 +1196,63 @@ class SettingsWindow(ctk.CTkToplevel):
         
         self.after(3000, lambda: self.save_status_label.configure(text=""))
 
+# --- SINGLE INSTANCE AND COMMUNICATION SETUP ---
+
+SINGLETON_HOST = "127.0.0.1"  
+SINGLETON_PORT = 60101      
+SHOW_WINDOW_MSG = b"show_playify_window" 
+
+def start_signal_server(app_instance, server_socket):
+    """
+    This function runs in the background (thread) and waits for a signal
+    to display the application window.
+    """
+    try:
+        server_socket.listen()
+        while True:
+            conn, addr = server_socket.accept()
+            with conn:
+                data = conn.recv(1024)
+                if data == SHOW_WINDOW_MSG:
+                    print("Signal received from another instance: displaying window.")
+                app_instance.after(0, app_instance.show_from_tray)
+    except (IOError, OSError):
+        pass
+    finally:
+        server_socket.close()
+
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+    
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    try:
+        server_socket.bind((SINGLETON_HOST, SINGLETON_PORT))
+        print("First instance of Playify started. Setting up the signaling server.")
+        
+    except OSError:
+        print("Playify is already running. Sending signal to show window.")
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                client_socket.connect((SINGLETON_HOST, SINGLETON_PORT))
+                client_socket.sendall(SHOW_WINDOW_MSG)
+        except Exception as e:
+            print(f"Unable to contact existing instance: {e}")
+        
+        sys.exit(0)
+
     ctk.set_appearance_mode("dark") 
     app = App()
+
+    listener_thread = threading.Thread(
+        target=start_signal_server, 
+        args=(app, server_socket), 
+        daemon=True
+    )
+    listener_thread.start()
+
     app.mainloop()
+
+    print("Closing application and signaling socket.")
+    server_socket.close()
