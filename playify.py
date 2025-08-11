@@ -49,7 +49,7 @@ except NotImplementedError: # Some systems may not support logical=False
     process_pool = ProcessPoolExecutor(max_workers=os.cpu_count())
 
 SILENT_MESSAGES = True
-IS_PUBLIC_VERSION = False
+IS_PUBLIC_VERSION = True
 
 # --- Logging ---
 
@@ -887,8 +887,8 @@ messages = {
         "kawaii": "(>_<) Not here!"
     },
     "command_restricted_description": {
-        "normal": "Sorry, Playify commands can only be used in specific channels on this server.",
-        "kawaii": "Aww... sowwy! I can only listen for commands in special channels here... (｡•́︿•̀｡)"
+        "normal": "Sorry, {bot_name} commands can only be used in specific channels on this server.",
+        "kawaii": "Aww... sowwy! {bot_name} can only listen for commands in special channels here... (｡•́︿•̀｡)"
     },
     "command_allowed_channels_field": {
         "normal": "Allowed Channels",
@@ -6393,46 +6393,56 @@ async def on_voice_state_update(member, before, after):
                     logger.info(f"Resuming track '{music_player.current_info.get('title')}' at {current_timestamp:.2f}s.")
                     bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
 
-@bot.tree.interaction_check
 async def global_interaction_check(interaction: discord.Interaction) -> bool:
     """
-    This global check runs before any slash command. It verifies if the
-    command is being used in an allowed channel based on the server's configuration.
+    Final global check for slash commands.
+    Blocks commands if they are used outside of allowed channels
+    by non-administrator users.
     """
-    # Always allow commands in DMs (where guild is None)
+    # Always allow commands in private messages
     if not interaction.guild:
         return True
 
     guild_id = interaction.guild.id
+    allowed_ids = allowed_channels_map.get(guild_id)
 
-    # If the guild has no entry in the map, restrictions are off. Allow command.
-    if guild_id not in allowed_channels_map:
+    # Case 1: No restrictions are defined on this server. Allow.
+    if not allowed_ids:
         return True
 
-    # Check for bypass permission. Users with "Manage Server" can use commands anywhere.
+    # Restrictions are active. Check exceptions.
+
+    # Case 2: The user has the "Manage Server" permission. Allow.
     if interaction.user.guild_permissions.manage_guild:
         return True
 
-    # Check if the command is being used in one of the allowed channels.
-    if interaction.channel_id in allowed_channels_map[guild_id]:
+    # Case 3: The command is used in one of the allowed channels. Allow.
+    if interaction.channel_id in allowed_ids:
         return True
 
-    # --- If we reach this point, the user is restricted ---
-    allowed_list = allowed_channels_map.get(guild_id, set())
-    channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_list]) if allowed_list else "None"
+    # If none of the above conditions are met, the user is a regular member
+    # in a non-allowed channel. The command must be blocked.
 
     is_kawaii = get_mode(guild_id)
+    channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_ids])
+    
+    # --- MODIFICATION BELOW ---
+    # Retrieve the phrase and format it with the bot's name
+    description_text = get_messages("command_restricted_description", guild_id).format(
+        bot_name=interaction.client.user.name
+    )
+
     embed = discord.Embed(
         title=get_messages("command_restricted_title", guild_id),
-        description=get_messages("command_restricted_description", guild_id),
+        description=description_text, # Use the formatted text here
         color=0xFF9AA2 if is_kawaii else discord.Color.red()
     )
     embed.add_field(
         name=get_messages("command_allowed_channels_field", guild_id),
         value=channel_mentions
     )
-
-    # Send the ephemeral warning and block the command from running.
+    
+    # Send the error message and block the command execution.
     await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
     return False
                     
@@ -6440,6 +6450,9 @@ async def global_interaction_check(interaction: discord.Interaction) -> bool:
 async def on_ready():
     logger.info(f"{bot.user.name} is online.")
     try:
+        bot.tree.interaction_check = global_interaction_check
+        logger.info("Global interaction check has been manually assigned.")
+
         for guild in bot.guilds:
             bot.add_view(MusicControllerView(bot, guild.id))
         logger.info("Re-registered persistent MusicControllerView for all guilds.")
@@ -6483,4 +6496,3 @@ async def on_ready():
 if __name__ == '__main__':
     bot.start_time = time.time()
     bot.run(os.getenv("DISCORD_TOKEN"))
-
