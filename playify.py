@@ -40,8 +40,51 @@ import os
 import shutil
 import subprocess
 import shlex
+import sqlite3
 from dotenv import load_dotenv
 load_dotenv()
+
+def init_db():
+    """Initialize the SQLite database and create tables if they do not exist."""
+    conn = sqlite3.connect('playify_state.db')
+    cursor = conn.cursor()
+
+    # Table for general server settings
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS guild_settings (
+        guild_id INTEGER PRIMARY KEY,
+        kawaii_mode BOOLEAN NOT NULL DEFAULT 0,
+        controller_channel_id INTEGER,
+        controller_message_id INTEGER,
+        is_24_7 BOOLEAN NOT NULL DEFAULT 0,
+        autoplay BOOLEAN NOT NULL DEFAULT 0,
+        volume REAL NOT NULL DEFAULT 1.0
+    )''')
+
+    # Table for the list of allowed channels
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS allowlist (
+        guild_id INTEGER NOT NULL,
+        channel_id INTEGER NOT NULL,
+        PRIMARY KEY (guild_id, channel_id)
+    )''')
+
+    # Table for playback state (current song, queue, etc.)
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS playback_state (
+        guild_id INTEGER PRIMARY KEY,
+        voice_channel_id INTEGER,
+        current_song_json TEXT,
+        queue_json TEXT,
+        history_json TEXT,
+        radio_playlist_json TEXT,
+        loop_current BOOLEAN NOT NULL DEFAULT 0,
+        playback_timestamp REAL NOT NULL DEFAULT 0
+    )''')
+
+    conn.commit()
+    conn.close()
+    logger.info("Database initialized successfully.")
 
 try:
     process_pool = ProcessPoolExecutor(max_workers=psutil.cpu_count(logical=False))
@@ -916,15 +959,30 @@ intents.guilds = True
 intents.voice_states = True
 
 # Create the bot
-bot = commands.Bot(command_prefix="!", intents=intents)
+# --- Definition of our custom bot class ---
+class PlayifyBot(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    # Override the close() method to add our save logic
+    async def close(self):
+        # Execute our save function before shutting down
+        await save_all_states()
+        # Call the original close() method to shut down the bot normally
+        await super().close()
+
+# --- Create an instance of our custom bot ---
+# Intents for the bot
+intents = discord.Intents.default()
+intents.guilds = True
+intents.voice_states = True
+
+# Create the bot
+bot = PlayifyBot(command_prefix="!", intents=intents)
 
 # ==============================================================================
 # 2. CORE CLASSES & STATE MANAGEMENT
 # ==============================================================================
-
-# --- Global State Variables ---
-
-
 
 # Server states
 music_players = {}  # {guild_id: MusicPlayer()}
@@ -986,6 +1044,129 @@ class MusicPlayer:
         self.silence_management_lock = asyncio.Lock()
         self.is_paused_by_leave = False
         self.manual_stop = False 
+
+async def save_all_states():
+    """Save the complete state of all servers in the database."""
+    logger.info("Attempting to save the state of all servers...")
+    conn = sqlite3.connect('playify_state.db')
+    cursor = conn.cursor()
+
+    # Clear the tables to start fresh
+    cursor.execute('DELETE FROM guild_settings')
+    cursor.execute('DELETE FROM allowlist')
+    cursor.execute('DELETE FROM playback_state')
+
+    # Save the settings of each server
+    for guild_id, is_kawaii in kawaii_mode.items():
+        settings = (
+            guild_id,
+            is_kawaii,
+            controller_channels.get(guild_id),
+            controller_messages.get(guild_id),
+            _24_7_active.get(guild_id, False),
+            music_players.get(guild_id).autoplay_enabled if music_players.get(guild_id) else False,
+            music_players.get(guild_id).volume if music_players.get(guild_id) else 1.0
+        )
+        cursor.execute('INSERT INTO guild_settings VALUES (?, ?, ?, ?, ?, ?, ?)', settings)
+
+    # Save the allowlist
+    for guild_id, channels in allowed_channels_map.items():
+        for channel_id in channels:
+            cursor.execute('INSERT INTO allowlist VALUES (?, ?)', (guild_id, channel_id))
+
+    # Save the playback state
+    for guild_id, player in music_players.items():
+        if not player.voice_client or not player.voice_client.is_connected():
+            continue
+
+        # Calculate the current timestamp
+        timestamp = 0
+        if player.playback_started_at:
+            timestamp = player.start_time + (time.time() - player.playback_started_at) * player.playback_speed
+        elif player.start_time > 0:
+            timestamp = player.start_time
+
+        state_data = (
+            guild_id,
+            player.voice_client.channel.id,
+            json.dumps(player.current_info) if player.current_info else None,
+            json.dumps(list(player.queue._queue)) if not player.queue.empty() else None,
+            json.dumps(player.history),
+            json.dumps(player.radio_playlist),
+            player.loop_current,
+            timestamp
+        )
+        cursor.execute('INSERT INTO playback_state VALUES (?, ?, ?, ?, ?, ?, ?, ?)', state_data)
+
+    conn.commit()
+    conn.close()
+    logger.info("State save completed successfully.")
+
+async def load_states_on_startup():
+    """Load the state of servers from the database on startup and attempt to resume playback."""
+    logger.info("Loading states from the database...")
+    conn = sqlite3.connect('playify_state.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Load settings
+    cursor.execute('SELECT * FROM guild_settings')
+    for row in cursor.fetchall():
+        guild_id = row['guild_id']
+        kawaii_mode[guild_id] = row['kawaii_mode']
+        if row['controller_channel_id']:
+            controller_channels[guild_id] = row['controller_channel_id']
+            controller_messages[guild_id] = row['controller_message_id']
+        _24_7_active[guild_id] = row['is_24_7']
+        # Initialize a player if needed
+        if guild_id not in music_players:
+            music_players[guild_id] = MusicPlayer()
+        music_players[guild_id].autoplay_enabled = row['autoplay']
+        music_players[guild_id].volume = row['volume']
+
+    # Load the allowlist
+    cursor.execute('SELECT * FROM allowlist')
+    for row in cursor.fetchall():
+        if row['guild_id'] not in allowed_channels_map:
+            allowed_channels_map[row['guild_id']] = set()
+        allowed_channels_map[row['guild_id']].add(row['channel_id'])
+
+    # Load and resume playback
+    cursor.execute('SELECT * FROM playback_state')
+    for row in cursor.fetchall():
+        guild_id = row['guild_id']
+        guild = bot.get_guild(guild_id)
+        if not guild:
+            continue
+
+        player = get_player(guild_id)
+        try:
+            # Restore the state
+            player.current_info = json.loads(row['current_song_json']) if row['current_song_json'] else None
+            player.history = json.loads(row['history_json']) if row['history_json'] else []
+            player.radio_playlist = json.loads(row['radio_playlist_json']) if row['radio_playlist_json'] else []
+            player.loop_current = row['loop_current']
+
+            queue_items = json.loads(row['queue_json']) if row['queue_json'] else []
+            for item in queue_items:
+                await player.queue.put(item)
+
+            # Attempt to reconnect and resume playback
+            if row['voice_channel_id'] and player.current_info:
+                channel = guild.get_channel(row['voice_channel_id'])
+                if channel and isinstance(channel, discord.VoiceChannel):
+                    logger.info(f"[{guild_id}] Resuming: Reconnecting to voice channel '{channel.name}'...")
+                    player.voice_client = await channel.connect()
+                    player.text_channel = bot.get_channel(controller_channels.get(guild_id, channel.last_message.channel.id if channel.last_message else 0))
+
+                    # Start playback from the saved timestamp
+                    timestamp = row['playback_timestamp']
+                    bot.loop.create_task(play_audio(guild_id, seek_time=timestamp, is_a_loop=True))
+        except Exception as e:
+            logger.error(f"Failed to restore state for server {guild_id}: {e}")
+
+    conn.close()
+    logger.info("State loading completed.")
 
     async def hydrate_track_info(self, track_info: dict) -> dict:
         """
@@ -6100,15 +6281,17 @@ async def volume(interaction: discord.Interaction, level: app_commands.Range[int
     await interaction.response.send_message(embed=embed, silent=SILENT_MESSAGES)
     bot.loop.create_task(update_controller(bot, interaction.guild.id))
 
+@app_commands.default_permissions(administrator=True)
 class SetupCommands(app_commands.Group):
     """Commands for setting up the bot on the server."""
     def __init__(self, bot: commands.Bot):
-        super().__init__(name="setup", description="Set up bot features for the server.")
+        super().__init__(name="setup", 
+                         description="Set up bot features for the server.", 
+                         default_permissions=discord.Permissions(administrator=True))
         self.bot = bot
 
     @app_commands.command(name="controller", description="Sets a channel for the persistent music controller.")
     @app_commands.describe(channel="The text channel for the controller. Defaults to the current channel if not specified.")
-    @app_commands.default_permissions(administrator=True)
     async def controller(self, interaction: discord.Interaction, channel: Optional[discord.TextChannel] = None):
         """Sets or updates the channel for the music controller."""
         if not interaction.guild:
@@ -6145,7 +6328,6 @@ class SetupCommands(app_commands.Group):
         channel4="An optional fourth channel to allow.",
         channel5="An optional fifth channel to allow."
     )
-    @app_commands.default_permissions(manage_guild=True)
     async def allowlist(self, interaction: discord.Interaction,
                         reset: Optional[str] = None,
                         channel1: Optional[discord.TextChannel] = None,
@@ -6396,45 +6578,40 @@ async def on_voice_state_update(member, before, after):
 async def global_interaction_check(interaction: discord.Interaction) -> bool:
     """
     Final global check for slash commands.
-    Blocks commands if they are used outside of allowed channels
-    by non-administrator users.
+    Properly handles autocomplete interactions.
     """
-    # Always allow commands in private messages
+    # If it's an autocomplete request, always allow it.
+    # The actual check will be performed during command submission.
+    if interaction.type == discord.InteractionType.autocomplete:
+        return True
+    
+    # For all other interactions (command submission, buttons, etc.),
+    # apply our security logic.
     if not interaction.guild:
         return True
 
     guild_id = interaction.guild.id
     allowed_ids = allowed_channels_map.get(guild_id)
 
-    # Case 1: No restrictions are defined on this server. Allow.
     if not allowed_ids:
         return True
 
-    # Restrictions are active. Check exceptions.
-
-    # Case 2: The user has the "Manage Server" permission. Allow.
     if interaction.user.guild_permissions.manage_guild:
         return True
 
-    # Case 3: The command is used in one of the allowed channels. Allow.
     if interaction.channel_id in allowed_ids:
         return True
 
-    # If none of the above conditions are met, the user is a regular member
-    # in a non-allowed channel. The command must be blocked.
-
+    # Final block if no condition is met
     is_kawaii = get_mode(guild_id)
     channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_ids])
-    
-    # --- MODIFICATION BELOW ---
-    # Retrieve the phrase and format it with the bot's name
     description_text = get_messages("command_restricted_description", guild_id).format(
         bot_name=interaction.client.user.name
     )
 
     embed = discord.Embed(
         title=get_messages("command_restricted_title", guild_id),
-        description=description_text, # Use the formatted text here
+        description=description_text,
         color=0xFF9AA2 if is_kawaii else discord.Color.red()
     )
     embed.add_field(
@@ -6442,7 +6619,6 @@ async def global_interaction_check(interaction: discord.Interaction) -> bool:
         value=channel_mentions
     )
     
-    # Send the error message and block the command execution.
     await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
     return False
                     
@@ -6486,6 +6662,8 @@ async def on_ready():
 
         bot.loop.create_task(rotate_presence())
 
+        await load_states_on_startup()
+
     except Exception as e:
         logger.error(f"Error during command synchronization: {e}")
 
@@ -6494,6 +6672,6 @@ async def on_ready():
 # ==============================================================================
 
 if __name__ == '__main__':
+    init_db()
     bot.start_time = time.time()
     bot.run(os.getenv("DISCORD_TOKEN"))
-
