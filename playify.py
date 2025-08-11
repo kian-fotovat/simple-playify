@@ -49,7 +49,7 @@ except NotImplementedError: # Some systems may not support logical=False
     process_pool = ProcessPoolExecutor(max_workers=os.cpu_count())
 
 SILENT_MESSAGES = True
-IS_PUBLIC_VERSION = True
+IS_PUBLIC_VERSION = False
 
 # --- Logging ---
 
@@ -6496,3 +6496,4 @@ async def on_ready():
 if __name__ == '__main__':
     bot.start_time = time.time()
     bot.run(os.getenv("DISCORD_TOKEN"))
+
