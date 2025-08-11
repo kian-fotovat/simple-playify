@@ -40,7 +40,7 @@ You’ll just need to enter your **Discord token** + **Spotify / Genius API keys
 
 **Get it here:**  
 📄 [Instructions & info](https://alan7383.github.io/playify/self-host.html)  
-⬇ [Direct download](https://github.com/alan7383/playify/releases/download/1.2.0/Playify_Setup_v1.2.0.exe)
+⬇ [Direct download](https://github.com/alan7383/playify/releases/download/9.9.9/Playify_Setup_v9.9.9.exe)
 
 ---
 
