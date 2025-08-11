@@ -40,7 +40,126 @@ import os
 import shutil
 import subprocess
 import shlex
+import sqlite3
+from queue import Empty
 from dotenv import load_dotenv
+
+def init_db():
+    """Initialize the SQLite database and create tables if they do not exist."""
+    conn = sqlite3.connect('playify_state.db')
+    cursor = conn.cursor()
+
+    # Table for general server settings
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS guild_settings (
+        guild_id INTEGER PRIMARY KEY,
+        kawaii_mode BOOLEAN NOT NULL DEFAULT 0,
+        controller_channel_id INTEGER,
+        controller_message_id INTEGER,
+        is_24_7 BOOLEAN NOT NULL DEFAULT 0,
+        autoplay BOOLEAN NOT NULL DEFAULT 0,
+        volume REAL NOT NULL DEFAULT 1.0
+    )''')
+
+    # Table for the list of allowed channels
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS allowlist (
+        guild_id INTEGER NOT NULL,
+        channel_id INTEGER NOT NULL,
+        PRIMARY KEY (guild_id, channel_id)
+    )''')
+
+    # Table for playback state (current song, queue, etc.)
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS playback_state (
+        guild_id INTEGER PRIMARY KEY,
+        voice_channel_id INTEGER,
+        current_song_json TEXT,
+        queue_json TEXT,
+        history_json TEXT,
+        radio_playlist_json TEXT,
+        loop_current BOOLEAN NOT NULL DEFAULT 0,
+        playback_timestamp REAL NOT NULL DEFAULT 0
+    )''')
+
+    conn.commit()
+    conn.close()
+    logger.info("Database initialized successfully.")
+    
+
+def _save_all_states_sync():
+    """
+    The synchronous part of the state saving logic. This function is designed
+    to be run in a separate thread to avoid blocking the main asyncio event loop.
+    """
+    logger.info("Executing synchronous state save to the database in a background thread...")
+    conn = None
+    try:
+        conn = sqlite3.connect('playify_state.db')
+        cursor = conn.cursor()
+
+        # Clear tables to prevent duplicate entries on restart
+        cursor.execute('DELETE FROM guild_settings')
+        cursor.execute('DELETE FROM allowlist')
+        cursor.execute('DELETE FROM playback_state')
+
+        # Save guild settings
+        for guild_id, is_kawaii in kawaii_mode.items():
+            player = music_players.get(guild_id)
+            settings = (
+                guild_id,
+                is_kawaii,
+                controller_channels.get(guild_id),
+                controller_messages.get(guild_id),
+                _24_7_active.get(guild_id, False),
+                player.autoplay_enabled if player else False,
+                player.volume if player else 1.0
+            )
+            cursor.execute('INSERT OR REPLACE INTO guild_settings (guild_id, kawaii_mode, controller_channel_id, controller_message_id, is_24_7, autoplay, volume) VALUES (?, ?, ?, ?, ?, ?, ?)', settings)
+
+        # Save channel allowlist
+        for guild_id, channels in allowed_channels_map.items():
+            for channel_id in channels:
+                cursor.execute('INSERT OR REPLACE INTO allowlist (guild_id, channel_id) VALUES (?, ?)', (guild_id, channel_id))
+
+        # Save playback state for active players
+        for guild_id, player in music_players.items():
+            if not player.voice_client or not player.voice_client.is_connected():
+                continue
+
+            # Calculate the current playback timestamp accurately
+            timestamp = 0
+            if player.voice_client.is_playing() and player.playback_started_at:
+                # If playing, calculate live position
+                timestamp = player.start_time + (time.time() - player.playback_started_at) * player.playback_speed
+            elif player.start_time > 0:
+                # If paused, use the stored start_time
+                timestamp = player.start_time
+
+            state_data = (
+                guild_id,
+                player.voice_client.channel.id,
+                json.dumps(player.current_info) if player.current_info else None,
+                json.dumps(list(player.queue._queue)) if not player.queue.empty() else None,
+                json.dumps(player.history),
+                json.dumps(player.radio_playlist),
+                player.loop_current,
+                timestamp
+            )
+            cursor.execute('INSERT OR REPLACE INTO playback_state (guild_id, voice_channel_id, current_song_json, queue_json, history_json, radio_playlist_json, loop_current, playback_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', state_data)
+
+        conn.commit()
+        logger.info("Synchronous database state save completed successfully.")
+
+    except Exception as e:
+        logger.error(f"An error occurred during the synchronous database save: {e}", exc_info=True)
+        if conn:
+            conn.rollback() # Roll back changes on error to prevent partial saves
+    finally:
+        if conn:
+            conn.close()
+
+
 
 class StreamToQueue:
     """A helper class to redirect stream output (like stdout) to a queue."""
@@ -874,8 +993,8 @@ messages = {
             "kawaii": "(>_<) Not here!"
         },
         "command_restricted_description": {
-            "normal": "Sorry, Playify commands can only be used in specific channels on this server.",
-            "kawaii": "Aww... sowwy! I can only listen for commands in special channels here... (｡•́︿•̀｡)"
+             "normal": "Sorry, {bot_name} commands can only be used in specific channels on this server.",
+            "kawaii": "Aww... sowwy! {bot_name} can only listen for commands in special channels here... (｡•́︿•̀｡)"
         },
         "command_allowed_channels_field": {
             "normal": "Allowed Channels",
@@ -1688,7 +1807,7 @@ class LazySearchItem:
 
 
 
-def run_bot(status_queue, log_queue):
+def run_bot(status_queue, log_queue, command_queue):
     """
     This function contains all the bot's logic.
     It is called by the desktop application (app.py).
@@ -1804,8 +1923,21 @@ def run_bot(status_queue, log_queue):
     intents.guilds = True
     intents.voice_states = True
 
-    # Create the bot
-    bot = commands.Bot(command_prefix="!", intents=intents)
+        # Create the bot
+    class PlayifyBot(commands.Bot):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        async def close(self):
+            await save_all_states()
+            await super().close()
+
+    intents = discord.Intents.default()
+    intents.guilds = True
+    intents.voice_states = True
+
+    # On crée le bot en utilisant notre nouvelle classe
+    bot = PlayifyBot(command_prefix="!", intents=intents)
 
     # ==============================================================================
     # 2. CORE CLASSES & STATE MANAGEMENT
@@ -1861,6 +1993,106 @@ def run_bot(status_queue, log_queue):
             self.silence_management_lock = asyncio.Lock()
             self.is_paused_by_leave = False
             self.manual_stop = False 
+
+    async def command_checker():
+        """Checks if the application has sent a command."""
+        while not bot.is_closed():  # As long as the bot is running
+            try:
+                # Try to get a message from the intercom, without blocking
+                command = command_queue.get_nowait()
+                
+                # If the message is "RESTART" or "QUIT"
+                if command in ['RESTART', 'QUIT']:
+                    logger.info(f"Command received: {command}. Shutting down gracefully.")
+                    
+                    # Initiate the bot's GRACEFUL shutdown procedure
+                    await bot.close()  # This is where the save is triggered!
+                    break  # Stop listening
+                    
+            except Empty:
+                # If there is no message, wait 1s and listen again
+                await asyncio.sleep(1)
+
+    async def save_all_states():
+        """
+        Asynchronously triggers the saving of all server states to the database
+        by running the blocking I/O operations in a separate thread. This prevents
+        the bot's shutdown process from freezing.
+        """
+        logger.info("Scheduling the blocking database save to run in the thread executor...")
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, _save_all_states_sync)
+            logger.info("The background save task has been successfully awaited.")
+        except Exception as e:
+            logger.critical(f"Failed to schedule or execute the state save task: {e}", exc_info=True)
+
+    async def load_states_on_startup():
+        """Load the state of servers from the database on startup and attempt to resume playback."""
+        logger.info("Loading states from the database...")
+        conn = sqlite3.connect('playify_state.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Load settings
+        cursor.execute('SELECT * FROM guild_settings')
+        for row in cursor.fetchall():
+            guild_id = row['guild_id']
+            kawaii_mode[guild_id] = row['kawaii_mode']
+            if row['controller_channel_id']:
+                controller_channels[guild_id] = row['controller_channel_id']
+                controller_messages[guild_id] = row['controller_message_id']
+            _24_7_active[guild_id] = row['is_24_7']
+            # Initialize a player if needed
+            if guild_id not in music_players:
+                music_players[guild_id] = MusicPlayer()
+            music_players[guild_id].autoplay_enabled = row['autoplay']
+            music_players[guild_id].volume = row['volume']
+
+        # Load the allowlist
+        cursor.execute('SELECT * FROM allowlist')
+        for row in cursor.fetchall():
+            if row['guild_id'] not in allowed_channels_map:
+                allowed_channels_map[row['guild_id']] = set()
+            allowed_channels_map[row['guild_id']].add(row['channel_id'])
+
+        # Load and resume playback
+        cursor.execute('SELECT * FROM playback_state')
+        for row in cursor.fetchall():
+            guild_id = row['guild_id']
+            guild = bot.get_guild(guild_id)
+            if not guild:
+                continue
+
+            player = get_player(guild_id)
+            try:
+                # Restore the state
+                player.current_info = json.loads(row['current_song_json']) if row['current_song_json'] else None
+                player.history = json.loads(row['history_json']) if row['history_json'] else []
+                player.radio_playlist = json.loads(row['radio_playlist_json']) if row['radio_playlist_json'] else []
+                player.loop_current = row['loop_current']
+
+                queue_items = json.loads(row['queue_json']) if row['queue_json'] else []
+                for item in queue_items:
+                    await player.queue.put(item)
+
+                # Attempt to reconnect and resume playback
+                if row['voice_channel_id'] and player.current_info:
+                    channel = guild.get_channel(row['voice_channel_id'])
+                    if channel and isinstance(channel, discord.VoiceChannel):
+                        logger.info(f"[{guild_id}] Resuming: Reconnecting to voice channel '{channel.name}'...")
+                        player.voice_client = await channel.connect()
+                        player.text_channel = bot.get_channel(controller_channels.get(guild_id, channel.last_message.channel.id if channel.last_message else 0))
+
+                        # Start playback from the saved timestamp
+                        timestamp = row['playback_timestamp']
+                        bot.loop.create_task(play_audio(guild_id, seek_time=timestamp, is_a_loop=True))
+            except Exception as e:
+                logger.error(f"Failed to restore state for server {guild_id}: {e}")
+
+        conn.close()
+        logger.info("State loading completed.")
+
 
     async def hydrate_track_info(self, track_info: dict) -> dict:
         """
@@ -4808,21 +5040,6 @@ def run_bot(status_queue, log_queue):
             bot.loop.create_task(update_controller(bot, guild_id))
 
         try:
-            # --- START OF THE DEFINITIVE FIX ---
-            # Pre-process the query to clean up ambiguous YouTube URLs.
-            # This is the key change that solves the problem.
-            if "youtube.com" in query or "youtu.be" in query:
-                parsed_url = urlparse(query)
-                query_params = parse_qs(parsed_url.query)
-                
-                # Check if it's a video link that is part of a playlist
-                if 'v' in query_params and 'list' in query_params:
-                    playlist_id = query_params['list'][0]
-                    clean_url = f"https://www.youtube.com/playlist?list={playlist_id}"
-                    logger.info(f"[{guild_id}] Ambiguous YouTube URL detected. Transformed '{query}' to clean playlist URL: '{clean_url}'")
-                    query = clean_url # Overwrite the original query with the clean one
-            # --- END OF THE DEFINITIVE FIX ---
-
             # Platform regexes to identify different music services
             spotify_regex = re.compile(r'^(https?://)?(open\.spotify\.com)/.+$')
             deezer_regex = re.compile(r'^(https?://)?((www\.)?deezer\.com/(?:[a-z]{2}/)?(track|playlist|album|artist)/.+|(link\.deezer\.com)/s/.+)$')
@@ -4857,10 +5074,35 @@ def run_bot(status_queue, log_queue):
 
             # Case 2: Direct platforms (YouTube, SoundCloud, Bandcamp, .mp3 links)
             if direct_platform_regex.match(query) or direct_link_regex.match(query):
-                # Always use fast, "flat" extraction for direct links to get an instant response.
-                logger.info(f"[{guild_id}] Using fast, flat extraction for direct link/playlist: {query}")
+                
+                # --- START OF THE DEFINITIVE FIX FOR YOUTUBE MIXES ---
+                url_to_fetch = query # Default to the original URL
+
+                if "youtube.com" in query or "youtu.be" in query:
+                    parsed_url = urlparse(query)
+                    query_params = parse_qs(parsed_url.query)
+                    
+                    # Check if it's a URL with both a video and a list parameter
+                    if 'v' in query_params and 'list' in query_params:
+                        playlist_id = query_params['list'][0]
+                        
+                        # If the list ID starts with 'RD', it's a dynamic YouTube Mix.
+                        # In this case, we must use the original full URL, as yt-dlp can handle it.
+                        if playlist_id.startswith('RD'):
+                            logger.info(f"[{guild_id}] YouTube Mix detected. Using original URL to extract all tracks: '{url_to_fetch}'")
+                            # No change is needed, url_to_fetch is already correct.
+                        else:
+                            # If it's a standard playlist (e.g., 'PL...'), we clean the URL to point only to the playlist.
+                            # This avoids adding just the single video from the URL.
+                            clean_playlist_url = f"https://www.youtube.com/playlist?list={playlist_id}"
+                            logger.info(f"[{guild_id}] Standard YouTube Playlist detected. Using clean playlist URL: '{clean_playlist_url}'")
+                            url_to_fetch = clean_playlist_url
+                
+                # --- END OF THE FIX ---
+
+                logger.info(f"[{guild_id}] Using fast, flat extraction for direct link/playlist: {url_to_fetch}")
                 ydl_opts_override = {"extract_flat": True, "noplaylist": False}
-                info = await fetch_video_info_with_retry(query, ydl_opts_override=ydl_opts_override)
+                info = await fetch_video_info_with_retry(url_to_fetch, ydl_opts_override=ydl_opts_override)
 
                 if "entries" in info and info["entries"]:
                     # This is a playlist (from YouTube, SoundCloud, etc.).
@@ -4908,7 +5150,7 @@ def run_bot(status_queue, log_queue):
                     await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
-
+                                
     @bot.tree.command(name="play-files", description="Plays one or more uploaded audio or video files.")
     @app_commands.describe(
         file1="The first audio/video file to play.",
@@ -6208,15 +6450,17 @@ def run_bot(status_queue, log_queue):
         await interaction.response.send_message(embed=embed, silent=SILENT_MESSAGES)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
 
+    @app_commands.default_permissions(administrator=True)
     class SetupCommands(app_commands.Group):
         """Commands for setting up the bot on the server."""
         def __init__(self, bot: commands.Bot):
-            super().__init__(name="setup", description="Set up bot features for the server.")
+            super().__init__(name="setup", 
+                            description="Set up bot features for the server.", 
+                            default_permissions=discord.Permissions(administrator=True))
             self.bot = bot
 
         @app_commands.command(name="controller", description="Sets a channel for the persistent music controller.")
         @app_commands.describe(channel="The text channel for the controller. Defaults to the current channel if not specified.")
-        @app_commands.default_permissions(administrator=True)
         async def controller(self, interaction: discord.Interaction, channel: Optional[discord.TextChannel] = None):
             """Sets or updates the channel for the music controller."""
             if not interaction.guild:
@@ -6261,7 +6505,6 @@ def run_bot(status_queue, log_queue):
         channel4="An optional fourth channel to allow.",
         channel5="An optional fifth channel to allow."
     )
-    @app_commands.default_permissions(manage_guild=True)
     async def allowlist(interaction: discord.Interaction,
                         reset: Optional[str] = None,
                         channel1: Optional[discord.TextChannel] = None,
@@ -6510,46 +6753,50 @@ def run_bot(status_queue, log_queue):
                         logger.info(f"Resuming track '{music_player.current_info.get('title')}' at {current_timestamp:.2f}s.")
                         bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
 
-    @bot.tree.interaction_check
     async def global_interaction_check(interaction: discord.Interaction) -> bool:
         """
-        This global check runs before any slash command. It verifies if the
-        command is being used in an allowed channel based on the server's configuration.
+        Final global check for slash commands.
+        Properly handles autocomplete interactions.
         """
-        # Always allow commands in DMs (where guild is None)
+        # If it's an autocomplete request, always allow it.
+        # The actual check will be performed during command submission.
+        if interaction.type == discord.InteractionType.autocomplete:
+            return True
+        
+        # For all other interactions (command submission, buttons, etc.),
+        # apply our security logic.
         if not interaction.guild:
             return True
 
         guild_id = interaction.guild.id
+        allowed_ids = allowed_channels_map.get(guild_id)
 
-        # If the guild has no entry in the map, restrictions are off. Allow command.
-        if guild_id not in allowed_channels_map:
+        if not allowed_ids:
             return True
 
-        # Check for bypass permission. Users with "Manage Server" can use commands anywhere.
         if interaction.user.guild_permissions.manage_guild:
             return True
 
-        # Check if the command is being used in one of the allowed channels.
-        if interaction.channel_id in allowed_channels_map[guild_id]:
+        if interaction.channel_id in allowed_ids:
             return True
 
-        # --- If we reach this point, the user is restricted ---
-        allowed_list = allowed_channels_map.get(guild_id, set())
-        channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_list]) if allowed_list else "None"
-
+        # Final block if no condition is met
         is_kawaii = get_mode(guild_id)
+        channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_ids])
+        description_text = get_messages("command_restricted_description", guild_id).format(
+            bot_name=interaction.client.user.name
+        )
+
         embed = discord.Embed(
             title=get_messages("command_restricted_title", guild_id),
-            description=get_messages("command_restricted_description", guild_id),
+            description=description_text,
             color=0xFF9AA2 if is_kawaii else discord.Color.red()
         )
         embed.add_field(
             name=get_messages("command_allowed_channels_field", guild_id),
             value=channel_mentions
         )
-
-        # Send the ephemeral warning and block the command from running.
+        
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
         return False
                         
@@ -6557,6 +6804,9 @@ def run_bot(status_queue, log_queue):
     async def on_ready():
         logger.info(f"{bot.user.name} is online.")
         try:
+            bot.tree.interaction_check = global_interaction_check
+            logger.info("Global interaction check has been manually assigned.")
+
             for guild in bot.guilds:
                 bot.add_view(MusicControllerView(bot, guild.id))
             logger.info("Re-registered persistent MusicControllerView for all guilds.")
@@ -6612,6 +6862,8 @@ def run_bot(status_queue, log_queue):
                         await asyncio.sleep(60) # Wait longer if an error occurs
 
             bot.loop.create_task(rotate_presence())
+            bot.loop.create_task(command_checker())
+            await load_states_on_startup()
 
         except Exception as e:
             logger.error(f"Error during on_ready tasks: {e}", exc_info=True)
@@ -6623,22 +6875,23 @@ def run_bot(status_queue, log_queue):
     # ==============================================================================
 
     try:
-        bot.start_time = time.time()
-        bot.run(TOKEN)
+            init_db()
+            bot.start_time = time.time()
+            bot.run(TOKEN)
     except discord.errors.LoginFailure:
-        log_queue.put("ERREUR: Le token Discord est invalide.")
-        status_queue.put("OFFLINE")
+            log_queue.put("ERROR: The Discord token is invalid.")
+            status_queue.put("OFFLINE")
     except Exception as e:
-        log_queue.put(f"Erreur inattendue lors du lancement du bot: {e}")
-        status_queue.put("OFFLINE")    
-
-    # ==============================================================================
-    # 8. POINT D'ENTRÉE POUR LE TEST (Étape 4)
-    # ==============================================================================
+            log_queue.put(f"Unexpected error while starting the bot: {e}")
+            status_queue.put("OFFLINE")    
+    
+        # ==============================================================================
+        # 8. ENTRY POINT FOR TESTING (Step 4)
+        # ==============================================================================
     if __name__ == '__main__':
-        class FakeQueue:
-            def put(self, item):
-                log_queue.put(f"STATUT ENVOYÉ À L'INTERFACE (simulation) -> {item}")
-        
-        log_queue.put("Lancement du bot en mode test autonome...")
-        run_bot(FakeQueue())
+            class FakeQueue:
+                def put(self, item):
+                    log_queue.put(f"STATUS SENT TO THE INTERFACE (simulation) -> {item}")
+            
+            log_queue.put("Starting the bot in standalone test mode...")
+            run_bot(FakeQueue())
