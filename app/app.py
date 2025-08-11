@@ -27,7 +27,7 @@ APP_NAME = "Playify"
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
 # The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.2.1).
 # ==============================================================================
-CURRENT_VERSION = "1.2.3"
+CURRENT_VERSION = "1.2.4"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
@@ -191,6 +191,7 @@ class App(ctk.CTk):
         self.manager = multiprocessing.Manager()
         self.status_queue = self.manager.Queue()
         self.log_queue = self.manager.Queue()
+        self.command_queue = self.manager.Queue()
 
         self.protocol("WM_DELETE_WINDOW", self.hide_to_tray)
         self.bot_process = None
@@ -246,7 +247,7 @@ class App(ctk.CTk):
             # Dynamically import playify_bot to ensure it's loaded after env vars are set
             import playify_bot
             self.bot_process = multiprocessing.Process(
-                target=playify_bot.run_bot, args=(self.status_queue, self.log_queue,), daemon=False
+                target=playify_bot.run_bot, args=(self.status_queue, self.log_queue, self.command_queue,), daemon=False
             )
             self.bot_process.start()
             print("New bot process started (non-daemon mode).")
@@ -314,18 +315,24 @@ class App(ctk.CTk):
             self.tray_icon.stop()
         self.after(0, self._perform_shutdown)
 
+
     def _perform_shutdown(self):
-        """The actual shutdown sequence, executed safely on the main thread."""
+        """Shuts down the application gracefully."""
         print("Performing shutdown on main thread.")
         if self.bot_process and self.bot_process.is_alive():
-            print("Terminating bot process...")
-            self.bot_process.terminate()
-            self.bot_process.join(timeout=1.0)
+            print("Sending shutdown command to bot...")
+            # 1. Send the "QUIT" command to the intercom
+            self.command_queue.put('QUIT')
+            # 2. Politely wait for it to shut down
+            self.bot_process.join(timeout=10)
+            # 3. Force termination if necessary
             if self.bot_process.is_alive():
-                 print("Bot process did not terminate, killing.")
-                 self.bot_process.kill()
+                print("Bot did not terminate gracefully, killing.")
+                self.bot_process.kill()
             else:
-                 print("Bot process terminated.")
+                print("Bot process terminated gracefully.")
+        
+        # 4. Close the application
         print("Destroying main window...")
         self.destroy()
         print("Exiting script.")
@@ -876,9 +883,37 @@ class StylishDashboardPage(ctk.CTkFrame):
         color = {"ONLINE": STYLE["success"], "OFFLINE": STYLE["danger"], "ERROR": STYLE["danger"], "RESTARTING": "#FFC107", "CONNECTING": "#FFA726"}.get(status_text, "#FFA726")
         self.status_label.configure(text=status_text, text_color=color)
 
-    def restart_bot(self): 
-        self.add_log_message("--- Restarting bot... ---\n"); self.update_status("RESTARTING"); self.controller.start_bot_process()
+    def restart_bot(self):
+        """When clicking the "Restart Bot" button."""
+        self.add_log_message("--- Sending restart command to bot... ---\n")
+        self.update_status("SHUTTING DOWN")
+        
+        # Launch the restart in a separate thread to prevent the interface from freezing.
+        threading.Thread(target=self._restart_sequence, daemon=True).start()
 
+    def _restart_sequence(self):
+        """This function contains the new restart logic."""
+        # Verify that the bot is currently running
+        if self.controller.bot_process and self.controller.bot_process.is_alive():
+            
+            # 1. Send the "RESTART" command to the intercom (the queue)
+            print("Sending 'RESTART' command...")
+            self.controller.command_queue.put('RESTART')
+            
+            # 2. Politely wait for the bot to finish shutting down (up to 10s)
+            self.controller.bot_process.join(timeout=10)
+
+            # 3. If after 10s it still hasn't responded, use the emergency switch
+            if self.controller.bot_process.is_alive():
+                print("Bot did not shut down gracefully. Forcing termination.")
+                self.controller.bot_process.terminate()
+                self.controller.bot_process.join()
+
+        # 4. Once the old bot is properly stopped, request the application to restart it
+        # "self.controller.after" ensures this is done by the main thread of the interface
+        print("Restarting bot process...")
+        self.controller.after(0, self.controller.start_bot_process)    
+    
 # =========================================================================================
 # === FULLY CORRECTED AND FUNCTIONAL SETTINGS WINDOW ======================================
 # =========================================================================================
