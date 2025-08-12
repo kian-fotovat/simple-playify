@@ -44,9 +44,14 @@ import sqlite3
 from queue import Empty
 from dotenv import load_dotenv
 
+APP_DATA_DIR = os.path.join(os.getenv('LOCALAPPDATA'), "Playify")
+DB_PATH = os.path.join(APP_DATA_DIR, 'playify_state.db')
+os.makedirs(APP_DATA_DIR, exist_ok=True)
+
+
 def init_db():
     """Initialize the SQLite database and create tables if they do not exist."""
-    conn = sqlite3.connect('playify_state.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     # Table for general server settings
@@ -84,7 +89,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    logger.info("Database initialized successfully.")
+    logger.info(f"Database initialized successfully at: {DB_PATH}")
     
 
 def _save_all_states_sync():
@@ -95,7 +100,7 @@ def _save_all_states_sync():
     logger.info("Executing synchronous state save to the database in a background thread...")
     conn = None
     try:
-        conn = sqlite3.connect('playify_state.db')
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         # Clear tables to prevent duplicate entries on restart
@@ -1853,6 +1858,7 @@ def run_bot(status_queue, log_queue, command_queue):
         print(f"!!! CRITICAL: COULD NOT LOAD OPUS LIBRARY !!!")
         print(f"Error details: {e}")
         print("The bot will not be able to play any audio.")
+
     # --- FIN DU NOUVEAU BLOC ---
     #     
 
@@ -2030,7 +2036,7 @@ def run_bot(status_queue, log_queue, command_queue):
     async def load_states_on_startup():
         """Load the state of servers from the database on startup and attempt to resume playback."""
         logger.info("Loading states from the database...")
-        conn = sqlite3.connect('playify_state.db')
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
