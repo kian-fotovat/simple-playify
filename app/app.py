@@ -27,7 +27,7 @@ APP_NAME = "Playify"
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
 # The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.2.1).
 # ==============================================================================
-CURRENT_VERSION = "1.2.5"
+CURRENT_VERSION = "1.2.6"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
@@ -315,27 +315,32 @@ class App(ctk.CTk):
             self.tray_icon.stop()
         self.after(0, self._perform_shutdown)
 
-
     def _perform_shutdown(self):
-        """Shuts down the application gracefully."""
-        print("Performing shutdown on main thread.")
+        """Gracefully shuts down the application, allowing the bot to save its state."""
+        print("Initiating shutdown sequence.")
+        if self.tray_icon:
+            self.tray_icon.stop()
+
         if self.bot_process and self.bot_process.is_alive():
-            print("Sending shutdown command to bot...")
-            # 1. Send the "QUIT" command to the intercom
-            self.command_queue.put('QUIT')
-            # 2. Politely wait for it to shut down
-            self.bot_process.join(timeout=10)
-            # 3. Force termination if necessary
+            print("Bot process is active. Sending shutdown command...")
+            
+            try:
+                self.command_queue.put('QUIT')
+                
+                self.bot_process.join(timeout=10.0) 
+            except Exception as e:
+                print(f"An error occurred while waiting for the bot to stop: {e}")
+
             if self.bot_process.is_alive():
-                print("Bot did not terminate gracefully, killing.")
-                self.bot_process.kill()
+                print("Bot did not respond in time. Forcing termination.")
+                self.bot_process.terminate()
+                self.bot_process.join(timeout=1.0)
+                print("Bot process forcefully terminated.")
             else:
-                print("Bot process terminated gracefully.")
+                print("Bot process stopped gracefully.")
         
-        # 4. Close the application
-        print("Destroying main window...")
+        print("Closing GUI and exiting program.")
         self.destroy()
-        print("Exiting script.")
         sys.exit(0)
 
     def check_log_queue(self):
