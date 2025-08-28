@@ -8,6 +8,7 @@ import time
 import webbrowser
 import threading
 import pystray
+import nacl
 import winreg as reg
 from PIL import ImageTk, Image, ImageDraw
 import subprocess
@@ -27,7 +28,7 @@ APP_NAME = "Playify"
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
 # The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.2.1).
 # ==============================================================================
-CURRENT_VERSION = "1.2.6"
+CURRENT_VERSION = "1.3.0"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
@@ -327,10 +328,12 @@ class App(ctk.CTk):
             try:
                 self.command_queue.put('QUIT')
                 
+                # Wait up to 10 seconds for the bot to shut down cleanly
                 self.bot_process.join(timeout=10.0) 
             except Exception as e:
                 print(f"An error occurred while waiting for the bot to stop: {e}")
 
+            # If the bot is still alive after the grace period, terminate it
             if self.bot_process.is_alive():
                 print("Bot did not respond in time. Forcing termination.")
                 self.bot_process.terminate()
@@ -917,8 +920,8 @@ class StylishDashboardPage(ctk.CTkFrame):
         # 4. Once the old bot is properly stopped, request the application to restart it
         # "self.controller.after" ensures this is done by the main thread of the interface
         print("Restarting bot process...")
-        self.controller.after(0, self.controller.start_bot_process)    
-    
+        self.controller.after(0, self.controller.start_bot_process)
+
 # =========================================================================================
 # === FULLY CORRECTED AND FUNCTIONAL SETTINGS WINDOW ======================================
 # =========================================================================================
