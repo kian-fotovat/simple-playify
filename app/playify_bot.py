@@ -206,31 +206,6 @@ process_pool = None
 
 logger = logging.getLogger(__name__)
 
-# --- API Tokens & Clients ---
-
-GENIUS_TOKEN = os.getenv("GENIUS_TOKEN")
-
-if GENIUS_TOKEN and GENIUS_TOKEN != "YOUR_GENIUS_TOKEN_HERE":
-        genius = lyricsgenius.Genius(GENIUS_TOKEN, verbose=False, remove_section_headers=True)
-        logger.info("LyricsGenius client initialized.")
-else:
-        genius = None
-        logger.warning("GENIUS_TOKEN is not set in the code. /lyrics and fallback will not work.")
-
-# Official API Client (fast and prioritized)
-
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-try:
-        sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-            client_id=SPOTIFY_CLIENT_ID,
-            client_secret=SPOTIFY_CLIENT_SECRET
-        ))
-        logger.info("Spotipy API Client successfully initialized.")
-except Exception as e:
-        sp = None
-        logger.error(f"Could not initialize Spotipy client: {e}")
-
     # Scraper Client (backup plan, without Selenium)
 try:
         # Using "requests" mode, more reliable on a server
@@ -1843,12 +1818,36 @@ def run_bot(status_queue, log_queue, command_queue):
     load_dotenv(dotenv_path=config_file_path)
     TOKEN = os.getenv('DISCORD_TOKEN')
 
+    global genius 
+    
+    GENIUS_TOKEN = os.getenv("GENIUS_TOKEN")
+
+    if GENIUS_TOKEN and GENIUS_TOKEN != "YOUR_GENIUS_TOKEN_HERE":
+            genius = lyricsgenius.Genius(GENIUS_TOKEN, verbose=False, remove_section_headers=True)
+            logger.info("LyricsGenius client initialized.")
+    else:
+            genius = None
+            logger.warning("GENIUS_TOKEN is not set in the code. /lyrics and fallback will not work.")
+    global sp
+
+    SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+    SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+    try:
+            sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+                client_id=SPOTIFY_CLIENT_ID,
+                client_secret=SPOTIFY_CLIENT_SECRET
+            ))
+            logger.info("Spotipy API Client successfully initialized.")
+    except Exception as e:
+            sp = None
+            logger.error(f"Could not initialize Spotipy client: {e}")
+
     # 4. Le reste de la logique reste le même
     if not TOKEN:
         log_queue.put(f"ERROR: DISCORD_TOKEN not found inside {config_file_path}")
         status_queue.put("ERROR: TOKEN NOT FOUND")
         return
-        
+
     # --- Caching ---
 
     url_cache = TTLCache(maxsize=75000, ttl=7200)
@@ -1956,6 +1955,25 @@ def run_bot(status_queue, log_queue, command_queue):
             self.silence_management_lock = asyncio.Lock()
             self.is_paused_by_leave = False
             self.manual_stop = False 
+
+    async def command_checker():
+        """Checks if the application has sent a command."""
+        while not bot.is_closed():  # As long as the bot is running
+            try:
+                # Try to get a message from the intercom, without blocking
+                command = command_queue.get_nowait()
+                
+                # If the message is "RESTART" or "QUIT"
+                if command in ['RESTART', 'QUIT']:
+                    logger.info(f"Command received: {command}. Shutting down gracefully.")
+                    
+                    # Initiate the bot's GRACEFUL shutdown procedure
+                    await bot.close()  # This is where the save is triggered!
+                    break  # Stop listening
+                    
+            except Empty:
+                # If there is no message, wait 1s and listen again
+                await asyncio.sleep(1)
 
     async def command_checker():
         """Checks if the application has sent a command."""
@@ -6856,6 +6874,11 @@ def run_bot(status_queue, log_queue, command_queue):
     except Exception as e:
             log_queue.put(f"Unexpected error while starting the bot: {e}")
             status_queue.put("OFFLINE")    
+    finally:
+        if process_pool:
+            logger.info("Shutting down the ProcessPoolExecutor...")
+            process_pool.shutdown(wait=True)
+            logger.info("ProcessPoolExecutor has been shut down.")
     
         # ==============================================================================
         # 8. ENTRY POINT FOR TESTING (Step 4)
