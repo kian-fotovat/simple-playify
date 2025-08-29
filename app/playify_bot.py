@@ -41,8 +41,39 @@ import shutil
 import subprocess
 import shlex
 import sqlite3
+import nacl
 from queue import Empty
 from dotenv import load_dotenv
+
+def run_nacl_diagnostics():
+    # On utilise le même dossier AppData pour trouver le log facilement
+    app_data_dir = os.path.join(os.getenv('LOCALAPPDATA'), "Playify")
+    log_file_path = os.path.join(app_data_dir, "playify_bot_nacl_diag.txt")
+
+    with open(log_file_path, "w", encoding="utf-8") as f:
+        f.write("--- Diagnostics PyNaCl depuis le processus du bot ---\n")
+        try:
+            f.write("Tentative d'import de 'cffi._cffi_backend'...\n")
+            import cffi._cffi_backend
+            f.write("SUCCÈS: 'import cffi._cffi_backend' a fonctionné.\n\n")
+
+            f.write("Tentative d'import de 'nacl.secret'...\n")
+            import nacl.secret
+            f.write("SUCCÈS: 'import nacl.secret' a fonctionné.\n\n")
+
+            f.write("Tentative de création d'un objet SecretBox (test de la librairie C)...\n")
+            key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
+            box = nacl.secret.SecretBox(key)
+            f.write("SUCCÈS: SecretBox créé.\n")
+            f.write("CONCLUSION: Tout semble fonctionner. Le problème est ailleurs.\n")
+
+        except Exception as e:
+            f.write(f"!!! ÉCHEC: Erreur durant l'import de diagnostic.\n")
+            f.write(f"Type: {type(e).__name__}\n")
+            f.write(f"Message: {e}\n")
+            f.write("Traceback:\n")
+            traceback.print_exc(file=f)
+# --- FIN DU BLOC DE DIAGNOSTIC ---
 
 APP_DATA_DIR = os.path.join(os.getenv('LOCALAPPDATA'), "Playify")
 DB_PATH = os.path.join(APP_DATA_DIR, 'playify_state.db')
@@ -1034,6 +1065,36 @@ async def process_spotify_url(url, guild_id):
     1. Tries with the official API (spotipy) for speed and completeness.
     2. On failure (e.g., editorial playlist), falls back to the scraper (spotifyscraper).
     """
+    from dotenv import load_dotenv
+    import os
+    import spotipy
+    from spotipy.oauth2 import SpotifyClientCredentials
+    from spotify_scraper import SpotifyClient
+    
+    # Locate and load the configuration file from the child process
+    config_file_path = os.path.join(os.getenv('LOCALAPPDATA'), "Playify", "playify_config.env")
+    load_dotenv(dotenv_path=config_file_path)
+
+    # Initialize the Spotipy client (sp) inside the process
+    SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+    SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+    sp = None
+    try:
+        if SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET:
+            sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+                client_id=SPOTIFY_CLIENT_ID,
+                client_secret=SPOTIFY_CLIENT_SECRET
+            ))
+    except Exception as e:
+        print(f"[Spotify Process] Failed to initialize Spotipy: {e}")
+
+    # Initialize the Spotify Scraper client inside the process
+    try:
+        spotify_scraper_client = SpotifyClient(browser_type="requests")
+    except Exception as e:
+        spotify_scraper_client = None
+        print(f"[Spotify Process] Failed to initialize SpotifyScraper: {e}")
+        
     is_kawaii = get_mode(guild_id)
     clean_url = url.split('?')[0]
 
@@ -1749,7 +1810,7 @@ def run_bot(status_queue, log_queue, command_queue):
     This function contains all the bot's logic.
     It is called by the desktop application (app.py).
     """
-    
+    run_nacl_diagnostics()
     # --- Redirection des logs (inchangé) ---
     sys.stdout = StreamToQueue(log_queue)
     sys.stderr = StreamToQueue(log_queue)
