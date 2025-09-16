@@ -223,7 +223,6 @@ IS_PUBLIC_VERSION = False
     # Server states
 music_players = {}  # {guild_id: MusicPlayer()}
 kawaii_mode = {}    # {guild_id: bool}
-server_filters = {} # {guild_id: set("filter1", "filter2")}
 karaoke_disclaimer_shown = set()
 _24_7_active = {}  # {guild_id: bool}
 controller_channels = {} # {guild_id: channel_id}
@@ -494,25 +493,13 @@ messages = {
             "normal": "Error processing the playlist. It may be private, region-locked, or invalid.",
             "kawaii": "(´；ω；`) Oh no! Problem with the playlist... maybe it’s shy or hidden?"
         },
-        "filter_title": {
-            "normal": "🎧 Audio Filters",
-            "kawaii": "Audio Filters! ヾ(≧▽≦*)o"
-        },
-        "filter_description": {
-            "normal": "Click on the buttons to enable or disable a filter in real time!",
-            "kawaii": "Clicky clicky to change the sound! (b ᵔ▽ᵔ)b"
-        },
-        "no_filter_playback": {
-            "normal": "Nothing is currently playing to apply a filter on.",
-            "kawaii": "Nothing is playing... (´・ω・`)"
-        },
         "lyrics_fallback_warning": {
             "normal": "Synced lyrics not found. Displaying standard lyrics instead.",
             "kawaii": "I couldn't find the synced lyrics... (｡•́︿•̀｡) But here are the normal ones for u!"
         },
         "karaoke_disclaimer": {
-            "normal": "Please note: The timing of the arrow (») and lyric accuracy are matched automatically and can vary based on the song version or active filters.",
-            "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ The arrow (») and lyrics do their best to sync up! But with different song versions or fun filters, they might not be perfectly on time~"
+            "normal": "Please note: The timing of the arrow (») and lyric accuracy are matched automatically and can vary based on the song version.",
+            "kawaii": "Just so you know! ପ(๑•ᴗ•๑)ଓ The arrow (») and lyrics do their best to sync up! But with different song versions, they might not be perfectly on time~"
         },
         "karaoke_warning_title": {
             "normal": "🎤 Karaoke - Important Notice",
@@ -1571,30 +1558,6 @@ def run_bot(status_queue, log_queue, command_queue):
     url_cache = TTLCache(maxsize=75000, ttl=7200)
 
     # --- Bot Configuration Dictionaries ---
-    # Dictionary of available audio filters and their FFmpeg options
-    AUDIO_FILTERS = {
-        "slowed": "asetrate=44100*0.8",
-        "spedup": "asetrate=44100*1.2",
-        "nightcore": "asetrate=44100*1.25,atempo=1.0",
-        "reverb": "aecho=0.8:0.9:40|50|60:0.4|0.3|0.2",
-        "8d": "apulsator=hz=0.08",
-        "muffled": "lowpass=f=500",
-        "bassboost": "bass=g=10", # Boost bass by 10 dB
-        "earrape": "acrusher=level_in=8:level_out=18:bits=8:mode=log:aa=1" # Ear rape effect
-    }
-
-    # Dictionary to map filter values to their display names
-    FILTER_DISPLAY_NAMES = {
-        "none": "None",
-        "slowed": "Slowed ♪",
-        "spedup": "Sped Up ♫",
-        "nightcore": "Nightcore ☆",
-        "reverb": "Reverb",
-        "8d": "8D Audio",
-        "muffled": "Muffled",
-        "bassboost": "Bass Boost",
-        "earrape": "Earrape"
-    }
 
     # --- Discord Bot Initialization ---
 
@@ -1640,10 +1603,9 @@ def run_bot(status_queue, log_queue, command_queue):
             self.last_was_single = False
             self.start_time = 0
             self.playback_started_at = None
-            self.active_filter = None
             self.seek_info = None
 
-            # --- Attributes for lyrics, karaoke, and filters ---
+            # --- Attributes for lyrics and karaoke ---
             self.lyrics_task = None
             self.lyrics_message = None
             self.synced_lyrics = None
@@ -2398,8 +2360,6 @@ def run_bot(status_queue, log_queue, command_queue):
         count_for_display = len(queue_snapshot)
         
         dynamic_footer_info = ""
-        active_filters = server_filters.get(guild_id, set())
-
         PLATFORM_DISPLAY = {
             "Spotify": "Spotify 🟢", "Deezer": "Deezer 🎵", "Apple Music": "Apple Music 🍎",
             "Tidal": "Tidal 🌊", "Amazon Music": "Amazon Music 📦", "SoundCloud": "SoundCloud ☁️",
@@ -2413,11 +2373,7 @@ def run_bot(status_queue, log_queue, command_queue):
             "Twitch": "Twitch (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
         }
 
-        if active_filters:
-            filter_name = next(iter(active_filters))
-            display_name = FILTER_DISPLAY_NAMES.get(filter_name, filter_name.capitalize())
-            dynamic_footer_info = f"Filter: {display_name}" + (" ✨" if is_kawaii else "")
-        elif music_player.current_info:
+        if music_player.current_info:
             source_type = music_player.current_info.get('source_type')
             current_display_map = KAOMOJI_PLATFORM_DISPLAY if is_kawaii else PLATFORM_DISPLAY
 
@@ -2626,7 +2582,7 @@ def run_bot(status_queue, log_queue, command_queue):
             elif self.message:
                 await self.message.edit(embed=embed, view=self)
 
-        @discord.ui.button(style=ButtonStyle.primary, emoji="⏪")
+        @discord.ui.button(style=ButtonStyle.primary, emoji="⏪", row=1)
         async def rewind_button(self, interaction: discord.Interaction, button: Button):
             current_time = self.get_current_time()
             target_seconds = max(0, current_time - self.REWIND_AMOUNT)
@@ -2636,12 +2592,8 @@ def run_bot(status_queue, log_queue, command_queue):
             self.music_player.voice_client.stop()
             await self.update_embed(interaction, jumped=True)
 
-        @discord.ui.button(style=ButtonStyle.secondary, emoji="✏️")
-        async def jump_button(self, interaction: discord.Interaction, button: Button):
-            modal = SeekModal(self, self.guild_id)
-            await interaction.response.send_modal(modal)
 
-        @discord.ui.button(style=ButtonStyle.primary, emoji="⏩")
+        @discord.ui.button(style=ButtonStyle.primary, emoji="⏩", row=1)
         async def forward_button(self, interaction: discord.Interaction, button: Button):
             current_time = self.get_current_time()
             target_seconds = current_time + self.FORWARD_AMOUNT
@@ -2650,6 +2602,11 @@ def run_bot(status_queue, log_queue, command_queue):
             self.music_player.seek_info = target_seconds
             self.music_player.voice_client.stop()
             await self.update_embed(interaction, jumped=True)
+            
+        @discord.ui.button(style=ButtonStyle.secondary, emoji="✏️", row=2)
+        async def jump_button(self, interaction: discord.Interaction, button: Button):
+            modal = SeekModal(self, self.guild_id)
+            await interaction.response.send_modal(modal)
 
         async def on_timeout(self):
             if self.update_task:
@@ -3072,60 +3029,6 @@ def run_bot(status_queue, log_queue, command_queue):
 
             # We start the actual karaoke logic
             await self.karaoke_coro()
-
-    # View for the filter buttons
-    class FilterView(View):
-        def __init__(self, interaction: discord.Interaction):
-            super().__init__(timeout=None)
-            self.guild_id = interaction.guild.id
-            self.interaction = interaction
-            server_filters.setdefault(self.guild_id, set())
-            for effect, display_name in FILTER_DISPLAY_NAMES.items():
-                is_active = effect in server_filters[self.guild_id]
-                style = ButtonStyle.success if is_active else ButtonStyle.secondary
-                button = Button(label=display_name, custom_id=f"filter_{effect}", style=style)
-                button.callback = self.button_callback
-                self.add_item(button)
-
-        async def button_callback(self, interaction: discord.Interaction):
-            effect = interaction.data['custom_id'].split('_')[1]
-            active_guild_filters = server_filters[self.guild_id]
-
-            # Enable or disable the filter
-            if effect in active_guild_filters:
-                active_guild_filters.remove(effect)
-            else:
-                active_guild_filters.add(effect)
-
-            # Update the appearance of the buttons
-            for child in self.children:
-                if isinstance(child, Button):
-                    child_effect = child.custom_id.split('_')[1]
-                    child.style = ButtonStyle.success if child_effect in active_guild_filters else ButtonStyle.secondary
-
-            await interaction.response.edit_message(view=self)
-
-            music_player = get_player(self.guild_id)
-            if music_player.voice_client and (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
-
-                # 1. We save the CURRENT playback speed (before the change)
-                old_speed = music_player.playback_speed
-
-                # 2. We calculate the real time elapsed since playback started
-                elapsed_time = 0
-                if music_player.playback_started_at:
-                    real_elapsed_time = time.time() - music_player.playback_started_at
-                    # 3. We calculate the position IN the music using the OLD speed
-                    elapsed_time = (real_elapsed_time * old_speed) + music_player.start_time
-
-                # 4. We update the player's speed with the NEW speed for the next playback
-                music_player.playback_speed = get_speed_multiplier_from_filters(active_guild_filters)
-
-                # We indicate that we are changing the filter to restart playback at the correct position
-                music_player.is_seeking = True
-                music_player.seek_info = elapsed_time
-                await safe_stop(music_player.voice_client)
-
     class QueueView(View):
         """
         A View that handles pagination for the /queue command.
@@ -3743,10 +3646,6 @@ def run_bot(status_queue, log_queue, command_queue):
             music_players[guild_id] = MusicPlayer()
         return music_players[guild_id]
 
-    # Get active filter for a server
-    def get_filter(guild_id):
-        return server_filters.get(guild_id)
-
     async def safe_stop(vc: discord.VoiceClient):
         """
         Stops the voice client and forcefully kills the underlying FFMPEG process
@@ -3842,28 +3741,6 @@ def run_bot(status_queue, log_queue, command_queue):
 
         logger.info(f"Cleaned info: Title='{clean_title}', Artist='{clean_artist}'")
         return clean_title, clean_artist
-
-    def get_speed_multiplier_from_filters(active_filters: set) -> float:
-        """Calculates the speed multiplier from the active filters."""
-        speed = 1.0
-        pitch_speed = 1.0 # Speed from asetrate (nightcore/slowed)
-        tempo_speed = 1.0 # Speed from atempo
-
-        for f in active_filters:
-            if f in AUDIO_FILTERS:
-                filter_value = AUDIO_FILTERS[f]
-                if "atempo=" in filter_value:
-                    match = re.search(r"atempo=([\d\.]+)", filter_value)
-                    if match:
-                        tempo_speed *= float(match.group(1))
-                if "asetrate=" in filter_value:
-                    match = re.search(r"asetrate=[\d\.]+\*([\d\.]+)", filter_value)
-                    if match:
-                        pitch_speed *= float(match.group(1))
-
-        # The final speed is the product of the two
-        speed = pitch_speed * tempo_speed
-        return speed
 
     async def fetch_and_display_genius_lyrics(interaction: discord.Interaction, fallback_message: str = None):
         """Fetches, formats, and displays lyrics with smart pagination buttons."""
@@ -4361,16 +4238,12 @@ def run_bot(status_queue, log_queue, command_queue):
                 
             music_player.is_current_live = music_player.current_info.get('is_live', False) or music_player.current_info.get('live_status') == 'is_live'
             
-            active_filters = server_filters.get(guild_id, set())
-            filter_chain = ",".join([AUDIO_FILTERS[f] for f in active_filters if f in active_filters]) if active_filters else ""
             
             ffmpeg_options = {"options": "-vn"}
             if music_player.current_info.get('source_type') != 'file':
                 ffmpeg_options["before_options"] = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
             if seek_time > 0:
                 ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}".strip()
-            if filter_chain:
-                ffmpeg_options["options"] = f"{ffmpeg_options.get('options', '')} -af \"{filter_chain}\"".strip()
             
             source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), volume=music_player.volume)
             
@@ -4412,7 +4285,7 @@ def run_bot(status_queue, log_queue, command_queue):
             await handle_playback_error(guild_id, e)
 
     async def update_karaoke_task(guild_id: int):
-        """Background task for karaoke mode, manages filters and speed."""
+        """Background task for karaoke mode."""
         music_player = get_player(guild_id)
         last_line_index = -1
         # We add a flag to know if the footer has already been removed
@@ -5218,34 +5091,6 @@ def run_bot(status_queue, log_queue, command_queue):
                 color=0xFF9AA2 if is_kawaii else discord.Color.red()
             )
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-
-    @bot.tree.command(name="filter", description="Applies or removes audio filters in real time.")
-    async def filter_command(interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message("This command can only be used inside a server.", ephemeral=True, silent=SILENT_MESSAGES)
-            return
-
-        guild_id = interaction.guild.id
-        music_player = get_player(guild_id)
-        is_kawaii = get_mode(guild_id)
-
-        if not music_player.voice_client or not (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
-            embed = Embed(
-                description=get_messages("no_filter_playback", guild_id),
-                color=0xFF9AA2 if is_kawaii else discord.Color.red()
-            )
-            await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, ephemeral=True)
-            return
-
-        # Creates and sends the view with the buttons
-        view = FilterView(interaction)
-        embed = Embed(
-            title=get_messages("filter_title", guild_id),
-            description=get_messages("filter_description", guild_id),
-            color=0xB5EAD7 if is_kawaii else discord.Color.blue()
-        )
-
-        await interaction.response.send_message(silent=SILENT_MESSAGES,embed=embed, view=view)
 
     @bot.tree.command(name="pause", description="Pause the current playback")
     async def pause(interaction: discord.Interaction):
@@ -6386,7 +6231,6 @@ def run_bot(status_queue, log_queue, command_queue):
                 music_player.current_task.cancel()
             
             if guild.id in music_players: del music_players[guild.id]
-            if guild_id in server_filters: del server_filters[guild_id]
             if guild_id in _24_7_active: del _24_7_active[guild_id]
             logger.info(f"Player for guild {guild_id} has been reset.")
             return

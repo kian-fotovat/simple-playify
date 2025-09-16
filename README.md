@@ -75,7 +75,6 @@ Type `/play <url or query>` and let the music flow~
 * **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
 * **Loop** & **shuffle** controls
 * **Kawaii Mode** toggles cute kaomoji responses (`/kaomoji`)
-* Audio **filters**: slowed, reverb, bass boost, nightcore, and more
 * Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
 <a id="installation"></a>
@@ -179,7 +178,6 @@ This way, you get all the great Playify features without any installation or con
 | `/loop` | Toggle looping for the current track. |
 | `/autoplay` | Toggle autoplay of similar songs when the queue ends. |
 | `/24_7 <mode>` | Keep the bot in the channel (`normal`, `auto`, or `off`). |
-| `/filter` | Apply real-time audio filters (nightcore, bassboost...). |
 | `/lyrics` | Fetch and display lyrics for the current song. |
 | `/karaoke` | Start a karaoke session with synced lyrics. |
 | `/reconnect` | Refresh the voice connection to fix lag without losing your place. |
