@@ -82,15 +82,6 @@ player:
     empty: "No previous song in history."
   previous:
     success: "Skipping back to the previous song."
-  play_files:
-    success:
-      title: "Files Added to Queue"
-      description: "**{count} file(s) added to the queue:**\n{file_list}"
-      footer_failed: "\n\n**{count} file(s) ignored (invalid type).**"
-    error:
-      invalid_type: "The uploaded file is not a valid audio or video type."
-      save_failed: "An error occurred while saving the uploaded file."
-      no_valid_files: "No valid audio/video files were added."
   play_next:
     error:
       invalid_args: "Please provide either a link/search term OR a file, but not both."

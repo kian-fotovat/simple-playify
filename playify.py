@@ -3196,7 +3196,6 @@ async def now_playing(interaction: discord.Interaction):
     if music_player.current_info:
         title = music_player.current_info.get("title", "Unknown Title")
         thumbnail = music_player.current_info.get("thumbnail")
-
         url = music_player.current_info.get("webpage_url", music_player.current_url)
         description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
 
@@ -3393,7 +3392,6 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
         # Hydrate info for a better announcement message
         hydrated_next_info = await music_player.hydrate_track_info(next_song_info)
         next_title = hydrated_next_info.get("title", "Unknown Title")
-
         next_url = hydrated_next_info.get("webpage_url", "#")
         description_text = get_messages("now_playing_description", guild_id, title=next_title, url=next_url)
 

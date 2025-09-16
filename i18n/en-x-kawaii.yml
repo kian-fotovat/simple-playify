@@ -82,15 +82,6 @@ player:
     empty: "There are no previous songs... (´• ω •`)"
   previous:
     success: "Going back to the last song!~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
-  play_files:
-    success:
-      title: "Files Added!~"
-      description: "**{count} file(s) are now in the queue!:**\n{file_list}"
-      footer_failed: "\n\n**{count} file(s) were ignored because they were shy... (invalid type).**"
-    error:
-      invalid_type: "That's not a song or video file! (>_<)"
-      save_failed: "I tried to save the file, but something went wrong... (´；ω；`)"
-      no_valid_files: "No valid audio or video files were added... (´• ω •`)"
   play_next:
     error:
       invalid_args: "Silly! Pick a link/name OR a file, not both! (>ω<)"

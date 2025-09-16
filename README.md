@@ -53,7 +53,7 @@ Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers,
 * **100% free**: All features unlocked for everyone.
 * **Unlimited playback**: Giant playlists, endless queues, eternal tunes!
 
-**Supports YouTube, YouTube Music, SoundCloud, Twitch, Spotify, Deezer, Bandcamp, direct audio links, and local files.**
+**Supports YouTube, YouTube Music, SoundCloud, Twitch, Spotify, Deezer, Bandcamp, and direct audio links.**
 Type `/play <url or query>` and let the music flow~
 
 <a id="spotify-support"></a>
@@ -68,9 +68,8 @@ Type `/play <url or query>` and let the music flow~
 <a id="key-features"></a>
 ## (≧◡≦) Key Features
 
-* Play from **10+ sources**: YouTube • SoundCloud • Twitch • Spotify • Deezer • Bandcamp • **Direct Audio Links** • **Local Files**
+* Play from **10+ sources**: YouTube • SoundCloud • Twitch • Spotify • Deezer • Bandcamp • **Direct Audio Links**
 * Slash commands: `/play`, `/search`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
-* **Play Local Files**: Directly upload and play your own audio/video files.
 * **Direct Audio Links**: Stream music directly from any audio URL (MP3, FLAC, WAV, etc.)
 * **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
 * **Loop** & **shuffle** controls
@@ -163,7 +162,6 @@ This way, you get all the great Playify features without any installation or con
 | :--- | :--- |
 | `/play <url/query>` | Add a song or playlist from a link/search. Supports direct audio links! |
 | `/search <query>` | Searches for a song and lets you choose from the top results. |
-| `/play-files <file1...>` | Play one or more uploaded audio/video files. |
 | `/playnext <query/file>` | Add a song or local file to the front of the queue. |
 | `/pause` | Pause playback. |
 | `/resume` | Resume playback. |
