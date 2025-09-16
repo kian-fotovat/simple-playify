@@ -105,11 +105,11 @@ def load_config():
     config = {
         "CHECK_FOR_UPDATES": "True",
         "PRESENCE_TYPE": "Playing",
-        "PRESENCE_ROTATION_COUNT": "3",
+        "PRESENCE_ROTATION_COUNT": "1",
         "PRESENCE_ROTATION_DELAY": "15",
         "PRESENCE_1": "/play [link]",
-        "PRESENCE_2": "/help",
-        "PRESENCE_3": "alan7383.github.io/playify",
+        "PRESENCE_2": "",
+        "PRESENCE_3": "",
     }
     if not os.path.exists(CONFIG_FILE):
         return config
@@ -141,8 +141,8 @@ def save_config(config_data):
             f.write(f"PRESENCE_ROTATION_COUNT={config_data.get('PRESENCE_ROTATION_COUNT', '3')}\n")
             f.write(f"PRESENCE_ROTATION_DELAY={config_data.get('PRESENCE_ROTATION_DELAY', '15')}\n")
             f.write(f"PRESENCE_1={config_data.get('PRESENCE_1', '/play [link]')}\n")
-            f.write(f"PRESENCE_2={config_data.get('PRESENCE_2', '/help')}\n")
-            f.write(f"PRESENCE_3={config_data.get('PRESENCE_3', 'alan7383.github.io/playify')}\n")
+            f.write(f"PRESENCE_2={config_data.get('PRESENCE_2', '')}\n")
+            f.write(f"PRESENCE_3={config_data.get('PRESENCE_3', '')}\n")
         return True
     except Exception as e:
         print(f"Error saving config file: {e}")
@@ -204,7 +204,7 @@ class App(ctk.CTk):
 
         footer = ctk.CTkFrame(self, fg_color="transparent")
         footer.pack(fill="x", side="bottom", pady=5)
-        ctk.CTkLabel(footer, text=f"- made by @alananasssss - v{CURRENT_VERSION} -", font=("Arial", 10), text_color="gray").pack()
+        ctk.CTkLabel(footer, text=f"- made by @alananasssss and slimmed by kian :) - v{CURRENT_VERSION} -", font=("Arial", 10), text_color="gray").pack()
 
         self.tray_icon = None
         self.settings_window = None
@@ -1262,8 +1262,8 @@ class SettingsWindow(ctk.CTkToplevel):
         self.entries_frame.grid_columnconfigure(0, weight=1)
 
         self.presence_entry_1, self.presence_frame_1 = self._populate_presence_entry(self.entries_frame, "Status 1", self.config.get("PRESENCE_1", "/play [link]"))
-        self.presence_entry_2, self.presence_frame_2 = self._populate_presence_entry(self.entries_frame, "Status 2", self.config.get("PRESENCE_2", "/help"))
-        self.presence_entry_3, self.presence_frame_3 = self._populate_presence_entry(self.entries_frame, "Status 3", self.config.get("PRESENCE_3", "alan7383.github.io/playify"))
+        self.presence_entry_2, self.presence_frame_2 = self._populate_presence_entry(self.entries_frame, "Status 2", self.config.get("PRESENCE_2", ""))
+        self.presence_entry_3, self.presence_frame_3 = self._populate_presence_entry(self.entries_frame, "Status 3", self.config.get("PRESENCE_3", ""))
 
         self.toggle_presence_entries()
 
@@ -1376,7 +1376,7 @@ class SettingsWindow(ctk.CTkToplevel):
         container.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(container, text=f"{APP_NAME} v{CURRENT_VERSION}", font=(TITLE_FONT_FAMILY, 32, "bold"), text_color=STYLE["text"]).grid(row=0, column=0, pady=10)
-        ctk.CTkLabel(container, text="Made by @alananasssss", font=self.desc_font, text_color=STYLE["text_secondary"]).grid(row=1, column=0, pady=(0, 10))
+        ctk.CTkLabel(container, text="Made by @alananasssss and slimmed by kian :)", font=self.desc_font, text_color=STYLE["text_secondary"]).grid(row=1, column=0, pady=(0, 10))
         ctk.CTkButton(container, text="Check for Updates", command=lambda: self.controller.check_for_updates(manual_check=True), fg_color=STYLE["accent"], hover_color=STYLE["accent_hover"]).grid(
             row=2, column=0, pady=(0, 20)
         )
@@ -1385,12 +1385,11 @@ class SettingsWindow(ctk.CTkToplevel):
         support_frame.grid(row=3, column=0, sticky="ew", pady=10, padx=10)
         support_frame.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(support_frame, text="(ง＾◡＾)ง Contributing & Support", font=("Arial", 16, "bold"), text_color=STYLE["text"]).grid(row=0, column=0, pady=(15, 10), padx=20)
+        ctk.CTkLabel(support_frame, text="Contributing & Support", font=("Arial", 16, "bold"), text_color=STYLE["text"]).grid(row=0, column=0, pady=(15, 10), padx=20)
 
-        self._create_link(support_frame, 1, "Star on GitHub", "https://github.com/alan7383/playify/")
-        self._create_link(support_frame, 2, "Join our Discord Server", "https://discord.gg/JeH8g6g3cG")
-        self._create_link(support_frame, 3, "Support on Patreon", "https://www.patreon.com/Playify")
-        self._create_link(support_frame, 4, "Donate via PayPal", "https://paypal.com/paypalme/alanmussot1")
+        self._create_link(support_frame, 1, "Star on GitHub", "https://github.com/kian-fotovat/simple-playify/")
+        self._create_link(support_frame, 2, "Support the upstream repo on Patreon", "https://www.patreon.com/Playify")
+        self._create_link(support_frame, 3, "Donate to the upstream author via PayPal", "https://paypal.com/paypalme/alanmussot1")
 
         ctk.CTkLabel(support_frame, text="Fork the repo, open an issue or pull request—all contributions are welcome!", wraplength=450, text_color=STYLE["text_secondary"], justify="center").grid(
             row=5, column=0, pady=(10, 20), padx=20

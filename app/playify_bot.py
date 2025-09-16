@@ -246,7 +246,7 @@ messages = {
     "critical_error_title": {"normal": "🚨 An Unexpected Error Occurred"},
     "critical_error_description": {"normal": "The bot encountered a problem. Please report this issue on GitHub so we can fix it!"},
     "critical_error_report_field": {"normal": "Report on GitHub"},
-    "critical_error_report_value": {"normal": "You can create an issue here:\n**https://github.com/alan7383/playify/issues**\n\nPlease include the error details below."},
+    "critical_error_report_value": {"normal": "You can create an issue here:\n**https://github.com/kian-fotovat/simple-playify/issues**\n\nPlease include the error details below."},
     "critical_error_details_field": {"normal": "Error Details"},
     "no_voice_channel": {"normal": "You must be in a voice channel to use this command."},
     "connection_error": {"normal": "Error connecting to the voice channel."},
@@ -392,7 +392,7 @@ messages = {
         "normal": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo get full YouTube playback, I made a super simple Windows app that sets up self-hosting for you — it's free and gives you full control!"
     },
     "youtube_blocked_repo_field": {"normal": "Get the Code & Setup"},
-    "youtube_blocked_repo_value": {"normal": "GitHub repo: https://github.com/alan7383/playify\nWindows setup & instructions: https://alan7383.github.io/playify/self-host.html"},
+    "youtube_blocked_repo_value": {"normal": "GitHub repo: https://github.com/kian-fotovat/simple-playify\nWindows setup & instructions: https://alan7383.github.io/playify/self-host.html"},
     "queue_last_song": {"normal": "No other songs are in the queue."},
     "command_restricted_title": {"normal": "🚫 Command Disabled Here"},
     "command_restricted_description": {"normal": "Sorry, {bot_name} commands can only be used in specific channels on this server."},
@@ -4479,7 +4479,7 @@ def run_bot(status_queue, log_queue, command_queue):
 
                         # Use default statuses if none are configured
                         if not custom_statuses:
-                            custom_statuses = [f"Serving {len(bot.guilds)} servers", "/play", "alan7383.github.io/playify"]
+                            custom_statuses = [f"Serving {len(bot.guilds)} servers", "/play"]
 
                         # Get the correct activity type object, defaulting to 'playing'
                         activity_type = activity_type_map.get(presence_type_str, discord.ActivityType.playing)

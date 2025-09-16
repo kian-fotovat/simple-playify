@@ -95,7 +95,7 @@ This is the easiest way to get the bot running.
 **Steps:**
 1.  Clone the repo:
     ```bash
-    git clone https://github.com/alan7383/playify.git
+    git clone https://github.com/kian-fotovat/simple-playify.git
     cd playify
     ```
 2.  Install dependencies:
@@ -171,4 +171,7 @@ MIT License — do what you want with the code, <del>just be kind!</del> feel fr
 
 <p align="center">
   Built with ☕ and love by <a href="https://github.com/alan7383">alan7383</a>
+</p>
+<p align="center">
+  and slimmed down by <a href="https://github.com/kian-fotovat">kian-fotovat</a> :)
 </p>
