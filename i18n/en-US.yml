@@ -193,58 +193,7 @@ queue:
     empty_queue_normal: "The queue is empty. Add songs before enabling 24/7 normal mode."
 
 # ==============================================================================
-# 9. LYRICS & KARAOKE
-# ==============================================================================
-lyrics:
-  success:
-    found: "Lyrics found!"
-    updated: "Lyrics updated successfully!"
-  button:
-    previous: "⬅️ Previous"
-    next: "Next ➡️"
-    refine: "Refine"
-  refine_modal:
-    title: "Refine Lyrics Search"
-    label: "New Song Title & Artist"
-    placeholder: "e.g., Blinding Lights The Weeknd"
-  error:
-    not_found:
-      title: "😢 Lyrics Not Found"
-      description: "I couldn't find lyrics for **{query}**.\n\nYou can refine the search yourself. Try using just the song title."
-    refine_failed: "Sorry, I still couldn't find lyrics for **{query}**."
-  fallback_warning: "Synced lyrics not found. Showing standard lyrics instead."
-  refine_button: "Refine Search"
-  embed:
-    title: "📜 Lyrics for {title}"
-    footer: "Page {current_page}/{total_pages}"
-
-karaoke:
-  session_finished: "*Karaoke session finished!*"
-  embed:
-    title: "🎤 Karaoke for {title}"
-    description: "Starting karaoke..."
-  error:
-    already_running: "Lyrics are already being displayed!"
-  warning:
-    title: "🎤 Karaoke - Important Notice"
-    description: "Please note that the timing of the lyrics (») is matched automatically and can vary.\n\n**💡 Pro Tip:** For the best results, try adding `topic` or `audio` to your search (e.g., `party addict kets4eki topic`).\n\nPress **Continue** to start."
-    button: "Continue"
-    acknowledged_button: "Acknowledged!"
-  retry:
-    success: "Lyrics found! Starting karaoke..."
-  refine_modal:
-    title: "Refine Synced Lyrics Search"
-    label: "Song Title & Artist"
-    placeholder: "e.g., Believer Imagine Dragons"
-  not_found_title: "😢 Synced Lyrics Not Found"
-  not_found_description: "I couldn't find synced lyrics for **{query}**.\n\nYou can refine the search or search for standard (non-synced) lyrics on Genius."
-  retry_button: "Refine Search"
-  genius_fallback_button: "Search on Genius"
-  display:
-    waiting_for_first_line: "*(Waiting for the first line...)*"
-
-# ==============================================================================
-# 10. INTERACTIVE COMPONENTS (MODALS, VIEWS)
+# 9. INTERACTIVE COMPONENTS (MODALS, VIEWS)
 # ==============================================================================
 add_song_modal:
   label: "Song Name or URL (Spotify, YouTube, etc.)"
@@ -286,7 +235,7 @@ jumpto:
   placeholder: "Jump to a specific song in the queue..."
 
 # ==============================================================================
-# 12. MISC & SUPPORT COMMANDS
+# 10. MISC & SUPPORT COMMANDS
 # ==============================================================================
 discord_command_title: "🔗 Join Our Discord!"
 discord_command_description: "Click the button below to join the official Playify support and community server."
@@ -323,24 +272,18 @@ support:
   footer: "Your support means the world to me!"
 
 # ==============================================================================
-# 13. PLATFORM SPECIFIC
+# 11. PLATFORM SPECIFIC
 # ==============================================================================
 platform:
   display:
     spotify: "Spotify 🟢"
     deezer: "Deezer 🎵"
-    apple_music: "Apple Music 🍎"
-    tidal: "Tidal 🌊"
-    amazon_music: "Amazon Music 📦"
     soundcloud: "SoundCloud ☁️"
     youtube: "YouTube ▶️"
     twitch: "Twitch 🟣"
   kaomoji:
     spotify: "Spotify ヾ(⌐■_■)ノ♪"
     deezer: "Deezer (つ◕_◕)つ"
-    apple_music: "Apple Music (≧◡≦)"
-    tidal: "Tidal (〜￣▽￣)〜"
-    amazon_music: "Amazon Music (b ᵔ▽ᵔ)b"
     soundcloud: "SoundCloud (ˊᵒ̴̶̷̤ ꇴ ᵒ̴̶̷̤ˋ)"
     youtube: "YouTube (►_◄)"
     twitch: "Twitch (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
@@ -352,32 +295,19 @@ spotify_error: "Error processing the Spotify link."
 deezer_playlist_added: "🎶 Deezer Playlist Added"
 deezer_playlist_description: "**{count} tracks** from Deezer have been added to the queue."
 deezer_error: "Error processing the Deezer link. It may be private, region-locked, or invalid."
-apple_music_playlist_added: "🎶 Apple Music Content Added"
-apple_music_playlist_description: "**{count} tracks** from Apple Music have been added to the queue."
-apple_music_error: "Error processing the Apple Music link. The page may have changed or is inaccessible."
-tidal_playlist_added: "🎶 Tidal Content Added"
-tidal_playlist_description: "**{count} tracks** from Tidal have been added to the queue."
-tidal_error: "Error processing the Tidal link. The page may have changed or is inaccessible."
-amazon_music_playlist_added: "🎶 Amazon Music Content Added"
-amazon_music_playlist_description: "**{count} tracks** from Amazon Music have been added to the queue."
-amazon_music_error: "Error processing the Amazon Music link. The page may have changed or is inaccessible."
 lazy_resolve:
   error:
     title: "Resolution Failed"
     description: "Could not find a source for: `{title}`.\n*This track will be skipped.*"
 api:
-  genius:
-    not_configured: "Genius API is not configured. The `/lyrics` command will not work."
   spotify:
     unreachable: "Critical error: Spotify services are unreachable."
   deezer:
     network_error: "Network error while retrieving Deezer data. Please try again later."
     value_error: "Error: {error_message}"
-  lyrics:
-    generic_fetch_error: "An unexpected error occurred while fetching the lyrics."
 
 # ==============================================================================
-# 14. MUSIC CONTROLLER
+# 12. MUSIC CONTROLLER
 # ==============================================================================
 controller:
   title: "Music Controller"
@@ -428,15 +358,13 @@ controller:
     shuffle: "Shuffle"
     loop: "Loop"
     autoplay: "Autoplay"
-    lyrics: "Lyrics"
-    karaoke: "Karaoke"
     queue: "Show Queue"
     jump_to: "Jump to..."
     vol_down: "Vol-"
     vol_up: "Vol+"
 
 # ==============================================================================
-# 15. BOT PRESENCE / STATUS
+# 13. BOT PRESENCE / STATUS
 # ==============================================================================
 presence:
   listening_volume: "/volume"

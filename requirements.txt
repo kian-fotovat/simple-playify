@@ -1,11 +1,9 @@
 cachetools
 discord.py[voice]
-lyricsgenius
 PyNaCl
 psutil
 python-dotenv
 requests
 spotifyscraper[all]
 spotipy
-syncedlyrics
 yt_dlp

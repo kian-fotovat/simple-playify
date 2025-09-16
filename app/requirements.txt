@@ -11,8 +11,6 @@ spotipy
 spotifyscraper[all]
 cachetools
 requests
-lyricsgenius
-syncedlyrics
 psutil
 pystray
 Pillow

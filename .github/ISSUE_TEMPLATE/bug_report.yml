@@ -19,8 +19,6 @@ body:
       options:
         - /play
         - /playnext
-        - /lyrics
-        - /karaoke
         - /filter
         - /stop
         - /skip
