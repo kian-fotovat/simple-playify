@@ -286,24 +286,6 @@ jumpto:
   placeholder: "Jump to a specific song in the queue..."
 
 # ==============================================================================
-# 11. FILTERS
-# ==============================================================================
-filter:
-  title: "🎧 Audio Filters"
-  description: "Click on the buttons to enable or disable a filter in real time!"
-  no_playback: "Nothing is currently playing to apply a filter on."
-  name:
-    none: "None"
-    slowed: "Slowed ♪"
-    spedup: "Sped Up ♫"
-    nightcore: "Nightcore ☆"
-    reverb: "Reverb"
-    "8d": "8D Audio"
-    muffled: "Muffled"
-    bassboost: "Bass Boost"
-    earrape: "Earrape"
-
-# ==============================================================================
 # 12. MISC & SUPPORT COMMANDS
 # ==============================================================================
 discord_command_title: "🔗 Join Our Discord!"
@@ -430,7 +412,6 @@ controller:
     format: "{count} songs | {dynamic_info} | Vol: {volume}%"
     format_last_song: "Last song | {dynamic_info} | Vol: {volume}%"
     source: "Source: {platform}"
-    filter: "Filter: {filter_name}"
     ping: "Ping: {ping_ms}ms"
     file_source: "Source: Local File 💿"
     bandcamp_source: "Source: Bandcamp 🎷"

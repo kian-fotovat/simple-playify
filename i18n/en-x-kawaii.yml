@@ -286,24 +286,6 @@ jumpto:
   placeholder: "Wanna jump to a song?~"
 
 # ==============================================================================
-# 11. FILTERS
-# ==============================================================================
-filter:
-  title: "Audio Filters! ヾ(≧▽≦*)o"
-  description: "Clicky clicky to change the sound! (b ᵔ▽ᵔ)b"
-  no_playback: "Nothing is playing... (´・ω・`)"
-  name:
-    none: "Normal~"
-    slowed: "Slowed (˘︶˘)"
-    spedup: "Sped Up (^_^)"
-    nightcore: "Nightcore (☆▽☆)"
-    reverb: "Reverb (✿)"
-    "8d": "8D Audio (♪)"
-    muffled: "Muffled (・・)"
-    bassboost: "Bass Boost (•̀ω•́)"
-    earrape: "Earrape (x_x)"
-
-# ==============================================================================
 # 12. MISC & SUPPORT COMMANDS
 # ==============================================================================
 discord_command_title: "Come hang out with us! （〃｀ 3′〃）"
@@ -430,7 +412,6 @@ controller:
     format: "{count} songs | {dynamic_info} | Vol: {volume}% (´• ω •`)"
     format_last_song: "Last song!~ | {dynamic_info} | Vol: {volume}% (´• ω •`)"
     source: "Source: {platform}"
-    filter: "Filter: {filter_name} ･ﾟ✧"
     ping: "Ping: {ping_ms}ms!~"
     file_source: "Source: Local File (`•ω•´)"
     bandcamp_source: "Source: Bandcamp (ﾉ$ヮ$)ﾉ"
