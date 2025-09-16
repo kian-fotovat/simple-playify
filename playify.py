@@ -15,7 +15,6 @@ import random
 import re
 import shutil
 import sqlite3
-import subprocess
 import sys
 import time
 import traceback  # --- NEW --- To format exceptions
@@ -555,7 +554,7 @@ class JumpToView(View):
         end_index = start_index + self.items_per_page
         tracks_on_page = self.all_tracks[start_index:end_index]
 
-        tracks_to_hydrate = [t for t in tracks_on_page if isinstance(t, dict) and (not t.get("title") or t.get("title") == "Unknown Title") and not t.get("source_type") == "file"]
+        tracks_to_hydrate = [t for t in tracks_on_page if isinstance(t, dict) and (not t.get("title") or t.get("title") == "Unknown Title")]
 
         if tracks_to_hydrate:
             # Minor log correction
@@ -950,7 +949,7 @@ async def create_controller_embed(bot, guild_id):
     if lazy_items_to_resolve:
         await asyncio.gather(*[item.resolve() for item in lazy_items_to_resolve])
 
-    tracks_to_hydrate = [t for t in tracks_to_display if isinstance(t, dict) and (not t.get("duration", 0) > 0 or "video #" in t.get("title", "")) and not t.get("source_type") == "file"]
+    tracks_to_hydrate = [t for t in tracks_to_display if isinstance(t, dict) and (not t.get("duration", 0) > 0 or "video #" in t.get("title", ""))]
     if tracks_to_hydrate:
         tasks = [fetch_meta(track["url"], None) for track in tracks_to_hydrate]
         hydrated_results = await asyncio.gather(*tasks)
@@ -1004,7 +1003,7 @@ async def create_controller_embed(bot, guild_id):
     embed = Embed(title=get_messages("controller.title", guild_id), description=description, color=0xB5EAD7 if is_kawaii else discord.Color.blue())
     embed.add_field(name=get_messages("controller.next_up.title", guild_id), value=next_song_text, inline=False)
 
-    now_playing_title_display = f"**[{title}]({info.get('webpage_url', info.get('url', '#'))})**" if info.get("source_type") != "file" else get_messages("queue.now_playing_format.file", guild_id, title=title)
+    now_playing_title_display = f"**[{title}]({info.get('webpage_url', info.get('url', '#'))})**"
     now_playing_value = get_messages("controller.now_playing.value", guild_id, now_playing_title_display=now_playing_title_display, artist=artist, requester_mention=requester.mention, channel_name=vc.channel.name)
     embed.add_field(name=get_messages("controller.now_playing.title", guild_id), value=now_playing_value, inline=False)
 
@@ -1032,10 +1031,7 @@ async def create_controller_embed(bot, guild_id):
         url = music_player.current_info.get("webpage_url", "").lower()
         original_platform = music_player.current_info.get("original_platform")
 
-        if source_type == "file":
-            dynamic_footer_info = get_messages("controller.footer.file_source", guild_id)
-
-        elif original_platform:
+        if original_platform:
             platform_mode = "kaomoji" if is_kawaii else "display"
             formatted_platform_name = original_platform.lower().replace(" ", "_")
             platform_key = f"platform.{platform_mode}.{formatted_platform_name}"
@@ -1432,11 +1428,8 @@ class QueueView(View):
         if self.music_player.current_info:
             title = self.music_player.current_info.get("title", "Unknown Title")
             now_playing_text = ""
-            if self.music_player.current_info.get("source_type") == "file":
-                now_playing_text = get_messages("queue.now_playing_format.file", self.guild_id, title=title)
-            else:
-                url = self.music_player.current_info.get("webpage_url", self.music_player.current_url)
-                now_playing_text = f"[{title}]({url})"
+            url = self.music_player.current_info.get("webpage_url", self.music_player.current_url)
+            now_playing_text = f"[{title}]({url})"
             embed.add_field(name=get_messages("now_playing_in_queue", self.guild_id), value=now_playing_text, inline=False)
 
         if self.tracks:
@@ -1448,9 +1441,7 @@ class QueueView(View):
             tracks_to_hydrate = [
                 track
                 for track in tracks_on_page
-                if isinstance(track, dict)
-                and (not track.get("title") or track.get("title") == "Unknown Title" or track.get("title") == get_messages("player.loading_placeholder", self.guild_id))
-                and not track.get("source_type") == "file"
+                if isinstance(track, dict) and (not track.get("title") or track.get("title") == "Unknown Title" or track.get("title") == get_messages("player.loading_placeholder", self.guild_id))
             ]
 
             if tracks_to_hydrate:
@@ -1477,8 +1468,6 @@ class QueueView(View):
                 if display_info.get("source_type") == "lazy":
                     # Just display the title, without any extra text
                     display_line = f"`{title}`"
-                elif display_info.get("source_type") == "file":
-                    display_line = get_messages("controller.queue.line_display.file", self.guild_id, title=title)
                 else:
                     url = display_info.get("webpage_url", "#")
                     display_line = f"[{title}]({url})"
@@ -1597,7 +1586,7 @@ class RemoveView(View):
         end_index = start_index + self.items_per_page
         tracks_on_page = self.all_tracks[start_index:end_index]
 
-        tracks_to_hydrate = [t for t in tracks_on_page if isinstance(t, dict) and (not t.get("title") or t.get("title") == "Unknown Title") and not t.get("source_type") == "file"]
+        tracks_to_hydrate = [t for t in tracks_on_page if isinstance(t, dict) and (not t.get("title") or t.get("title") == "Unknown Title")]
 
         if tracks_to_hydrate:
             tasks = [fetch_meta(track["url"], None) for track in tracks_to_hydrate]
@@ -1728,21 +1717,6 @@ async def fetch_video_info_with_retry(query: str, ydl_opts_override=None):
         else:
             # Not an age restriction error, re-raise it
             raise e
-
-
-def get_file_duration(file_path: str) -> float:
-    """Uses ffprobe to get the duration of a local file in seconds."""
-    command = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", file_path]
-    try:
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode == 0:
-            return float(result.stdout.strip())
-        else:
-            logger.error(f"ffprobe error for {file_path}: {result.stderr}")
-            return 0.0
-    except (FileNotFoundError, ValueError) as e:
-        logger.error(f"Unable to get duration for {file_path}: {e}")
-        return 0.0
 
 
 def format_duration(seconds: int) -> str:
@@ -2100,22 +2074,7 @@ async def safe_stop(vc: discord.VoiceClient):
 def create_queue_item_from_info(info: dict, guild_id: int) -> dict:
     """
     Creates a standardized, clean queue item from a full yt-dlp info dict.
-    This version correctly handles the difference between local files and online sources.
     """
-
-    # If the source_type is 'file', we build a very specific and clean dictionary
-    # to ensure no data from previous online songs can interfere.
-    if info.get("source_type") == "file":
-        return {
-            "url": info.get("url"),  # This is the essential file path
-            "title": info.get("title", get_messages("player.unknown_file", guild_id)),
-            "webpage_url": None,  # A local file has no webpage URL
-            "thumbnail": None,  # A local file has no thumbnail
-            "is_single": False,  # When re-queuing, it's considered part of a list
-            "source_type": "file",  # Critically preserve this type
-            "requester": info.get("requester"),
-        }
-
     return {
         "url": info.get("webpage_url", info.get("url")),  # Prioritize the user-friendly URL
         "title": info.get("title", get_messages("player.unknown_title", guild_id)),
@@ -2608,7 +2567,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                         else:
                             if music_player.text_channel:
                                 try:
-                                    notice_key = "autoplay_file_notice" if seed_source_info.get("source_type") == "file" else "autoplay_direct_link_notice"
+                                    notice_key = "autoplay_direct_link_notice"
                                     notice_embed = Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
                                     progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
                                 except discord.Forbidden:
@@ -2736,27 +2695,26 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
 
         url_for_fetching = music_player.current_info.get("webpage_url") or music_player.current_info.get("url")
 
-        if music_player.current_info.get("source_type") != "file":
-            logger.info(f"[{guild_id}] Refreshing stream URL for '{music_player.current_info.get('title')}' to prevent expiration.")
-            try:
-                refreshed_info = await fetch_video_info_with_retry(url_for_fetching)
-                music_player.current_info.update(refreshed_info)
-            except Exception as e:
-                logger.error(f"[{guild_id}] FAILED to refresh stream URL for {url_for_fetching}: {e}", exc_info=True)
-                if music_player.text_channel:
-                    try:
-                        emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
-                        embed = Embed(
-                            title=f"{emoji} {get_messages('error.playback_failed.title', guild_id)}",
-                            description=get_messages(desc_key, guild_id) + "\n*" + get_messages("player.track_will_be_skipped", guild_id) + "*",
-                            color=0xFF9AA2 if is_kawaii else discord.Color.red(),
-                        )
-                        embed.add_field(name=get_messages("error.generic.affected_url_field", guild_id), value=f"`{url_for_fetching}`")
-                        await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
-                    except discord.Forbidden:
-                        pass
-                bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
-                return
+        logger.info(f"[{guild_id}] Refreshing stream URL for '{music_player.current_info.get('title')}' to prevent expiration.")
+        try:
+            refreshed_info = await fetch_video_info_with_retry(url_for_fetching)
+            music_player.current_info.update(refreshed_info)
+        except Exception as e:
+            logger.error(f"[{guild_id}] FAILED to refresh stream URL for {url_for_fetching}: {e}", exc_info=True)
+            if music_player.text_channel:
+                try:
+                    emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
+                    embed = Embed(
+                        title=f"{emoji} {get_messages('error.playback_failed.title', guild_id)}",
+                        description=get_messages(desc_key, guild_id) + "\n*" + get_messages("player.track_will_be_skipped", guild_id) + "*",
+                        color=0xFF9AA2 if is_kawaii else discord.Color.red(),
+                    )
+                    embed.add_field(name=get_messages("error.generic.affected_url_field", guild_id), value=f"`{url_for_fetching}`")
+                    await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
+                except discord.Forbidden:
+                    pass
+            bot.loop.create_task(play_audio(guild_id, song_that_just_ended=music_player.current_info))
+            return
 
         audio_url = music_player.current_info.get("url")
         if not audio_url:
@@ -2767,8 +2725,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
         music_player.is_current_live = music_player.current_info.get("is_live", False) or music_player.current_info.get("live_status") == "is_live"
 
         ffmpeg_options = {"options": "-vn"}
-        if music_player.current_info.get("source_type") != "file":
-            ffmpeg_options["before_options"] = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+        ffmpeg_options["before_options"] = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
         if seek_time > 0:
             ffmpeg_options["before_options"] = f"-ss {seek_time} {ffmpeg_options.get('before_options', '')}".strip()
 
@@ -3044,105 +3001,6 @@ async def play(interaction: discord.Interaction, query: str):
                 await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
 
 
-@bot.tree.command(name="play-files", description="Plays one or more uploaded audio or video files.")
-@app_commands.describe(
-    file1="The first audio/video file to play.",
-    file2="An optional audio/video file.",
-    file3="An optional audio/video file.",
-    file4="An optional audio/video file.",
-    file5="An optional audio/video file.",
-    file6="An optional audio/video file.",
-    file7="An optional audio/video file.",
-    file8="An optional audio/video file.",
-    file9="An optional audio/video file.",
-    file10="An optional audio/video file.",
-)
-async def play_files(
-    interaction: discord.Interaction,
-    file1: discord.Attachment,
-    file2: discord.Attachment = None,
-    file3: discord.Attachment = None,
-    file4: discord.Attachment = None,
-    file5: discord.Attachment = None,
-    file6: discord.Attachment = None,
-    file7: discord.Attachment = None,
-    file8: discord.Attachment = None,
-    file9: discord.Attachment = None,
-    file10: discord.Attachment = None,
-):
-    """
-    Downloads, saves, and queues one or more user-uploaded audio/video files.
-    """
-    if not interaction.guild:
-        await interaction.response.send_message(get_messages("command.error.guild_only", interaction.guild_id), ephemeral=True, silent=SILENT_MESSAGES)
-        return
-
-    guild_id = interaction.guild_id
-    state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
-    state = get_guild_state(guild_id)
-    music_player = state.music_player
-
-    await interaction.response.defer()
-
-    voice_client = await ensure_voice_connection(interaction)
-    if not voice_client:
-        return
-
-    base_cache_dir = "audio_cache"
-    guild_cache_dir = os.path.join(base_cache_dir, str(guild_id))
-    os.makedirs(guild_cache_dir, exist_ok=True)
-
-    attachments = [f for f in [file1, file2, file3, file4, file5, file6, file7, file8, file9, file10] if f is not None]
-
-    added_files = []
-    failed_files = []
-
-    for attachment in attachments:
-        if not attachment.content_type or not (attachment.content_type.startswith("audio/") or attachment.content_type.startswith("video/")):
-            failed_files.append(attachment.filename)
-            continue
-
-        file_path = os.path.join(guild_cache_dir, attachment.filename)
-        try:
-            await attachment.save(file_path)
-            logger.info(f"File saved for guild {guild_id}: {file_path}")
-
-            duration = get_file_duration(file_path)
-
-            queue_item = {"url": file_path, "title": attachment.filename, "webpage_url": None, "thumbnail": None, "is_single": True, "source_type": "file", "duration": duration, "requester": interaction.user}
-
-            await music_player.queue.put(queue_item)
-            added_files.append(attachment.filename)
-
-            if get_guild_state(guild_id)._24_7_mode:
-                music_player.radio_playlist.append(queue_item)
-                logger.info(f"Added '{attachment.filename}' to the active 24/7 radio playlist for guild {guild_id}.")
-
-        except Exception as e:
-            logger.error(f"Failed to process file {attachment.filename}: {e}")
-            failed_files.append(attachment.filename)
-            continue
-
-    if not added_files:
-        await interaction.followup.send(
-            embed=Embed(description=get_messages("player.play_files.error.no_valid_files", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES
-        )
-        return
-
-    description = get_messages("player.play_files.success.description", guild_id, count=len(added_files), file_list="\n".join([f"• {name}" for name in added_files[:10]]))
-    if len(added_files) > 10:
-        description += f"\n... and {len(added_files) - 10} more."
-    if failed_files:
-        description += get_messages("player.play_files.success.footer_failed", guild_id, count=len(failed_files))
-
-    embed = Embed(title=get_messages("player.play_files.success.title", guild_id), description=description, color=0xB5EAD7 if is_kawaii else discord.Color.blue())
-    await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
-
-    if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
-        music_player.current_task = asyncio.create_task(play_audio(guild_id))
-
-
 # /queue command
 @bot.tree.command(name="queue", description="Show the current song queue and status with pages.")
 async def queue(interaction: discord.Interaction):
@@ -3206,9 +3064,9 @@ async def clear_queue(interaction: discord.Interaction):
     await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
 
 
-@bot.tree.command(name="playnext", description="Add a song or a local file to play next")
-@app_commands.describe(query="Link or title of the video/song to play next.", file="The local audio/video file to play next.")
-async def play_next(interaction: discord.Interaction, query: str = None, file: discord.Attachment = None):
+@bot.tree.command(name="playnext", description="Add a song to play next")
+@app_commands.describe(query="Link or title of the video/song to play next.")
+async def play_next(interaction: discord.Interaction, query: str = None):
     if not interaction.guild:
         await interaction.response.send_message(get_messages("command.error.guild_only", interaction.guild_id), ephemeral=True, silent=SILENT_MESSAGES)
         return
@@ -3218,11 +3076,6 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
     is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
-
-    if (query and file) or (not query and not file):
-        embed = Embed(description=get_messages("player.play_next.error.invalid_args", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-        await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-        return
 
     await interaction.response.defer()
 
@@ -3305,28 +3158,6 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
             logger.error(f"Error processing /playnext for query '{query}': {e}", exc_info=True)
             return
 
-    # This part for handling local files remains the same
-    elif file:
-        if not file.content_type or not (file.content_type.startswith("audio/") or file.content_type.startswith("video/")):
-            embed = Embed(description=get_messages("player.play_files.error.invalid_type", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-            await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-            return
-
-        base_cache_dir = "audio_cache"
-        guild_cache_dir = os.path.join(base_cache_dir, str(guild_id))
-        os.makedirs(guild_cache_dir, exist_ok=True)
-        file_path = os.path.join(guild_cache_dir, file.filename)
-
-        try:
-            await file.save(file_path)
-            duration = get_file_duration(file_path)
-            queue_item = {"url": file_path, "title": file.filename, "webpage_url": None, "thumbnail": None, "is_single": True, "source_type": "file", "duration": duration, "requester": interaction.user}
-        except Exception as e:
-            logger.error(f"Failed to process uploaded file for /playnext: {e}")
-            embed = Embed(description=get_messages("player.play_files.error.save_failed", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
-            await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
-            return
-
     if queue_item:
         new_queue = asyncio.Queue()
         await new_queue.put(queue_item)
@@ -3335,11 +3166,7 @@ async def play_next(interaction: discord.Interaction, query: str = None, file: d
             await new_queue.put(item)
         music_player.queue = new_queue
 
-        description_text = ""
-        if queue_item.get("source_type") == "file":
-            description_text = get_messages("queue.now_playing_format.file", guild_id, title=queue_item["title"])
-        else:
-            description_text = f"[{queue_item['title']}]({queue_item['webpage_url']})"
+        description_text = f"[{queue_item['title']}]({queue_item['webpage_url']})"
 
         embed = Embed(title=get_messages("play_next_added", guild_id), description=description_text, color=0xC7CEEA if is_kawaii else discord.Color.blue())
         if queue_item.get("thumbnail"):
@@ -3370,12 +3197,8 @@ async def now_playing(interaction: discord.Interaction):
         title = music_player.current_info.get("title", "Unknown Title")
         thumbnail = music_player.current_info.get("thumbnail")
 
-        description_text = ""
-        if music_player.current_info.get("source_type") == "file":
-            description_text = get_messages("queue.now_playing_format.file", guild_id, title=title)
-        else:
-            url = music_player.current_info.get("webpage_url", music_player.current_url)
-            description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
+        url = music_player.current_info.get("webpage_url", music_player.current_url)
+        description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
 
         embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=0xC7CEEA if is_kawaii else discord.Color.green())
         if thumbnail:
@@ -3571,12 +3394,8 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
         hydrated_next_info = await music_player.hydrate_track_info(next_song_info)
         next_title = hydrated_next_info.get("title", "Unknown Title")
 
-        description_text = ""
-        if hydrated_next_info.get("source_type") == "file":
-            description_text = get_messages("queue.now_playing_format.file", guild_id, title=next_title)
-        else:
-            next_url = hydrated_next_info.get("webpage_url", "#")
-            description_text = get_messages("now_playing_description", guild_id, title=next_title, url=next_url)
+        next_url = hydrated_next_info.get("webpage_url", "#")
+        description_text = get_messages("now_playing_description", guild_id, title=next_title, url=next_url)
 
         embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=0xE2F0CB if is_kawaii else discord.Color.blue())
         embed.set_author(name=get_messages("skip_confirmation", guild_id))
