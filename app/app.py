@@ -28,11 +28,11 @@ APP_NAME = "Playify"
 # Use semantic versioning (e.g., 1.1.1, 1.2.0, 2.0.0).
 # The GitHub release tag MUST match this number, prefixed with 'v' (e.g., v1.2.1).
 # ==============================================================================
-CURRENT_VERSION = "1.3.0"
+CURRENT_VERSION = "1.3.1"
 UPDATE_REPO_URL = "https://api.github.com/repos/alan7383/playify/releases/latest"
 
 # Centralized path for all application data (config, browsers, etc.)
-APP_DATA_DIR = os.path.join(os.getenv("LOCALAPPDATA"), APP_NAME)
+APP_DATA_DIR = os.path.relpath("Playify_Data")
 os.makedirs(APP_DATA_DIR, exist_ok=True)
 
 CONFIG_FILE = os.path.join(APP_DATA_DIR, "playify_config.env")
@@ -42,7 +42,7 @@ STYLE = {
     "theme_bg": "#000000",
     "text": "#EAEAEA",
     "text_secondary": "#B0B0B0",
-    "accent": "#9B59B6",  # A modern, elegant purple
+    "accent": "#9B59B6",
     "accent_hover": "#8E44AD",
     "success": "#2ECC71",
     "success_hover": "#25a25a",
@@ -1473,8 +1473,8 @@ if __name__ == "__main__":
         server_socket.bind((SINGLETON_HOST, SINGLETON_PORT))
         print("First instance of Playify started. Setting up the signaling server.")
 
-    except OSError:
-        print("Playify is already running. Sending signal to show window.")
+    except OSError as e:
+        print(f"Error: {e}")
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                 client_socket.connect((SINGLETON_HOST, SINGLETON_PORT))

@@ -1323,8 +1323,6 @@ class SearchSelect(discord.ui.Select):
             else:
                 await interaction.followup.send(get_messages("search.added_to_queue_ephemeral", guild_id, title=video_info.get("title", "Unknown Title")), ephemeral=True, silent=SILENT_MESSAGES)
 
-            await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
-
             if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
                 music_player.suppress_next_now_playing = True
                 music_player.current_task = asyncio.create_task(play_audio(guild_id))

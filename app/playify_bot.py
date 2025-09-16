@@ -38,10 +38,14 @@ from spotify_scraper import SpotifyClient
 from spotify_scraper.core.exceptions import SpotifyScraperError
 from spotipy.oauth2 import SpotifyClientCredentials
 
+APP_DATA_DIR = os.path.relpath("Playify_Data")
+DB_PATH = os.path.join(APP_DATA_DIR, "playify_state.db")
+os.makedirs(APP_DATA_DIR, exist_ok=True)
+
 
 def run_nacl_diagnostics():
     # On utilise le même dossier AppData pour trouver le log facilement
-    app_data_dir = os.path.join(os.getenv("LOCALAPPDATA"), "Playify")
+    app_data_dir = APP_DATA_DIR
     log_file_path = os.path.join(app_data_dir, "playify_bot_nacl_diag.txt")
 
     with open(log_file_path, "w", encoding="utf-8") as f:
@@ -70,10 +74,6 @@ def run_nacl_diagnostics():
 
 
 # --- FIN DU BLOC DE DIAGNOSTIC ---
-
-APP_DATA_DIR = os.path.join(os.getenv("LOCALAPPDATA"), "Playify")
-DB_PATH = os.path.join(APP_DATA_DIR, "playify_state.db")
-os.makedirs(APP_DATA_DIR, exist_ok=True)
 
 
 def init_db():
@@ -441,7 +441,7 @@ async def process_spotify_url(url, guild_id):
     from spotipy.oauth2 import SpotifyClientCredentials
 
     # Locate and load the configuration file from the child process
-    config_file_path = os.path.join(os.getenv("LOCALAPPDATA"), "Playify", "playify_config.env")
+    config_file_path = os.path.join(APP_DATA_DIR, "playify_config.env")
     load_dotenv(dotenv_path=config_file_path)
 
     # Initialize the Spotipy client (sp) inside the process
@@ -892,7 +892,7 @@ def run_bot(status_queue, log_queue, command_queue):
 
     # 1. Construire le chemin ABSOLU vers le fichier de configuration dans AppData
     # C'est la ligne la plus importante.
-    config_file_path = os.path.join(os.getenv("LOCALAPPDATA"), "Playify", "playify_config.env")
+    config_file_path = os.path.join(APP_DATA_DIR, "playify_config.env")
 
     # 2. Vérifier si le fichier existe pour un message d'erreur plus clair (bonne pratique)
     if not os.path.exists(config_file_path):
@@ -1981,8 +1981,6 @@ def run_bot(status_queue, log_queue, command_queue):
                     await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
                 else:
                     await interaction.followup.send(f"✅ Added to queue: {video_info.get('title', 'Unknown Title')}", ephemeral=True, silent=SILENT_MESSAGES)
-
-                await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
 
                 if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
                     music_player.suppress_next_now_playing = True

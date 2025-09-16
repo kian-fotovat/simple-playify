@@ -8,3 +8,4 @@ __pycache__/
 .venv
 playify_state.db
 playify_state.db-journal
+Playify_Data
