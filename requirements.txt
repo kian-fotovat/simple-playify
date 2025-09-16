@@ -1,18 +1,11 @@
-# Core Discord library and voice dependency
-git+https://github.com/Rapptz/discord.py
-PyNaCl
-
-# Audio/Video downloading
-yt_dlp
-
-# Music platform APIs and scrapers
-spotipy
-spotifyscraper[all]
-requests
-syncedlyrics
-lyricsgenius
-python-dotenv  # <-- NEW
-
-# Utilities
 cachetools
+discord.py[voice]
+lyricsgenius
+PyNaCl
 psutil
+python-dotenv
+requests
+spotifyscraper[all]
+spotipy
+syncedlyrics
+yt_dlp

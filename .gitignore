@@ -6,3 +6,5 @@ __pycache__/
 *.pyd
 .DS_Store
 .venv
+playify_state.db
+playify_state.db-journal
