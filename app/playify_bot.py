@@ -2255,7 +2255,7 @@ def run_bot(status_queue, log_queue, command_queue):
     async def show_youtube_blocked_message(interaction: discord.Interaction):
         """Creates and sends the standardized 'YouTube is blocked' embed."""
         guild_id = interaction.guild.id
-        embed = Embed(title=get_messages("youtube_blocked_title", guild_id), description=get_messages("youtube_blocked_description", guild_id), color=0xFF9AA2 if get_mode(guild_id) else discord.Color.orange())
+        embed = Embed(title=get_messages("youtube_blocked_title", guild_id), description=get_messages("youtube_blocked_description", guild_id), color=discord.Color.orange())
         embed.add_field(name=get_messages("youtube_blocked_repo_field", guild_id), value=get_messages("youtube_blocked_repo_value", guild_id))
         # Use followup.send because the interaction will always be deferred by the command
         await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
@@ -4083,7 +4083,7 @@ def run_bot(status_queue, log_queue, command_queue):
         view = SeekView(interaction)
 
         # Create the initial embed (will be updated by the view)
-        initial_embed = Embed(title=get_messages("seek_interface_title", guild_id), description="Loading player...", color=0xB5EAD7 if get_mode(guild_id) else discord.Color.blue())
+        initial_embed = Embed(title=get_messages("seek_interface_title", guild_id), description="Loading player...", color=discord.Color.blue())
 
         await interaction.response.send_message(embed=initial_embed, view=view, silent=SILENT_MESSAGES)
 
@@ -4114,7 +4114,7 @@ def run_bot(status_queue, log_queue, command_queue):
         if vc and vc.is_playing() and isinstance(vc.source, discord.PCMVolumeTransformer):
             vc.source.volume = new_volume
 
-        embed = Embed(description=get_messages("volume_success", guild_id).format(level=level), color=0xB5EAD7 if get_mode(guild_id) else discord.Color.blue())
+        embed = Embed(description=get_messages("volume_success", guild_id).format(level=level), color=discord.Color.blue())
 
         await interaction.response.send_message(embed=embed, silent=SILENT_MESSAGES)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
