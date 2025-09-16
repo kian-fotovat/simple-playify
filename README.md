@@ -9,7 +9,6 @@
 <p align="center">
   <img src="https://img.shields.io/github/license/alan7383/playify.svg" alt="GitHub license" />
   <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python 3.9+" />
-  <a href="https://discord.gg/JeH8g6g3cG"><img src="https://img.shields.io/discord/1395755097350213632?label=Discord%20Server&logo=discord" alt="Discord Server" /></a>
 </p>
 
 ---
@@ -32,20 +31,19 @@
 
 
 <a id="easy-setup"></a>
-## (つ≧▽≦)つ Easy Windows Setup (just once, promise)
+## Easy Windows Setup (just once, promise)
 
-Too lazy to mess with Docker, Python, or configs? (｡•́︿•̀｡)  
+Too lazy to mess with Python or configs? 
 No worries — I made a Windows app that sets up everything for you in one go!  
-You'll just need to enter your **Discord token** + **Spotify / Genius API keys** once, and you're done forever!
+You'll just need to enter your **Discord token** + **Spotify API keys** once, and you're done forever!
 
 **Get it here:**  
 📄 [Instructions & info](https://alan7383.github.io/playify/self-host.html)  
-⬇ [Direct download](https://github.com/alan7383/playify/releases/download/1.3.1/Playify_Setup_v1.3.1.exe)
 
 ---
 
 <a id="what-is-playify"></a>
-## ＼(＾O＾)／ What is Playify?
+## What is Playify?
 
 Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers, no limits, just music!
 
@@ -57,7 +55,7 @@ Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers,
 Type `/play <url or query>` and let the music flow~
 
 <a id="spotify-support"></a>
-## (＾◡＾) Spotify Support
+## Spotify Support
 
 * ✅ Individual tracks
 * ✅ Personal & public playlists
@@ -66,9 +64,9 @@ Type `/play <url or query>` and let the music flow~
 > *Note:* Dynamic Spotify radios/mixes may vary from your app—they update constantly.
 
 <a id="key-features"></a>
-## (≧◡≦) Key Features
+## Key Features
 
-* Play from **10+ sources**: YouTube • SoundCloud • Twitch • Spotify • Deezer • Bandcamp • **Direct Audio Links**
+* Play from **5+ sources**: YouTube • SoundCloud • Twitch • Spotify • Deezer • Bandcamp • **Direct Audio Links**
 * Slash commands: `/play`, `/search`, `/pause`, `/skip`, `/queue`, `/remove`, + more!
 * **Direct Audio Links**: Stream music directly from any audio URL (MP3, FLAC, WAV, etc.)
 * **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
@@ -76,39 +74,18 @@ Type `/play <url or query>` and let the music flow~
 * Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
 <a id="installation"></a>
-## (＾∀＾) Installation
+## Installation
 
-You can run Playify in two ways. The Docker method is recommended for most users as it's simpler and manages all dependencies for you.
+You can run Playify in two ways. The executable is recommended for most users.
 
-### (🐳) Method 1: Docker Setup (Recommended)
+### Method 1: Prebuilt Executable (Recommended)
 
 This is the easiest way to get the bot running.
 
-1.  **Clone the repository and enter it:**
-    ```bash
-    git clone https://github.com/alan7383/playify.git
-    cd playify
-    ```
-2.  **Create your secret file:**
-    Copy the example file to create your own configuration.
-    ```bash
-    cp .env.example .env
-    ```
-    Now, **edit the `.env` file** and fill in your tokens.
-    ```ini
-    DISCORD_TOKEN=your_discord_bot_token
-    SPOTIFY_CLIENT_ID=your_spotify_client_id
-    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-    GENIUS_TOKEN=your_genius_api_token
-    ```
-3.  **Fire it up!**
-    This command will build the container and run the bot in the background.
-    ```bash
-    docker compose up -d --build
-    ```
-    To view the bot's logs, use `docker compose logs -f`.
+1. **Download the executable from the releases page.**
+2. **Run the executable and follow the setup instructions.**
 
-### (🛠️) Method 2: Manual Setup
+### Method 2: Manual Setup
 
 **Requirements:**
 *   Python 3.9+
@@ -129,7 +106,7 @@ This is the easiest way to get the bot running.
     ```bash
     cp .env.example .env
     ```
-    **Edit the `.env` file** with your tokens as shown in the Docker method.
+    **Edit the `.env` file** with your tokens.
 4.  Run the bot:
     ```bash
     python playify.py
@@ -144,18 +121,8 @@ This is the easiest way to get the bot running.
 ---
 
 
-<a id="public-bot"></a>
-## (＾▽＾) Use the Public Bot (No setup needed!)
-
-If you don't want to self-host Playify, you can invite the **public Playify bot** hosted by me directly to your server!  
-Check it out and add it easily here: [https://alan7383.github.io/playify/](https://alan7383.github.io/playify/)
-
-This way, you get all the great Playify features without any installation or configuration hassle!
-
----
-
 <a id="command-reference"></a>
-## (⊙‿⊙) Command Reference
+## Command Reference
 
 | Command | Description |
 | :--- | :--- |
@@ -179,30 +146,29 @@ This way, you get all the great Playify features without any installation or con
 | `/status` | Show the bot's detailed performance and resource usage. |
 
 <a id="troubleshooting"></a>
-## (｀・ω・´) Troubleshooting
+## Troubleshooting
 
-*   **FFmpeg not found**: Ensure it's installed & in your system's PATH. (Docker setup handles this for you!)
+*   **FFmpeg not found**: Ensure it's installed & in your system's PATH.
 *   **Spotify errors**: Verify your API credentials in the `.env` file.
 *   **Bot offline/unresponsive**: Check your `DISCORD_TOKEN` and bot permissions in the Developer Portal.
 *   **Direct link issues**: Ensure the URL points directly to an audio file and is publicly accessible.
 
 <a id="privacy--data"></a>
-## (ﾉ◕ヮ◕)ﾉ Privacy & Data
+## Privacy & Data
 
 *   **Self-hosted**: All logs are local to your machine. No telemetry is sent.
-*   **Public bot**: Minimal error logs are stored for debugging purposes only. No user data or analytics are collected.
 
 <a id="contributing--support"></a>
-## (ง＾◡＾)ง Contributing & Support
+## Contributing & Support
 
 *   Fork the repo, open an issue or pull request—all contributions are welcome!
 *   Star the repository if you enjoy using Playify!
 
 <a id="license"></a>
-## (＾ω＾) License
+## License
 
-MIT License — do what you want with the code, just be kind!
+MIT License — do what you want with the code, <del>just be kind!</del> feel free to roast my contributions/changes but don't hate on the OG developer(s) please!
 
 <p align="center">
-  Built with ☕ and love by <a href="https://github.com/alan7383">alan7383</a> (｡♥‿♥｡)
+  Built with ☕ and love by <a href="https://github.com/alan7383">alan7383</a>
 </p>
