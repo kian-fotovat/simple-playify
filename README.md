@@ -36,7 +36,7 @@
 
 Too lazy to mess with Docker, Python, or configs? (｡•́︿•̀｡)  
 No worries — I made a Windows app that sets up everything for you in one go!  
-You’ll just need to enter your **Discord token** + **Spotify / Genius API keys** once, and you’re done forever!
+You'll just need to enter your **Discord token** + **Spotify / Genius API keys** once, and you're done forever!
 
 **Get it here:**  
 📄 [Instructions & info](https://alan7383.github.io/playify/self-host.html)  
@@ -47,7 +47,7 @@ You’ll just need to enter your **Discord token** + **Spotify / Genius API keys
 <a id="what-is-playify"></a>
 ## ＼(＾O＾)／ What is Playify?
 
-Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers, no limits, just music and kawaii vibes!
+Playify is the ultimate minimalist Discord music bot—no ads, no premium tiers, no limits, just music!
 
 * **No web UI**: Only simple slash commands.
 * **100% free**: All features unlocked for everyone.
@@ -73,7 +73,6 @@ Type `/play <url or query>` and let the music flow~
 * **Direct Audio Links**: Stream music directly from any audio URL (MP3, FLAC, WAV, etc.)
 * **Autoplay** of similar tracks (YouTube Mix, SoundCloud Stations)
 * **Loop** & **shuffle** controls
-* **Kawaii Mode** toggles cute kaomoji responses (`/kaomoji`)
 * Powered by `yt-dlp`, `FFmpeg`, `asyncio`, and a dash of chaos
 
 <a id="installation"></a>
@@ -148,7 +147,7 @@ This is the easiest way to get the bot running.
 <a id="public-bot"></a>
 ## (＾▽＾) Use the Public Bot (No setup needed!)
 
-If you don’t want to self-host Playify, you can invite the **public Playify bot** hosted by me directly to your server!  
+If you don't want to self-host Playify, you can invite the **public Playify bot** hosted by me directly to your server!  
 Check it out and add it easily here: [https://alan7383.github.io/playify/](https://alan7383.github.io/playify/)
 
 This way, you get all the great Playify features without any installation or configuration hassle!
@@ -178,7 +177,6 @@ This way, you get all the great Playify features without any installation or con
 | `/24_7 <mode>` | Keep the bot in the channel (`normal`, `auto`, or `off`). |
 | `/reconnect` | Refresh the voice connection to fix lag without losing your place. |
 | `/status` | Show the bot's detailed performance and resource usage. |
-| `/kaomoji` | Toggle cute kaomoji responses. `(ADMIN)` |
 
 <a id="troubleshooting"></a>
 ## (｀・ω・´) Troubleshooting

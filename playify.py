@@ -51,7 +51,6 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS guild_settings (
         guild_id INTEGER PRIMARY KEY,
-        kawaii_mode BOOLEAN NOT NULL DEFAULT 0,
         controller_channel_id INTEGER,
         controller_message_id INTEGER,
         is_24_7 BOOLEAN NOT NULL DEFAULT 0,
@@ -242,12 +241,6 @@ def get_player(guild_id: int) -> MusicPlayer:
     return get_guild_state(guild_id).music_player
 
 
-def get_mode(guild_id: int) -> bool:
-    """Helper to quickly check if kawaii_mode is active for a guild."""
-    # This now checks the locale set in the guild's state.
-    return get_guild_state(guild_id).locale == Locale.EN_X_KAWAII
-
-
 # --- Core Music Player Class ---
 
 
@@ -263,7 +256,7 @@ async def save_all_states():
 
     for guild_id, state in guild_states.items():
         player = state.music_player
-        settings = (guild_id, state.locale == Locale.EN_X_KAWAII, state.controller_channel_id, state.controller_message_id, state._24_7_mode, player.autoplay_enabled, player.volume)
+        settings = (guild_id, state.locale == Locale.EN_US, state.controller_channel_id, state.controller_message_id, state._24_7_mode, player.autoplay_enabled, player.volume)
         cursor.execute("INSERT INTO guild_settings VALUES (?, ?, ?, ?, ?, ?, ?)", settings)
 
         for channel_id in state.allowed_channels:
@@ -308,7 +301,7 @@ async def load_states_on_startup():
         state = get_guild_state(guild_id)
         player = state.music_player
 
-        state.locale = Locale.EN_X_KAWAII if row["kawaii_mode"] else Locale.EN_US
+        state.locale = Locale.EN_US
         state.controller_channel_id = row["controller_channel_id"]
         state.controller_message_id = row["controller_message_id"]
         state._24_7_mode = row["is_24_7"]
@@ -625,7 +618,6 @@ class MusicControllerView(View):
         vc = music_player.voice_client
         is_playing = vc and (vc.is_playing() or vc.is_paused())
         is_paused = vc and vc.is_paused()
-        is_kawaii = get_mode(self.guild_id)
 
         def get_label(key):
             return get_messages(key, self.guild_id)
@@ -649,13 +641,10 @@ class MusicControllerView(View):
                 label_key = f"controller.label.{action}"
                 child.label = get_label(label_key)
 
-            if is_kawaii:
-                child.emoji = None
+            if custom_id == "controller_pause":
+                child.emoji = self.default_emojis["controller_resume"] if is_paused else self.default_emojis["controller_pause"]
             else:
-                if custom_id == "controller_pause":
-                    child.emoji = self.default_emojis["controller_resume"] if is_paused else self.default_emojis["controller_pause"]
-                else:
-                    child.emoji = self.default_emojis.get(custom_id)
+                child.emoji = self.default_emojis.get(custom_id)
 
         pause_button = discord.utils.get(self.children, custom_id="controller_pause")
         if pause_button:
@@ -889,7 +878,6 @@ async def create_status_embed(guild_id: int) -> Embed:
     state = get_guild_state(guild_id)
     music_player = state.music_player
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
 
     status_lines = []
     if music_player.loop_current:
@@ -902,14 +890,13 @@ async def create_status_embed(guild_id: int) -> Embed:
 
     status_description = "\n".join(status_lines) if status_lines else get_messages("queue_status_none", guild_id)
 
-    embed = Embed(title=get_messages("queue_status_title", guild_id), description=status_description, color=0xB5EAD7 if is_kawaii else discord.Color.blue())
+    embed = Embed(title=get_messages("queue_status_title", guild_id), description=status_description, color=discord.Color.blue())
     return embed
 
 
 async def create_controller_embed(bot, guild_id):
     state = get_guild_state(guild_id)
     music_player = state.music_player
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     vc = music_player.voice_client
     is_connected = vc and vc.is_connected()
     is_playing = is_connected and music_player.current_info
@@ -1000,7 +987,7 @@ async def create_controller_embed(bot, guild_id):
     queue_list_text.reverse()
 
     description = "\n".join(queue_list_text)
-    embed = Embed(title=get_messages("controller.title", guild_id), description=description, color=0xB5EAD7 if is_kawaii else discord.Color.blue())
+    embed = Embed(title=get_messages("controller.title", guild_id), description=description, color=discord.Color.blue())
     embed.add_field(name=get_messages("controller.next_up.title", guild_id), value=next_song_text, inline=False)
 
     now_playing_title_display = f"**[{title}]({info.get('webpage_url', info.get('url', '#'))})**"
@@ -1032,7 +1019,7 @@ async def create_controller_embed(bot, guild_id):
         original_platform = music_player.current_info.get("original_platform")
 
         if original_platform:
-            platform_mode = "kaomoji" if is_kawaii else "display"
+            platform_mode = "display"
             formatted_platform_name = original_platform.lower().replace(" ", "_")
             platform_key = f"platform.{platform_mode}.{formatted_platform_name}"
             platform_display_name = get_messages(platform_key, guild_id)
@@ -1167,7 +1154,6 @@ class SeekView(View):
         self.interaction = interaction
         self.guild_id = interaction.guild.id
         self.music_player = get_player(self.guild_id)
-        self.is_kawaii = get_mode(self.guild_id)
         self.message = None
         self.update_task = None
 
@@ -1225,7 +1211,7 @@ class SeekView(View):
         progress_bar = create_progress_bar(current_pos, total_duration, self.guild_id)
         time_display = f"**{format_duration(current_pos)} / {format_duration(total_duration)}**"
 
-        embed = Embed(title=get_messages("seek_interface_title", self.guild_id), description=f"**{title}**\n\n{progress_bar} {time_display}", color=0xB5EAD7 if self.is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("seek_interface_title", self.guild_id), description=f"**{title}**\n\n{progress_bar} {time_display}", color=discord.Color.blue())
         embed.set_footer(text=get_messages("seek_interface_footer", self.guild_id))
 
         # If it's a response to a button interaction
@@ -1277,7 +1263,6 @@ class SearchSelect(discord.ui.Select):
 
     def __init__(self, search_results: list, guild_id: int):
         self.state = get_guild_state(guild_id)
-        is_kawaii = self.state.locale == Locale.EN_X_KAWAII
 
         options = []
         for i, video in enumerate(search_results):
@@ -1296,7 +1281,6 @@ class SearchSelect(discord.ui.Select):
         """This is called when the user selects a song."""
         guild_id = interaction.guild_id
         state = get_guild_state(guild_id)
-        is_kawaii = state.locale == Locale.EN_X_KAWAII
         state = get_guild_state(guild_id)
         music_player = state.music_player
 
@@ -1332,11 +1316,9 @@ class SearchSelect(discord.ui.Select):
             video_url = video_info.get("webpage_url", video_info.get("url"))
 
             if not get_guild_state(guild_id).controller_channel_id:
-                embed = Embed(title=get_messages("song_added", guild_id), description=f"[{video_info.get('title', 'Unknown Title')}]({video_url})", color=0xB5EAD7 if is_kawaii else discord.Color.blue())
+                embed = Embed(title=get_messages("song_added", guild_id), description=f"[{video_info.get('title', 'Unknown Title')}]({video_url})", color=discord.Color.blue())
                 if video_info.get("thumbnail"):
                     embed.set_thumbnail(url=video_info["thumbnail"])
-                if is_kawaii:
-                    embed.set_footer(text="☆⌒(≧▽° )")
                 await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
             else:
                 await interaction.followup.send(get_messages("search.added_to_queue_ephemeral", guild_id, title=video_info.get("title", "Unknown Title")), ephemeral=True, silent=SILENT_MESSAGES)
@@ -1349,7 +1331,7 @@ class SearchSelect(discord.ui.Select):
 
         except Exception as e:
             logger.error(f"Error adding track from /search selection: {e}")
-            error_embed = Embed(description=get_messages("player.error.add_failed", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            error_embed = Embed(description=get_messages("player.error.add_failed", guild_id), color=discord.Color.red())
             await interaction.followup.send(embed=error_embed, silent=SILENT_MESSAGES, ephemeral=True)
 
 
@@ -1372,7 +1354,6 @@ class QueueView(View):
         self.interaction = interaction
         self.guild_id = interaction.guild_id
         self.music_player = get_player(self.guild_id)
-        self.is_kawaii = get_mode(self.guild_id)
 
         self.tracks = tracks
         self.items_per_page = items_per_page
@@ -1421,7 +1402,7 @@ class QueueView(View):
         else:
             description_text = get_messages("queue_description", self.guild_id, count=len(self.tracks))
 
-        embed = Embed(title=get_messages("queue_title", self.guild_id), description=description_text, color=0xB5EAD7 if self.is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("queue_title", self.guild_id), description=description_text, color=discord.Color.blue())
 
         embed.add_field(name=get_messages("queue_status_title", self.guild_id), value=status_description, inline=False)
 
@@ -1536,7 +1517,6 @@ class RemoveSelect(discord.ui.Select):
         """This is the corrected callback that properly handles the interaction response."""
         guild_id = interaction.guild_id
         state = get_guild_state(guild_id)
-        is_kawaii = state.locale == Locale.EN_X_KAWAII
         state = get_guild_state(guild_id)
         music_player = state.music_player
 
@@ -1561,9 +1541,7 @@ class RemoveSelect(discord.ui.Select):
         self.view.clear_items()
         await interaction.response.edit_message(content=get_messages("remove_processed", guild_id), embed=None, view=self.view)
 
-        embed = Embed(
-            title=get_messages("remove_success_title", guild_id, count=len(removed_titles)), description="\n".join([f"• `{title}`" for title in removed_titles]), color=0xB5EAD7 if is_kawaii else discord.Color.green()
-        )
+        embed = Embed(title=get_messages("remove_success_title", guild_id, count=len(removed_titles)), description="\n".join([f"• `{title}`" for title in removed_titles]), color=discord.Color.green())
         await interaction.channel.send(embed=embed, silent=SILENT_MESSAGES)
 
 
@@ -1633,7 +1611,7 @@ async def show_youtube_blocked_message(interaction: discord.Interaction):
     embed = Embed(
         title=get_messages("youtube_blocked_title", guild_id),
         description=get_messages("youtube_blocked_description", guild_id),
-        color=0xFF9AA2 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.orange(),
+        color=discord.Color.orange(),
     )
     embed.add_field(name=get_messages("youtube_blocked_repo_field", guild_id), value=get_messages("youtube_blocked_repo_value", guild_id))
     # Use followup.send because the interaction will always be deferred by the command
@@ -1882,11 +1860,10 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
     state = get_guild_state(guild_id)
     music_player = state.music_player
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
 
     member = interaction.guild.get_member(interaction.user.id)
     if not member or not member.voice or not member.voice.channel:
-        embed = Embed(description=get_messages("no_voice_channel", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("no_voice_channel", guild_id), color=discord.Color.red())
         if interaction.response.is_done():
             await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         else:
@@ -1969,7 +1946,7 @@ async def ensure_voice_connection(interaction: discord.Interaction) -> discord.V
                 raise e
 
         except Exception as e:
-            embed = Embed(description=get_messages("connection_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            embed = Embed(description=get_messages("connection_error", guild_id), color=discord.Color.red())
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             else:
@@ -2155,7 +2132,6 @@ async def process_spotify_url(url, interaction):
     """
     guild_id = interaction.guild.id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     clean_url = url.split("?")[0]
 
     # --- METHOD 1: OFFICIAL API (SPOTIPY) ---
@@ -2236,13 +2212,13 @@ async def process_spotify_url(url, interaction):
         except (SpotifyScraperError, spotipy.exceptions.SpotifyException) as e:
             logger.error(f"Both methods (API and Scraper) failed. Final error: {e}", exc_info=True)
 
-            embed = Embed(title=get_messages("spotify_error_title", guild_id), description=get_messages("spotify_error_description_detailed", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            embed = Embed(title=get_messages("spotify_error_title", guild_id), description=get_messages("spotify_error_description_detailed", guild_id), color=discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
             return None
         # --- END OF CORRECTION ---
         except Exception as e:  # General fallback for any other unexpected errors
             logger.error(f"An unexpected error occurred in the Spotify fallback: {e}", exc_info=True)
-            embed = Embed(description=get_messages("spotify_error", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.red())
+            embed = Embed(description=get_messages("spotify_error", guild_id), color=discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
             return None
 
@@ -2359,17 +2335,17 @@ async def process_deezer_url(url, interaction):
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error fetching Deezer URL {url}: {e}")
-        embed = Embed(description=get_messages("api.deezer.network_error", guild_id), color=0xFFB6C1 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.red())
+        embed = Embed(description=get_messages("api.deezer.network_error", guild_id), color=discord.Color.red())
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
         return None
     except ValueError as e:
         logger.error(f"Invalid Deezer data for URL {url}: {e}")
-        embed = Embed(description=get_messages("api.deezer.value_error", guild_id, error_message=str(e)), color=0xFFB6C1 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.red())
+        embed = Embed(description=get_messages("api.deezer.value_error", guild_id, error_message=str(e)), color=discord.Color.red())
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
         return None
     except Exception as e:
         logger.error(f"Unexpected error processing Deezer URL {url}: {e}")
-        embed = Embed(description=get_messages("deezer_error", guild_id), color=0xFFB6C1 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.red())
+        embed = Embed(description=get_messages("deezer_error", guild_id), color=discord.Color.red())
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
         return None
 
@@ -2460,8 +2436,7 @@ async def handle_playback_error(guild_id: int, error: Exception):
     logger.error(f"Unhandled playback error in guild {guild_id}:\n{tb_str}")
 
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
-    embed = Embed(title=get_messages("critical_error_title", guild_id), description=get_messages("critical_error_description", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+    embed = Embed(title=get_messages("critical_error_title", guild_id), description=get_messages("critical_error_description", guild_id), color=discord.Color.red())
     embed.add_field(name=get_messages("critical_error_report_field", guild_id), value=get_messages("critical_error_report_value", guild_id), inline=False)
     error_details = get_messages("error.critical.details_format", guild_id, url=music_player.current_url, error_summary=str(error)[:500])
     embed.add_field(name=get_messages("critical_error_details_field", guild_id), value=f"```\n{error_details}\n```", inline=False)
@@ -2495,7 +2470,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
     state = get_guild_state(guild_id)
     music_player = state.music_player
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
 
     if music_player.voice_client and music_player.voice_client.is_playing() and not is_a_loop and not seek_time > 0:
         return
@@ -2568,7 +2542,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                             if music_player.text_channel:
                                 try:
                                     notice_key = "autoplay_direct_link_notice"
-                                    notice_embed = Embed(description=get_messages(notice_key, guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
+                                    notice_embed = Embed(description=get_messages(notice_key, guild_id), color=discord.Color.blue())
                                     progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
                                 except discord.Forbidden:
                                     pass
@@ -2589,7 +2563,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                                 initial_embed = Embed(
                                     title=get_messages("autoplay_loading_title", guild_id),
                                     description=get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0, guild_id), processed=0, total="?"),
-                                    color=0xC7CEEA if is_kawaii else discord.Color.blue(),
+                                    color=discord.Color.blue(),
                                 )
                                 progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
 
@@ -2638,7 +2612,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                                 final_embed = progress_message.embeds[0]
                                 final_embed.title = None
                                 final_embed.description = get_messages("autoplay_finished_description", guild_id).format(count=added_count)
-                                final_embed.color = 0xB5EAD7 if is_kawaii else discord.Color.green()
+                                final_embed.color = discord.Color.green()
                                 await progress_message.edit(embed=final_embed)
                             elif progress_message and added_count == 0:
                                 await progress_message.delete()
@@ -2666,7 +2640,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                             error_embed = Embed(
                                 title=get_messages("lazy_resolve.error.title", guild_id),
                                 description=get_messages("lazy_resolve.error.description", guild_id, title=failed_title),
-                                color=0xFF9AA2 if is_kawaii else discord.Color.red(),
+                                color=discord.Color.red(),
                             )
                             await music_player.text_channel.send(embed=error_embed, silent=SILENT_MESSAGES)
                         except discord.Forbidden:
@@ -2707,7 +2681,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                     embed = Embed(
                         title=f"{emoji} {get_messages('error.playback_failed.title', guild_id)}",
                         description=get_messages(desc_key, guild_id) + "\n*" + get_messages("player.track_will_be_skipped", guild_id) + "*",
-                        color=0xFF9AA2 if is_kawaii else discord.Color.red(),
+                        color=discord.Color.red(),
                     )
                     embed.add_field(name=get_messages("error.generic.affected_url_field", guild_id), value=f"`{url_for_fetching}`")
                     await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
@@ -2775,26 +2749,6 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
 # ==============================================================================
 
 
-# /kaomoji command
-@bot.tree.command(name="kaomoji", description="Enable/disable kawaii mode")
-@app_commands.default_permissions(administrator=True)
-async def toggle_kawaii(interaction: discord.Interaction):
-    if not interaction.guild:
-        await interaction.response.send_message(get_messages("command.error.guild_only", interaction.guild_id), ephemeral=True, silent=SILENT_MESSAGES)
-        return
-
-    guild_id = interaction.guild_id
-    state = get_guild_state(guild_id)
-    if state.locale == Locale.EN_X_KAWAII:
-        state.locale = Locale.EN_US
-    else:
-        state.locale = Locale.EN_X_KAWAII
-    state = get_messages("kawaii_state_enabled", guild_id) if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else get_messages("kawaii_state_disabled", guild_id)
-
-    embed = Embed(description=get_messages("kawaii_toggle", guild_id).format(state=state), color=0xFFB6C1 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.blue())
-    await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
-
-
 async def play_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
     """Provides real-time search suggestions for the /play command, including duration."""
     # Don't start a search if the user hasn't typed at least 3 characters
@@ -2859,7 +2813,6 @@ async def play(interaction: discord.Interaction, query: str):
 
     guild_id = interaction.guild.id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -2901,7 +2854,7 @@ async def play(interaction: discord.Interaction, query: str):
         }
         title_key, desc_key = platform_key_map.get(platform_name)
 
-        embed = Embed(title=get_messages(title_key, guild_id), description=get_messages(desc_key, guild_id, count=total_tracks, failed=0, failed_tracks=""), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(title=get_messages(title_key, guild_id), description=get_messages(desc_key, guild_id, count=total_tracks, failed=0, failed_tracks=""), color=discord.Color.green())
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
         if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
@@ -2965,7 +2918,7 @@ async def play(interaction: discord.Interaction, query: str):
                         }
                     )
 
-                embed = Embed(title=get_messages("playlist_added", guild_id), description=get_messages("playlist_description", guild_id, count=len(tracks_to_add)), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+                embed = Embed(title=get_messages("playlist_added", guild_id), description=get_messages("playlist_description", guild_id, count=len(tracks_to_add)), color=discord.Color.green())
                 await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
 
                 if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
@@ -2988,7 +2941,7 @@ async def play(interaction: discord.Interaction, query: str):
         await add_and_update_controller(video_info)
 
     except Exception as e:
-        embed = Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
         logger.error(f"Error in /play for '{query}': {e}", exc_info=True)
         if not interaction.response.is_done():
             await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
@@ -3028,8 +2981,7 @@ async def queue(interaction: discord.Interaction):
 
     if not tracks_for_display and not music_player.current_info:
         state = get_guild_state(guild_id)
-        is_kawaii = state.locale == Locale.EN_X_KAWAII
-        embed = Embed(description=get_messages("queue_empty", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
         return
 
@@ -3048,7 +3000,6 @@ async def clear_queue(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3060,7 +3011,7 @@ async def clear_queue(interaction: discord.Interaction):
     music_player.history.clear()
     music_player.radio_playlist.clear()
 
-    embed = Embed(description=get_messages("clear_queue_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+    embed = Embed(description=get_messages("clear_queue_success", guild_id), color=discord.Color.green())
     await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
 
 
@@ -3073,7 +3024,6 @@ async def play_next(interaction: discord.Interaction, query: str = None):
 
     guild_id = interaction.guild.id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3081,7 +3031,7 @@ async def play_next(interaction: discord.Interaction, query: str = None):
 
     # Define the helper function to show the YouTube blocked message
     async def show_youtube_blocked_message():
-        embed = Embed(title=get_messages("youtube_blocked_title", guild_id), description=get_messages("youtube_blocked_description", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
+        embed = Embed(title=get_messages("youtube_blocked_title", guild_id), description=get_messages("youtube_blocked_description", guild_id), color=discord.Color.orange())
         embed.add_field(name=get_messages("youtube_blocked_repo_field", guild_id), value=get_messages("youtube_blocked_repo_value", guild_id))
         await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
 
@@ -3119,9 +3069,7 @@ async def play_next(interaction: discord.Interaction, query: str = None):
                 if tracks:
                     if len(tracks) > 1:
                         # Playlists are not supported for playnext, send a clear message.
-                        await interaction.followup.send(
-                            embed=Embed(description=get_messages("player.play_next.error.playlist_unsupported", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES
-                        )
+                        await interaction.followup.send(embed=Embed(description=get_messages("player.play_next.error.playlist_unsupported", guild_id), color=discord.Color.red()), ephemeral=True, silent=SILENT_MESSAGES)
                         return
                     track_name, artist_name = tracks[0]
                     search_term = f"{track_name} {artist_name}"
@@ -3153,7 +3101,7 @@ async def play_next(interaction: discord.Interaction, query: str = None):
                 "requester": interaction.user,
             }
         except Exception as e:
-            embed = Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
             logger.error(f"Error processing /playnext for query '{query}': {e}", exc_info=True)
             return
@@ -3168,11 +3116,9 @@ async def play_next(interaction: discord.Interaction, query: str = None):
 
         description_text = f"[{queue_item['title']}]({queue_item['webpage_url']})"
 
-        embed = Embed(title=get_messages("play_next_added", guild_id), description=description_text, color=0xC7CEEA if is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("play_next_added", guild_id), description=description_text, color=discord.Color.blue())
         if queue_item.get("thumbnail"):
             embed.set_thumbnail(url=queue_item["thumbnail"])
-        if is_kawaii:
-            embed.set_footer(text="☆⌒(≧▽° )")
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
         bot.loop.create_task(update_controller(bot, guild_id))
@@ -3189,7 +3135,6 @@ async def now_playing(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3199,13 +3144,13 @@ async def now_playing(interaction: discord.Interaction):
         url = music_player.current_info.get("webpage_url", music_player.current_url)
         description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
 
-        embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=0xC7CEEA if is_kawaii else discord.Color.green())
+        embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=discord.Color.green())
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
 
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
     else:
-        embed = Embed(description=get_messages("no_song_playing", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("no_song_playing", guild_id), color=discord.Color.red())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
 
@@ -3220,7 +3165,6 @@ async def pause(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3233,12 +3177,12 @@ async def pause(interaction: discord.Interaction):
             music_player.playback_started_at = None
 
         voice_client.pause()
-        embed = Embed(description=get_messages("pause", guild_id), color=0xFFB7B2 if is_kawaii else discord.Color.orange())
+        embed = Embed(description=get_messages("pause", guild_id), color=discord.Color.orange())
         # Use followup.send because we deferred
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
     else:
-        embed = Embed(description=get_messages("no_playback", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("no_playback", guild_id), color=discord.Color.red())
         # Use followup.send because we deferred
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
@@ -3255,7 +3199,6 @@ async def resume(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3266,12 +3209,12 @@ async def resume(interaction: discord.Interaction):
             music_player.playback_started_at = time.time()
 
         voice_client.resume()
-        embed = Embed(description=get_messages("resume", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(description=get_messages("resume", guild_id), color=discord.Color.green())
         # Use followup.send because we deferred
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
     else:
-        embed = Embed(description=get_messages("no_paused", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("no_paused", guild_id), color=discord.Color.red())
         # Use followup.send because we deferred
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
@@ -3320,13 +3263,12 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
     voice_client = interaction.guild.voice_client
 
     if not voice_client or not (voice_client.is_playing() or voice_client.is_paused()):
-        embed = Embed(description=get_messages("no_song", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("no_song", guild_id), color=discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
 
@@ -3362,7 +3304,7 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
         jumped_to_track_info = get_track_display_info(new_queue_list[0])
         title_to_announce = jumped_to_track_info.get("title", get_messages("player.a_song_fallback", guild_id))
 
-        embed = Embed(description=get_messages("player.skip.success.jumped", guild_id, number=number, title=title_to_announce), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(description=get_messages("player.skip.success.jumped", guild_id, number=number, title=title_to_announce), color=discord.Color.green())
         await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
 
         # Stop the current song to trigger the new one
@@ -3376,7 +3318,7 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
         title = music_player.current_info.get("title", "Unknown Title")
         url = music_player.current_info.get("webpage_url", music_player.current_url)
         description_text = get_messages("player.replay.success_desc", guild_id, title=title, url=url)
-        embed = Embed(title=get_messages("player.replay.success_title", guild_id), description=description_text, color=0xC7CEEA if is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("player.replay.success_title", guild_id), description=description_text, color=discord.Color.blue())
         if music_player.current_info.get("thumbnail"):
             embed.set_thumbnail(url=music_player.current_info["thumbnail"])
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -3395,14 +3337,14 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
         next_url = hydrated_next_info.get("webpage_url", "#")
         description_text = get_messages("now_playing_description", guild_id, title=next_title, url=next_url)
 
-        embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=0xE2F0CB if is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=discord.Color.blue())
         embed.set_author(name=get_messages("skip_confirmation", guild_id))
 
         if hydrated_next_info.get("thumbnail"):
             embed.set_thumbnail(url=hydrated_next_info["thumbnail"])
     else:
         # Queue is now empty
-        embed = Embed(title=get_messages("skip_confirmation", guild_id), color=0xE2F0CB if is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("skip_confirmation", guild_id), color=discord.Color.blue())
         embed.set_footer(text=get_messages("skip_queue_empty", guild_id))
 
     await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -3424,14 +3366,13 @@ async def loop(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
     music_player.loop_current = not music_player.loop_current
     state = get_messages("loop_state_enabled", guild_id) if music_player.loop_current else get_messages("loop_state_disabled", guild_id)
 
-    embed = Embed(description=get_messages("loop", guild_id, state=state), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+    embed = Embed(description=get_messages("loop", guild_id, state=state), color=discord.Color.blue())
 
     # 2. Send the actual response as a follow-up
     await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -3447,7 +3388,6 @@ async def stop(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3479,10 +3419,10 @@ async def stop(interaction: discord.Interaction):
         clear_audio_cache(guild_id)
         get_guild_state(guild_id).music_player = MusicPlayer()
 
-        embed = Embed(description=get_messages("stop", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("stop", guild_id), color=discord.Color.red())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
     else:
-        embed = Embed(description=get_messages("not_connected", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("not_connected", guild_id), color=discord.Color.red())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
 
@@ -3495,7 +3435,6 @@ async def shuffle(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3510,11 +3449,11 @@ async def shuffle(interaction: discord.Interaction):
         for item in items:
             await music_player.queue.put(item)
 
-        embed = Embed(description=get_messages("shuffle_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(description=get_messages("shuffle_success", guild_id), color=discord.Color.green())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
     else:
-        embed = Embed(description=get_messages("queue_empty", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
 
@@ -3527,14 +3466,13 @@ async def toggle_autoplay(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
     music_player.autoplay_enabled = not music_player.autoplay_enabled
     state = get_messages("autoplay_state_enabled", guild_id) if music_player.autoplay_enabled else get_messages("autoplay_state_disabled", guild_id)
 
-    embed = Embed(description=get_messages("autoplay_toggle", guild_id, state=state), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+    embed = Embed(description=get_messages("autoplay_toggle", guild_id, state=state), color=discord.Color.blue())
     await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
     bot.loop.create_task(update_controller(bot, interaction.guild.id))
 
@@ -3661,7 +3599,6 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3678,7 +3615,7 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
         music_player.loop_current = False
         music_player.radio_playlist.clear()
 
-        embed = Embed(title=get_messages("24_7.off_title", guild_id), description=get_messages("24_7.off_desc", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(title=get_messages("24_7.off_title", guild_id), description=get_messages("24_7.off_desc", guild_id), color=discord.Color.red())
         await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
         return
 
@@ -3713,10 +3650,10 @@ async def radio_24_7(interaction: discord.Interaction, mode: str):
 
     if mode == "auto":
         music_player.autoplay_enabled = True
-        embed = Embed(title=get_messages("24_7.auto_title", guild_id), description=get_messages("24_7.auto_desc", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(title=get_messages("24_7.auto_title", guild_id), description=get_messages("24_7.auto_desc", guild_id), color=discord.Color.green())
     else:  # mode == "normal"
         music_player.autoplay_enabled = False
-        embed = Embed(title=get_messages("24_7.normal_title", guild_id), description=get_messages("24_7.normal_desc", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(title=get_messages("24_7.normal_title", guild_id), description=get_messages("24_7.normal_desc", guild_id), color=discord.Color.green())
 
     if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
         music_player.current_task = asyncio.create_task(play_audio(guild_id))
@@ -3736,7 +3673,6 @@ async def reconnect(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
@@ -3751,7 +3687,7 @@ async def reconnect(interaction: discord.Interaction):
     # We remove the `is_playing()` check. We only need to know WHAT to play,
     # not IF it's currently making sound. This is the key fix for the zombie state.
     if not music_player.current_info:
-        embed = Embed(description=get_messages("reconnect_not_playing", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("reconnect_not_playing", guild_id), color=discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
 
@@ -3796,7 +3732,7 @@ async def reconnect(interaction: discord.Interaction):
         # We now reliably restart playback from the correct timestamp
         music_player.current_task = bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
 
-        embed = Embed(description=get_messages("reconnect_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+        embed = Embed(description=get_messages("reconnect_success", guild_id), color=discord.Color.green())
         await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
 
     except Exception as e:
@@ -3848,12 +3784,11 @@ async def remove(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
     if music_player.queue.empty():
-        embed = Embed(description=get_messages("queue_empty", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
 
@@ -3863,7 +3798,7 @@ async def remove(interaction: discord.Interaction):
     view = RemoveView(interaction, all_tracks)
     await view.update_view()
 
-    embed = Embed(title=get_messages("remove_title", guild_id), description=get_messages("remove_description", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+    embed = Embed(title=get_messages("remove_title", guild_id), description=get_messages("remove_description", guild_id), color=discord.Color.blue())
 
     await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
@@ -3880,7 +3815,6 @@ async def search(interaction: discord.Interaction, query: str):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
 
     voice_client = await ensure_voice_connection(interaction)
     if not voice_client:
@@ -3899,18 +3833,18 @@ async def search(interaction: discord.Interaction, query: str):
         search_results = info.get("entries", [])
 
         if not search_results:
-            embed = Embed(description=get_messages("search_no_results", guild_id).format(query=query), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+            embed = Embed(description=get_messages("search_no_results", guild_id).format(query=query), color=discord.Color.red())
             await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES, ephemeral=True)
             return
 
         view = SearchView(search_results, guild_id)
-        embed = Embed(title=get_messages("search_results_title", guild_id), description=get_messages("search_results_description", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+        embed = Embed(title=get_messages("search_results_title", guild_id), description=get_messages("search_results_description", guild_id), color=discord.Color.blue())
 
         await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
     except Exception as e:
         logger.error(f"Error during /search for '{query}': {e}", exc_info=True)
-        embed = Embed(description=get_messages("search_error", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
         await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
 
 
@@ -3935,7 +3869,7 @@ async def seek_interactive(interaction: discord.Interaction):
     initial_embed = Embed(
         title=get_messages("seek_interface_title", guild_id),
         description=get_messages("seek.interface.loading_description", guild_id),
-        color=0xB5EAD7 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.blue(),
+        color=discord.Color.blue(),
     )
 
     await interaction.response.send_message(embed=initial_embed, view=view, silent=SILENT_MESSAGES)
@@ -3969,7 +3903,7 @@ async def volume(interaction: discord.Interaction, level: app_commands.Range[int
     if vc and vc.is_playing() and isinstance(vc.source, discord.PCMVolumeTransformer):
         vc.source.volume = new_volume
 
-    embed = Embed(description=get_messages("volume_success", guild_id, level=level), color=0xB5EAD7 if (get_guild_state(guild_id).locale == Locale.EN_X_KAWAII) else discord.Color.blue())
+    embed = Embed(description=get_messages("volume_success", guild_id, level=level), color=discord.Color.blue())
 
     await interaction.response.send_message(embed=embed, silent=SILENT_MESSAGES)
     bot.loop.create_task(update_controller(bot, interaction.guild.id))
@@ -4033,7 +3967,6 @@ class SetupCommands(app_commands.Group):
     ):
         guild_id = interaction.guild.id
         state = get_guild_state(guild_id)
-        is_kawaii = state.locale == Locale.EN_X_KAWAII
 
         # Case 1: Reset the allowlist
         if reset and reset.lower() == "default":
@@ -4042,7 +3975,7 @@ class SetupCommands(app_commands.Group):
                 state.allowed_channels.clear()
                 logger.info(f"Command channel allowlist has been RESET for guild {guild_id}.")
 
-            embed = discord.Embed(description=get_messages("allowlist_reset_success", guild_id), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+            embed = discord.Embed(description=get_messages("allowlist_reset_success", guild_id), color=discord.Color.green())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
             return
 
@@ -4056,12 +3989,12 @@ class SetupCommands(app_commands.Group):
             channel_mentions = ", ".join([ch.mention for ch in channels])
             logger.info(f"Command channel allowlist for guild {guild_id} set to: {allowed_ids}")
 
-            embed = discord.Embed(description=get_messages("allowlist_set_success", guild_id).format(channels=channel_mentions), color=0xB5EAD7 if is_kawaii else discord.Color.green())
+            embed = discord.Embed(description=get_messages("allowlist_set_success", guild_id).format(channels=channel_mentions), color=discord.Color.green())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
             return
 
         # Case 3: Invalid arguments
-        embed = discord.Embed(description=get_messages("allowlist_invalid_args", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.orange())
+        embed = discord.Embed(description=get_messages("allowlist_invalid_args", guild_id), color=discord.Color.orange())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
 
 
@@ -4118,12 +4051,11 @@ async def jumpto(interaction: discord.Interaction):
 
     guild_id = interaction.guild_id
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     state = get_guild_state(guild_id)
     music_player = state.music_player
 
     if music_player.queue.empty():
-        embed = Embed(description=get_messages("queue_empty", guild_id), color=0xFF9AA2 if is_kawaii else discord.Color.red())
+        embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
 
@@ -4133,7 +4065,7 @@ async def jumpto(interaction: discord.Interaction):
     view = JumpToView(interaction, all_tracks)
     await view.update_view()
 
-    embed = Embed(title=get_messages("jumpto.title", guild_id), description=get_messages("jumpto.description", guild_id), color=0xC7CEEA if is_kawaii else discord.Color.blue())
+    embed = Embed(title=get_messages("jumpto.title", guild_id), description=get_messages("jumpto.description", guild_id), color=discord.Color.blue())
 
     await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
@@ -4298,11 +4230,10 @@ async def global_interaction_check(interaction: discord.Interaction) -> bool:
 
     # Final block if no condition is met
     state = get_guild_state(guild_id)
-    is_kawaii = state.locale == Locale.EN_X_KAWAII
     channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_ids])
     description_text = get_messages("command_restricted_description", guild_id).format(bot_name=interaction.client.user.name)
 
-    embed = discord.Embed(title=get_messages("command_restricted_title", guild_id), description=description_text, color=0xFF9AA2 if is_kawaii else discord.Color.red())
+    embed = discord.Embed(title=get_messages("command_restricted_title", guild_id), description=description_text, color=discord.Color.red())
     embed.add_field(name=get_messages("command_allowed_channels_field", guild_id), value=channel_mentions)
 
     await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)

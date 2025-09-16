@@ -107,9 +107,6 @@ player:
 # ==============================================================================
 # 5. GENERAL INTERFACE & MESSAGES
 # ==============================================================================
-kawaii_toggle: "Kawaii mode {state} for this server!"
-kawaii_state_enabled: "enabled"
-kawaii_state_disabled: "disabled"
 playlist_added: "🎶 Playlist Added"
 playlist_description: "{count} tracks have been added to the queue."
 song_added: "✅ Added to Queue"
@@ -256,12 +253,6 @@ platform:
     soundcloud: "SoundCloud ☁️"
     youtube: "YouTube ▶️"
     twitch: "Twitch 🟣"
-  kaomoji:
-    spotify: "Spotify ヾ(⌐■_■)ノ♪"
-    deezer: "Deezer (つ◕_◕)つ"
-    soundcloud: "SoundCloud (ˊᵒ̴̶̷̤ ꇴ ᵒ̴̶̷̤ˋ)"
-    youtube: "YouTube (►_◄)"
-    twitch: "Twitch (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
 spotify_playlist_added: "🎶 Spotify Playlist Added"
 spotify_playlist_description: "**{count} tracks** from Spotify have been added to the queue."
 spotify_error_title: "🚨 Spotify Error"

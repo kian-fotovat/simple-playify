@@ -9,7 +9,7 @@ This Privacy Policy describes how Playify ("the Bot") collects, uses, and handle
 The Bot is designed to be privacy-focused. We only collect and process data that is essential for its core functionality.
 
 **1. Server and Channel Information:**
-   - The Bot stores server IDs and channel IDs to manage server-specific settings, such as language preferences and "kawaii mode".
+   - The Bot stores server IDs and channel IDs to manage server-specific settings, such as language preferences.
    - It also temporarily keeps track of the voice channel and text channel it is operating in to play music and send status messages.
 
 **2. User-Provided Content (Message Content Intent):**
