@@ -11,7 +11,6 @@ spotipy
 spotifyscraper[all]
 cachetools
 requests
-playwright
 lyricsgenius
 syncedlyrics
 psutil

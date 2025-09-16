@@ -22,7 +22,6 @@ from urllib.parse import urlparse, parse_qs, quote_plus
 from cachetools import TTLCache
 import logging
 import requests
-from playwright.async_api import async_playwright
 from concurrent.futures import ProcessPoolExecutor
 from i18n_translator import I18nTranslator, Locale
 from typing import Optional
@@ -4188,9 +4187,9 @@ async def play(interaction: discord.Interaction, query: str):
         platform_processor = None
         if spotify_regex.match(query): platform_processor, platform_name = process_spotify_url, "Spotify"
         elif deezer_regex.match(query): platform_processor, platform_name = process_deezer_url, "Deezer"
-        elif apple_music_regex.match(query): platform_processor, platform_name = process_apple_music_url, "Apple Music"
-        elif tidal_regex.match(query): platform_processor, platform_name = process_tidal_url, "Tidal"
-        elif amazon_music_regex.match(query): platform_processor, platform_name = process_amazon_music_url, "Amazon Music"
+        # elif apple_music_regex.match(query): platform_processor, platform_name = process_apple_music_url, "Apple Music"
+        # elif tidal_regex.match(query): platform_processor, platform_name = process_tidal_url, "Tidal"
+        # elif amazon_music_regex.match(query): platform_processor, platform_name = process_amazon_music_url, "Amazon Music"
 
         if platform_processor:
             platform_tracks = await platform_processor(query, interaction)

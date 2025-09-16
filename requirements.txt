@@ -11,7 +11,6 @@ spotifyscraper[all]
 requests
 syncedlyrics
 lyricsgenius
-playwright
 python-dotenv  # <-- NEW
 
 # Utilities

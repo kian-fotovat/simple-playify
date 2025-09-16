@@ -6,15 +6,12 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
-    git \
-    chromium && \
+    git && \
     rm -rf /var/lib/apt/lists/*
 
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-# Install playwright and its dependencies
-RUN pip install playwright && playwright install-deps && playwright install
 
 COPY . .
 
