@@ -326,9 +326,6 @@ messages = {
         "normal": "Some videos have restrictions that prevent bots from playing them.\n\nIf you believe this is a different bug, please [open an issue on GitHub]({github_link}).",
         "kawaii": "Some videos have super strong shields that stop me! ( >д<)\n\nIf you think something is really, really broken, you can [tell the super smart developers here]({github_link})!~",
     },
-    "discord_command_title": {"normal": "🔗 Join Our Discord!", "kawaii": "Come hang out with us!"},
-    "discord_command_description": {"normal": "Click the button below to join the official Playify support and community server.", "kawaii": "Join our super cute community! Just click the button below~ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"},
-    "discord_command_button": {"normal": "Join Server", "kawaii": "Join Us! <3"},
     "24_7_on_title": {"normal": "📻 24/7 Radio ON", "kawaii": "24/7 Radio ON ✧"},
     "24_7_on_desc": {"normal": "Queue will loop indefinitely – bot stays & auto-resumes when you re-join.", "kawaii": "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Radio forever! Bot never sleeps, just pauses when alone~"},
     "24_7_off_title": {"normal": "📴 24/7 Radio OFF", "kawaii": "24/7 Radio OFF (；一_一)"},
@@ -374,15 +371,6 @@ messages = {
     "search_song_added": {"normal": "✅ Added to Queue", "kawaii": "Added!~"},
     "jump_to_placeholder": {"normal": "Jump to a specific song in the queue...", "kawaii": "Wanna jump to a song?~"},
     "jump_to_success": {"normal": "⏭️ Jumped to **{title}**!", "kawaii": "Yay! We jumped to **{title}**!~"},
-    "support_title": {"normal": "💖 Support the Creator", "kawaii": "Support Me! (⁄ ⁄>⁄ ᗨ ⁄<⁄ ⁄)"},
-    "support_description": {
-        "normal": "I spend countless hours, day and night, optimizing Playify, fixing bugs, and adding new features. Your support helps me keep the project alive and thriving! Every donation is deeply appreciated and allows me to dedicate more time to making the bot better for you.",
-        "kawaii": "I spend sooooo much time, day and night, making Playify super cute and fast for you, fixing all the little boo-boos! (´• ω •`) Your support helps me keep going! Every little bit makes me super duper happy and lets me make the bot even better!~",
-    },
-    "support_patreon_title": {"normal": "🌟 Become a Patron", "kawaii": "Be My Patron!~"},
-    "support_paypal_title": {"normal": "💰 One-Time Donation", "kawaii": "One-Time Tip!~"},
-    "support_discord_title": {"normal": "💬 Join the Community", "kawaii": "Hang Out With Us!~"},
-    "support_contact_title": {"normal": "✉️ Contact Me", "kawaii": "Talk to Me!~"},
     "seek_success": {"normal": "▶️ Jumped to **{timestamp}**.", "kawaii": "Hehe, teleported to **{timestamp}**!~"},
     "seek_fail_live": {"normal": "Cannot seek in a live stream.", "kawaii": "Aww, we can't time travel in a live stream... (｡•́︿•̀｡)"},
     "seek_fail_invalid_time": {"normal": "Invalid time format. Use `HH:MM:SS`, `MM:SS`, or `SS` (e.g., `1:23`).", "kawaii": "That time format is a bit silly... (>_<) Try something like `1:23`!"},
@@ -3937,67 +3925,6 @@ def run_bot(status_queue, log_queue, command_queue):
         embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
 
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
-
-    # /discord command
-    @bot.tree.command(name="discord", description="Get an invite to the official community and support server.")
-    async def discord_command(interaction: discord.Interaction):
-        guild_id = interaction.guild_id
-        is_kawaii = get_mode(guild_id)
-
-        # Create the embed using messages from the dictionary
-        embed = Embed(title=get_messages("discord_command_title", guild_id), description=get_messages("discord_command_description", guild_id), color=0xFFB6C1 if is_kawaii else discord.Color.blue())
-
-        # Create a View to hold the button
-        view = View()
-
-        # Create a button that links to your server
-        button = Button(
-            label=get_messages("discord_command_button", guild_id),
-            style=discord.ButtonStyle.link,
-            url="https://discord.gg/JeH8g6g3cG",  # Your server invite link
-        )
-
-        # Add the button to the view
-        view.add_item(button)
-
-        # Send the response with the embed and button
-        await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, view=view)
-
-    @bot.tree.command(name="support", description="Shows ways to support the creator of Playify.")
-    async def support(interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message("This command can be used inside any server.", ephemeral=True, silent=SILENT_MESSAGES)
-            return
-
-        guild_id = interaction.guild_id
-        is_kawaii = get_mode(guild_id)
-
-        # Create the embed using messages from the dictionary
-        embed = Embed(
-            title=get_messages("support_title", guild_id),
-            description=get_messages("support_description", guild_id),
-            color=0xFFC300 if not is_kawaii else 0xFFB6C1,  # Gold for normal, Pink for kawaii
-        )
-
-        patreon_link = "https://patreon.com/Playify"
-        paypal_link = "https://www.paypal.com/paypalme/alanmussot1"
-        discord_server_link = "https://discord.gg/JeH8g6g3cG"
-        discord_username = "@alananasssss"
-
-        # Add the fields for the links
-        embed.add_field(name=get_messages("support_patreon_title", guild_id), value=f"[Support on Patreon]({patreon_link})", inline=True)
-        embed.add_field(name=get_messages("support_paypal_title", guild_id), value=f"[Donate via PayPal]({paypal_link})", inline=True)
-
-        # This is a little trick to create a new line for the next inline fields
-        embed.add_field(name="\u200b", value="\u200b", inline=False)
-
-        embed.add_field(name=get_messages("support_discord_title", guild_id), value=f"[Join the Discord Server]({discord_server_link})", inline=True)
-        embed.add_field(name=get_messages("support_contact_title", guild_id), value=f"You can reach me on Discord at:\n**{discord_username}**", inline=True)
-
-        embed.set_thumbnail(url=bot.user.avatar.url)
-        embed.set_footer(text="Your support means the world to me!")
-
-        await interaction.response.send_message(embed=embed, silent=SILENT_MESSAGES)
 
     @bot.tree.command(name="24_7", description="Enable or disable 24/7 mode.")
     @app_commands.describe(mode="Choose the mode: auto (adds songs), normal (loops the queue), or off.")

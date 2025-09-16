@@ -248,19 +248,6 @@ status:
   environment:
     title: "My Tools! ⚙️"
     value: "**Magic Language:** v{python_version}\n**Chatting Library:** v{discord_py_version}\n**Music Finder:** v{yt_dlp_version}\n**My Brain Space:** {bot_ram_usage} (◕‿◕✿)"
-support:
-  guild_agnostic: "This command can be used inside any server!~"
-  title: "Support Me! ('/ />/ ᗨ /</ /)"
-  description: "I spend sooooo much time, day and night, making Playify super cute and fast for you, fixing all the little boo-boos! (´• ω •`) Your support helps me keep going! Every little bit makes me super duper happy and lets me make the bot even better!~"
-  patreon_title: "Be My Patron!~"
-  patreon_value: "[Be My Patron!~]({link})"
-  paypal_title: "One-Time Tip!~"
-  paypal_value: "[One-Time Tip!~]({link})"
-  discord_title: "Hang Out With Us!~"
-  discord_value: "[Hang Out With Us!~]({link})"
-  contact_title: "Talk to Me!~"
-  contact_value: "You can talk to me on Discord!~\n**{username}**"
-  footer: "Your support makes me so happy!~ (´• ω •`)"
 
 # ==============================================================================
 # 11. PLATFORM SPECIFIC

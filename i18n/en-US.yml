@@ -228,9 +228,6 @@ jumpto:
 # ==============================================================================
 # 10. MISC & SUPPORT COMMANDS
 # ==============================================================================
-discord_command_title: "🔗 Join Our Discord!"
-discord_command_description: "Click the button below to join the official Playify support and community server."
-discord_command_button: "Join Server"
 status:
   title: "Playify's Dashboard"
   description: "Full operational status of the bot and its environment."
@@ -248,19 +245,6 @@ status:
   environment:
     title: "⚙️ Environment"
     value: "**Python:** v{python_version}\n**Discord.py:** v{discord_py_version}\n**yt-dlp:** v{yt_dlp_version}\n**Bot RAM Usage:** {bot_ram_usage}"
-support:
-  guild_agnostic: "This command can be used inside any server."
-  title: "💖 Support the Creator"
-  description: "I spend countless hours optimizing Playify, fixing bugs, and adding new features. Your support helps me keep the project alive and thriving! Every donation is deeply appreciated and allows me to dedicate more time to making the bot better for you."
-  patreon_title: "🌟 Become a Patron"
-  patreon_value: "[Support on Patreon]({link})"
-  paypal_title: "💰 One-Time Donation"
-  paypal_value: "[Donate via PayPal]({link})"
-  discord_title: "💬 Join the Community"
-  discord_value: "[Join the Discord Server]({link})"
-  contact_title: "✉️ Contact Me"
-  contact_value: "You can reach me on Discord at:\n**{username}**"
-  footer: "Your support means the world to me!"
 
 # ==============================================================================
 # 11. PLATFORM SPECIFIC

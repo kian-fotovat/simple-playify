@@ -179,7 +179,6 @@ This way, you get all the great Playify features without any installation or con
 | `/reconnect` | Refresh the voice connection to fix lag without losing your place. |
 | `/status` | Show the bot's detailed performance and resource usage. |
 | `/kaomoji` | Toggle cute kaomoji responses. `(ADMIN)` |
-| `/discord` | Get an invite to the official support server. |
 
 <a id="troubleshooting"></a>
 ## (｀・ω・´) Troubleshooting
@@ -200,11 +199,6 @@ This way, you get all the great Playify features without any installation or con
 
 *   Fork the repo, open an issue or pull request—all contributions are welcome!
 *   Star the repository if you enjoy using Playify!
-*   Join our Discord server for help and community discussions:
-    [![Discord](https://img.shields.io/discord/1395755097350213632?label=Discord%20Server&logo=discord)](https://discord.gg/JeH8g6g3cG)
-*   Support the project to help cover hosting costs and encourage development:
-    *   Become a Patron on [Patreon](https://patreon.com/Playify) for special perks and to show your ongoing support!
-    *   [Donate via PayPal](https://www.paypal.com/paypalme/alanmussot1) for a one-time contribution.
 
 <a id="license"></a>
 ## (＾ω＾) License
