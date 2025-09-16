@@ -186,9 +186,6 @@ class App(ctk.CTk):
         except Exception as e:
             print(f"Icon error: {e}")
 
-        self.playwright_browser_path = os.path.join(APP_DATA_DIR, "playwright_browsers")
-        os.makedirs(self.playwright_browser_path, exist_ok=True)
-
         self.manager = multiprocessing.Manager()
         self.status_queue = self.manager.Queue()
         self.log_queue = self.manager.Queue()
@@ -244,7 +241,6 @@ class App(ctk.CTk):
             print("Old process terminated.")
 
         try:
-            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = self.playwright_browser_path
             # Dynamically import playify_bot to ensure it's loaded after env vars are set
             import playify_bot
             self.bot_process = multiprocessing.Process(
@@ -662,7 +658,6 @@ class StylishTutorialPage(ctk.CTkFrame):
             {"title": "Set Up Spotify (Optional)", "desc": "To enable music playback from Spotify, create a Spotify application. In its settings, add the 'Redirect URI' below. This step is optional.", "video": "3_spotify_app.mp4", "links": {"Spotify Developer Dashboard": "https://developer.spotify.com/dashboard"}, "copy_fields": [{"label": "Redirect URI:", "value": "http://127.0.0.1:8000/callback"}], "input": "SPOTIFY_CLIENT_ID", "optional": True},
             {"title": "Get Genius Token (Optional)", "desc": "For lyrics, we need a Genius API Client. The 'App Website URL' isn't critical. This step is optional if you don't need lyrics.", "video": "4_genius_app.mp4", "links": {"Genius API Clients": "https://genius.com/api-clients"}, "copy_fields": [{"label": "Example Website URL:", "value": "https://example.com"}], "input": "GENIUS_TOKEN", "optional": True},
             {"title": "Invite Your Bot", "desc": "Generate an invite link from the 'OAuth2 -> URL Generator' tab. Select the 'bot' & 'applications.commands' scopes, then grant it the necessary permissions to function on your server.", "video": "5_invite_bot.mp4"},
-            {"title": "Streaming Services", "desc": "Do you need support for Apple Music, Amazon Music, or Tidal? This requires installing additional components (Playwright).", "choice": "streaming_services"},
             {"title": "Ready to Launch", "desc": "Configuration is complete! Choose your final settings below and click 'Finish' to save everything and start the bot.", "video": None}
         ]
         

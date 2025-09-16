@@ -127,7 +127,6 @@ This is the easiest way to get the bot running.
 2.  Install dependencies:
     ```bash
     pip install -r requirements.txt
-    playwright install
     ```
 3.  Copy & configure environment:
     ```bash
