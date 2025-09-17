@@ -68,7 +68,6 @@ player:
   live_indicator: "(Live)"
   unknown_title: "Unknown Title"
   unknown_artist: "Unknown Artist"
-  unknown_file: "Unknown File" # <-- CLÉ AJOUTÉE
   invalid_track: "Invalid Track"
   loading_placeholder: "Loading..."
   a_song_fallback: "a song"
@@ -161,7 +160,6 @@ queue_status_volume: "🔊 **Volume**: {level}%"
 queue:
   now_playing_format:
     default: "[{title}]({url})"
-    file: "💿 `{title}`"
   track_line:
     full_format: "`{i}.` {display_line}\n"
   and_more: "\n... and {remaining} more song(s)."
@@ -281,14 +279,13 @@ controller:
     description: "Waiting for music...\nUse `/play` or the button below to add a song."
     not_connected: "The bot is not connected to a voice channel.\nJoin a voice channel and use `/play`."
   next_up:
-    title: "Next Up:"
+    title: "Next Up"
     format:
       default: "[{title}]({url}) - `{duration}`"
-      file: "💿 `{title}` - `{duration}`"
       lazy: "`{title}`"
   now_playing:
     title: "Now Playing:"
-    value: "{now_playing_title_display}\n> 🎤 **{artist}**\n\nRequested by: {requester_mention}\nConnected in: 🔊 | {channel_name}"
+    value: "{now_playing_title_display}\n> **{artist}**"
   nothing_next:
     title: "Nothing next"
   no_other_songs:
@@ -301,7 +298,6 @@ controller:
   queue:
     line_display:
       default: "[{title}]({url})"
-      file: "💿 `{title}`"
       lazy: "`{title}`"
   footer:
     idle: "Playify Controller System"

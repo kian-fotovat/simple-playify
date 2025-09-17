@@ -309,9 +309,9 @@ messages = {
     "error_field_what_to_do": {"normal": "What to do?"},
     "error_what_to_do_content": {"normal": "Some videos have restrictions that prevent bots from playing them.\n\nIf you believe this is a different bug, please [open an issue on GitHub]({github_link})."},
     "24_7_on_title": {"normal": "📻 24/7 Radio ON"},
-    "24_7_on_desc": {"normal": "Queue will loop indefinitely – bot stays & auto-resumes when you re-join."},
+    "24_7_on_desc": {"normal": "Queue will loop indefinitely - bot stays & auto-resumes when you re-join."},
     "24_7_off_title": {"normal": "📴 24/7 Radio OFF"},
-    "24_7_off_desc": {"normal": "Queue cleared – bot will disconnect after 60 s if left alone."},
+    "24_7_off_desc": {"normal": "Queue cleared - bot will disconnect after 60 s if left alone."},
     "24_7_auto_title": {"normal": "🔄 24/7 Auto Mode"},
     "24_7_auto_desc": {"normal": "Autoplay enabled - will add similar songs when playlist ends!"},
     "24_7_normal_title": {"normal": "🔁 24/7 Loop Mode"},
@@ -366,7 +366,7 @@ messages = {
     "queue_status_volume": {"normal": "🔊 **Volume**: {level}%"},
     "controller_title": {"normal": "Music Controller"},
     "controller_idle_description": {"normal": "Waiting for music...\nSend the name or link of a song in this channel."},
-    "controller_next_up_field": {"normal": "Next up:"},
+    "controller_next_up_field": {"normal": "Next Up"},
     "controller_now_playing_field": {"normal": "Now Playing"},
     "controller_nothing_next": {"normal": "Nothing next"},
     "controller_no_other_songs": {"normal": "No other songs in queue."},
@@ -383,7 +383,8 @@ messages = {
     "controller_autoplay_label": {"normal": "Autoplay"},
     "controller_queue_label": {"normal": "Show Queue"},
     "controller_jump_to_song_label": {"normal": "Jump to..."},
-    "jump_to_title": {"normal": "️ JUMP TO SONG"},
+    "controller_queue_title": {"normal": "Queue"},
+    "jump_to_title": {"normal": " JUMP TO SONG"},
     "jump_to_description": {"normal": "Use the dropdown menu to jump to a specific song in the queue.\nUse the buttons to navigate if you have a lot of songs."},
     "controller_vol_down_label": {"normal": " "},
     "controller_vol_up_label": {"normal": " "},
@@ -1660,14 +1661,14 @@ def run_bot(status_queue, log_queue, command_queue):
         else:
             description_lines.append(get_messages("controller_queue_is_empty", guild_id))
 
-        description = "\n".join(reversed(description_lines))
+        queue_list = "\n".join(description_lines)
 
-        embed = Embed(title=get_messages("controller_title", guild_id), description=description, color=discord.Color.blue())
-        embed.add_field(name=get_messages("controller_next_up_field", guild_id), value=next_song_text, inline=False)
-
+        embed = Embed(title=get_messages("controller_title", guild_id), color=discord.Color.blue())
         now_playing_title_display = f"**[{title}]({info.get('webpage_url', info.get('url', '#'))})**"
-        now_playing_value = f"{now_playing_title_display}\n> 🎤 **{artist}**\n\nRequested by: {requester.mention}\nConnected in: 🔊 | {vc.channel.name}"
+        now_playing_value = f"{now_playing_title_display}\n> **{artist}**"
         embed.add_field(name=get_messages("controller_now_playing_field", guild_id), value=now_playing_value, inline=False)
+        embed.add_field(name=get_messages("controller_next_up_field", guild_id), value=next_song_text, inline=False)
+        embed.add_field(name=get_messages("controller_queue_title", guild_id), value=queue_list, inline=False)
 
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)

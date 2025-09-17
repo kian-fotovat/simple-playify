@@ -979,15 +979,13 @@ async def create_controller_embed(bot, guild_id):
     elif not tracks_to_display:
         queue_list_text.append(get_messages("controller.queue_empty.title", guild_id))
 
-    queue_list_text.reverse()
-
-    description = "\n".join(queue_list_text)
-    embed = Embed(title=get_messages("controller.title", guild_id), description=description, color=discord.Color.blue())
-    embed.add_field(name=get_messages("controller.next_up.title", guild_id), value=next_song_text, inline=False)
-
+    queue_list = "\n".join(queue_list_text)
+    embed = Embed(title=get_messages("controller.title", guild_id), color=discord.Color.blue())
     now_playing_title_display = f"**[{title}]({info.get('webpage_url', info.get('url', '#'))})**"
-    now_playing_value = get_messages("controller.now_playing.value", guild_id, now_playing_title_display=now_playing_title_display, artist=artist, requester_mention=requester.mention, channel_name=vc.channel.name)
+    now_playing_value = get_messages("controller.now_playing.value", guild_id, now_playing_title_display=now_playing_title_display, artist=artist)
     embed.add_field(name=get_messages("controller.now_playing.title", guild_id), value=now_playing_value, inline=False)
+    embed.add_field(name=get_messages("controller.next_up.title", guild_id), value=next_song_text, inline=False)
+    embed.add_field(name=get_messages("controller_queue_title", guild_id), value=queue_list, inline=False)
 
     if thumbnail:
         embed.set_thumbnail(url=thumbnail)
