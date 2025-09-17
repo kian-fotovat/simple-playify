@@ -933,6 +933,7 @@ def run_bot(status_queue, log_queue, command_queue):
     intents = discord.Intents.default()
     intents.guilds = True
     intents.voice_states = True
+    intents.message_content = True
 
     # Create the bot
     class PlayifyBot(commands.Bot):
