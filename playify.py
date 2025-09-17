@@ -2554,7 +2554,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                             if not progress_message and music_player.text_channel:
                                 initial_embed = Embed(
                                     title=get_messages("autoplay_loading_title", guild_id),
-                                    description=get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0, guild_id), processed=0, total="?"),
+                                    description=get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total="?"),
                                     color=discord.Color.blue(),
                                 )
                                 progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
