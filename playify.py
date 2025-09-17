@@ -136,6 +136,7 @@ AVAILABLE_COOKIES = ["cookies_1.txt", "cookies_2.txt", "cookies_3.txt", "cookies
 intents = discord.Intents.default()
 intents.guilds = True
 intents.voice_states = True
+intents.message_content = True
 
 
 # Create the bot
