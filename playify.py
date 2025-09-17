@@ -152,12 +152,6 @@ class PlayifyBot(commands.Bot):
         await super().close()
 
 
-# --- Create an instance of our custom bot ---
-# Intents for the bot
-intents = discord.Intents.default()
-intents.guilds = True
-intents.voice_states = True
-
 # Create the bot
 bot = PlayifyBot(command_prefix="!", intents=intents)
 
