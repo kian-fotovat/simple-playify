@@ -768,7 +768,7 @@ class MusicControllerView(View):
 
         await interaction.response.defer()
 
-    @discord.ui.button(style=ButtonStyle.danger, custom_id="controller_stop", row=0)
+    @discord.ui.button(style=ButtonStyle.danger, custom_id="controller_stop", row=1)
     async def stop_button(self, interaction: discord.Interaction, button: Button):
         guild_id = interaction.guild_id
         state = get_guild_state(guild_id)
@@ -797,11 +797,11 @@ class MusicControllerView(View):
             # Update the controller to show the idle state
             await update_controller(self.bot, guild_id)
 
-    @discord.ui.button(style=ButtonStyle.success, custom_id="controller_add_song", row=0)
+    @discord.ui.button(style=ButtonStyle.success, custom_id="controller_add_song", row=1)
     async def add_song_button(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(AddSongModal(self.bot, interaction.guild_id))
 
-    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_shuffle", row=1)
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_shuffle", row=2)
     async def shuffle_button(self, interaction: discord.Interaction, button: Button):
         music_player = get_player(interaction.guild_id)
         async with music_player.queue_lock:
@@ -816,21 +816,21 @@ class MusicControllerView(View):
         await update_controller(self.bot, interaction.guild_id)
         await interaction.response.defer()
 
-    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_loop", row=1)
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_loop", row=2)
     async def loop_button(self, interaction: discord.Interaction, button: Button):
         music_player = get_player(interaction.guild_id)
         music_player.loop_current = not music_player.loop_current
         await update_controller(self.bot, interaction.guild_id)
         await interaction.response.defer()
 
-    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_autoplay", row=1)
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_autoplay", row=2)
     async def autoplay_button(self, interaction: discord.Interaction, button: Button):
         music_player = get_player(interaction.guild_id)
         music_player.autoplay_enabled = not music_player.autoplay_enabled
         await update_controller(self.bot, interaction.guild_id)
         await interaction.response.defer()
 
-    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_vol_down", row=1)
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_vol_down", row=3)
     async def volume_down_button(self, interaction: discord.Interaction, button: Button):
         music_player, vc = get_player(interaction.guild_id), interaction.guild.voice_client
         new_volume = max(0, music_player.volume - 0.1)
@@ -840,7 +840,7 @@ class MusicControllerView(View):
         await update_controller(self.bot, interaction.guild_id)
         await interaction.response.defer()
 
-    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_vol_up", row=1)
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_vol_up", row=3)
     async def volume_up_button(self, interaction: discord.Interaction, button: Button):
         music_player, vc = get_player(interaction.guild_id), interaction.guild.voice_client
         new_volume = min(2.0, music_player.volume + 0.1)
@@ -851,7 +851,7 @@ class MusicControllerView(View):
         await interaction.response.defer()
 
     # --- ROW 2: QUEUE CONTROLS ---
-    @discord.ui.button(style=ButtonStyle.primary, custom_id="controller_queue", row=2)
+    @discord.ui.button(style=ButtonStyle.primary, custom_id="controller_queue", row=4)
     async def queue_button(self, interaction: discord.Interaction, button: Button):
         queue_command = self.bot.tree.get_command("queue")
         if queue_command:
@@ -859,7 +859,7 @@ class MusicControllerView(View):
         else:
             await interaction.response.send_message(get_messages("command.error.not_found", interaction.guild_id, command_name="queue"), ephemeral=True, silent=True)
 
-    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_jump_to_song", row=2)
+    @discord.ui.button(style=ButtonStyle.secondary, custom_id="controller_jump_to_song", row=4)
     async def jump_to_song_button(self, interaction: discord.Interaction, button: Button):
         music_player = get_player(interaction.guild_id)
         if music_player.queue.empty():
