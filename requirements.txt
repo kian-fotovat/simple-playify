@@ -1,6 +1,5 @@
 cachetools
 discord.py[voice]
-PyNaCl
 psutil
 python-dotenv
 requests

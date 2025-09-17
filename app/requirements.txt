@@ -1,18 +1,17 @@
 # requirements.txt
 
-pyinstaller
-discord.py
-PyNaCl
-zstandard
-customtkinter
-python-dotenv
-yt-dlp
-spotipy
-spotifyscraper[all]
 cachetools
-requests
-psutil
-pystray
-Pillow
+customtkinter
+discord.py[voice]
+# opencv-python
 packaging
-opencv-python
+Pillow
+psutil
+pyinstaller
+pystray
+python-dotenv
+requests
+spotifyscraper[all]
+spotipy
+yt-dlp
+# zstandard
