@@ -9,3 +9,4 @@ __pycache__/
 playify_state.db
 playify_state.db-journal
 Playify_Data
+config.json

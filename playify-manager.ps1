@@ -27,7 +27,7 @@ try {
     $script:ScriptPath = $MyInvocation.MyCommand.Path
     $script:ScriptDirectory = if ($script:ScriptPath) { Split-Path -Parent $script:ScriptPath } else { Get-Location }
 
-    $configDir = Join-Path $env:LOCALAPPDATA 'PlayifyManager'
+    $configDir = $script:ScriptDirectory
     $configPath = Join-Path $configDir 'config.json'
 
     $script:BotRoot = $null
@@ -423,7 +423,3 @@ catch {
     Write-Error $_.Exception.Message
     Write-Host "---------------------------------------" -ForegroundColor Red
 }
-#finally {
-#    Write-Host "`nScript has finished. Press Enter to exit." -ForegroundColor Cyan
-#    [void](Read-Host)
-#}
