@@ -27,7 +27,7 @@ if (-not $IsRelaunched.IsPresent) {
     exit
 }
 
-# --- Block 2: Main Logic (Hardened for Path Safety) ---
+# --- Block 2: Main Logic ---
 try {
     $scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
 
