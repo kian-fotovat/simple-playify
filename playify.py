@@ -250,7 +250,7 @@ async def save_all_states():
 
     for guild_id, state in guild_states.items():
         player = state.music_player
-        settings = (guild_id, state.locale == Locale.EN_US, state.controller_channel_id, state.controller_message_id, state._24_7_mode, player.autoplay_enabled, player.volume)
+        settings = (guild_id, state.controller_channel_id, state.controller_message_id, state._24_7_mode, player.autoplay_enabled, player.volume)
         cursor.execute("INSERT INTO guild_settings VALUES (?, ?, ?, ?, ?, ?, ?)", settings)
 
         for channel_id in state.allowed_channels:
