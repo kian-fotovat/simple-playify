@@ -5,8 +5,8 @@ param(
 )
 
 # --- Block 1: The Relauncher ---
-# The only purpose of this block is to handle being double-clicked. A double-clicked
-# script is non-interactive, so this code restarts itself in a new, interactive window.
+# This block handles being double-clicked by relaunching the script in a new,
+# interactive window.
 if (-not $IsRelaunched.IsPresent) {
     $pwshPath = (Get-Command -Name 'pwsh' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Path
     if (-not $pwshPath) {
@@ -15,24 +15,28 @@ if (-not $IsRelaunched.IsPresent) {
         exit 1
     }
     
-    # --- CHANGE: '-NoExit' has been REMOVED ---
-    # The new window will now close by default as soon as the script finishes.
-    $arguments = @('-File', $MyInvocation.MyCommand.Path, '-IsRelaunched')
+    $scriptPath = $MyInvocation.MyCommand.Path
+    $commandToRun = "& '$scriptPath' -IsRelaunched"
+    
+    $arguments = @(
+        '-Command',
+        $commandToRun
+    )
+    
     Start-Process -FilePath $pwshPath -ArgumentList $arguments
     exit
 }
 
-# --- Block 2: Main Logic (only runs in the new interactive window) ---
+# --- Block 2: Main Logic (Hardened for Path Safety) ---
 try {
-    # $PSScriptRoot is a reliable variable for the script's own directory.
-    $scriptDirectory = $PSScriptRoot
+    $scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
 
     # --- Step 1: Configure Application Directory ---
     $dataDir = Join-Path $scriptDirectory 'Playify_Data'
     $configPath = Join-Path $dataDir 'config.txt'
     $appRoot = $null
 
-    # Try to load the saved directory from the config file.
+    # Load saved directory from config.
     if (Test-Path -Path $configPath) {
         $savedPath = Get-Content -Path $configPath
         if (Test-Path -Path (Join-Path $savedPath 'app.py')) {
@@ -40,7 +44,7 @@ try {
         }
     }
 
-    # If the directory wasn't loaded or was invalid, we must ask the user for it.
+    # If directory is not configured or invalid, prompt the user.
     if ([string]::IsNullOrWhiteSpace($appRoot)) {
         Write-Host "`nYour Python application directory needs to be configured." -ForegroundColor Yellow
         
@@ -86,7 +90,6 @@ try {
 
     # --- Step 2: Find the Python Interpreter ---
     $pythonPath = $null
-    
     $venvNames = @('venv', '.venv', 'env')
     foreach ($name in $venvNames) {
         $testPath = Join-Path $appRoot "$name\Scripts\python.exe"
@@ -114,16 +117,14 @@ try {
     $appScriptPath = Join-Path $appRoot 'app.py'
     Write-Host "`nLaunching application in the background..." -ForegroundColor Green
     
-    Start-Process -FilePath $pythonPath -ArgumentList $appScriptPath -WorkingDirectory $appRoot -WindowStyle Hidden
+    $argumentsForPython = "`"$appScriptPath`""
 
-    # The script now finishes here and the window will close automatically.
+    Start-Process -FilePath $pythonPath -ArgumentList $argumentsForPython -WorkingDirectory $appRoot -WindowStyle Hidden
+
     Write-Host "Application launched successfully. This window will close shortly." -ForegroundColor Green
     Start-Sleep -Seconds 3
 }
 catch {
-    # --- CHANGE: 'Read-Host' has been ADDED here ---
-    # This block only runs if an error occurs.
-    # The Read-Host command will pause the script, keeping the window open so you can see the error.
     Write-Host "`n--- SCRIPT HALTED DUE TO A FATAL ERROR ---" -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
     Write-Host "------------------------------------------" -ForegroundColor Red
