@@ -2552,8 +2552,8 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                         try:
                             if not progress_message and music_player.text_channel:
                                 initial_embed = Embed(
-                                    title=get_messages("autoplay_loading_title", guild_id),
-                                    description=get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total="?"),
+                                    title=get_messages("autoplay.loading_title", guild_id),
+                                    description=get_messages("autoplay.loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total="?"),
                                     color=discord.Color.blue(),
                                 )
                                 progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
@@ -2593,7 +2593,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                                     if (i + 1) % 10 == 0 or (i + 1) == total_to_add:
                                         progress = (i + 1) / total_to_add
                                         updated_embed = progress_message.embeds[0]
-                                        updated_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(progress), processed=added_count, total=total_to_add)
+                                        updated_embed.description = get_messages("autoplay.loading_description", guild_id).format(progress_bar=create_loading_bar(progress), processed=added_count, total=total_to_add)
                                         await progress_message.edit(embed=updated_embed)
                                         await asyncio.sleep(0.5)
                         except Exception as e:
@@ -2602,7 +2602,7 @@ async def play_audio(guild_id, seek_time=0, is_a_loop=False, song_that_just_ende
                             if progress_message and added_count > 0:
                                 final_embed = progress_message.embeds[0]
                                 final_embed.title = None
-                                final_embed.description = get_messages("autoplay_finished_description", guild_id).format(count=added_count)
+                                final_embed.description = get_messages("autoplay.finished_description", guild_id).format(count=added_count)
                                 final_embed.color = discord.Color.green()
                                 await progress_message.edit(embed=final_embed)
                             elif progress_message and added_count == 0:
