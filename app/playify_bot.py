@@ -243,172 +243,167 @@ except Exception as e:
     logger.error(f"Could not initialize SpotifyScraper: {e}")
 
 messages = {
-    "critical_error_title": {"normal": "🚨 An Unexpected Error Occurred"},
-    "critical_error_description": {"normal": "The bot encountered a problem. Please report this issue on GitHub so we can fix it!"},
-    "critical_error_report_field": {"normal": "Report on GitHub"},
-    "critical_error_report_value": {"normal": "You can create an issue here:\n**https://github.com/kian-fotovat/simple-playify/issues**\n\nPlease include the error details below."},
-    "critical_error_details_field": {"normal": "Error Details"},
-    "no_voice_channel": {"normal": "You must be in a voice channel to use this command."},
-    "connection_error": {"normal": "Error connecting to the voice channel."},
-    "spotify_error": {"normal": "Error processing the Spotify link. It may be private, region-locked, or invalid."},
-    "spotify_error_title": {"normal": "🚨 Spotify Error"},
-    "spotify_error_description_detailed": {
-        "normal": "Could not process this Spotify link.\n\n**Probable reason:** The playlist might be private, deleted, or unavailable in the bot's region.\n\n*The fallback method also failed, which can happen if Spotify recently updated its website.*"
-    },
-    "spotify_playlist_added": {"normal": "🎶 Spotify Playlist Added"},
-    "spotify_playlist_description": {"normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}"},
-    "deezer_error": {"normal": "Error processing the Deezer link. It may be private, region-locked, or invalid."},
-    "deezer_playlist_added": {"normal": "🎶 Deezer Playlist Added"},
-    "deezer_playlist_description": {"normal": "**{count} tracks** added, {failed} failed.\n{failed_tracks}"},
-    "song_added": {"normal": "🎵 Added to Queue"},
-    "playlist_added": {"normal": "🎶 Playlist Added"},
-    "playlist_description": {"normal": "**{count} tracks** added to the queue."},
-    "ytmusic_playlist_added": {"normal": "🎶 YouTube Music Playlist Added"},
-    "ytmusic_playlist_description": {"normal": "**{count} tracks** being added..."},
-    "video_error": {"normal": "Error adding the video or playlist."},
-    "search_error": {"normal": "Error during search. Try another title."},
-    "now_playing_title": {"normal": "🎵 Now Playing"},
-    "now_playing_description": {"normal": "[{title}]({url})"},
-    "pause": {"normal": "⏸️ Playback paused."},
-    "no_playback": {"normal": "No playback in progress."},
-    "resume": {"normal": "▶️ Playback resumed."},
-    "no_paused": {"normal": "No playback is paused."},
-    "skip": {"normal": "⏭️ Current song skipped."},
-    "no_song": {"normal": "No song is playing."},
-    "loop": {"normal": "🔁 Looping for the current song {state}."},
-    "loop_state_enabled": {"normal": "enabled"},
-    "loop_state_disabled": {"normal": "disabled"},
-    "stop": {"normal": "⏹️ Playback stopped and bot disconnected."},
-    "not_connected": {"normal": "The bot is not connected to a voice channel."},
-    "shuffle_success": {"normal": "🔀 Queue shuffled successfully!"},
-    "queue_empty": {"normal": "The queue is empty."},
-    "autoplay_toggle": {"normal": "Autoplay {state}."},
-    "autoplay_state_enabled": {"normal": "enabled"},
-    "autoplay_state_disabled": {"normal": "disabled"},
-    "autoplay_added": {"normal": "🎵 Adding similar songs to the queue... (This may take up to 1 minute)"},
-    "queue_title": {"normal": "🎶 Queue"},
-    "queue_description": {"normal": "There are **{count} songs** in the queue."},
-    "queue_next": {"normal": "Next songs:"},
-    "queue_song": {"normal": "- [{title}]({url})"},
-    "clear_queue_success": {"normal": "✅ Queue cleared."},
-    "play_next_added": {"normal": "🎵 Added as next song"},
-    "no_song_playing": {"normal": "No song is currently playing."},
-    "loading_playlist": {"normal": "Processing playlist...\n{processed}/{total} tracks added"},
-    "playlist_error": {"normal": "Error processing the playlist. It may be private, region-locked, or invalid."},
-    "extraction_error": {"normal": "⚠️ Could Not Add Track"},
-    "extraction_error_reason": {"normal": "Reason: {error_message}"},
-    "error_title_age_restricted": {"normal": "Age-Restricted Video"},
-    "error_desc_age_restricted": {"normal": "This video requires sign-in to confirm the user's age and cannot be played by the bot."},
-    "error_title_private": {"normal": "Private Video"},
-    "error_desc_private": {"normal": "This video is marked as private and cannot be accessed."},
-    "error_title_unavailable": {"normal": "Video Unavailable"},
-    "error_desc_unavailable": {"normal": "This video is no longer available or may have been removed."},
-    "error_title_generic": {"normal": "Access Denied"},
-    "error_desc_generic": {"normal": "The bot was blocked from accessing this video. This can happen with certain live streams or premieres."},
-    "error_field_full_error": {"normal": "Full Error for Bug Report"},
-    "error_field_what_to_do": {"normal": "What to do?"},
-    "error_what_to_do_content": {"normal": "Some videos have restrictions that prevent bots from playing them.\n\nIf you believe this is a different bug, please [open an issue on GitHub]({github_link})."},
-    "24_7_on_title": {"normal": "📻 24/7 Radio ON"},
-    "24_7_on_desc": {"normal": "Queue will loop indefinitely - bot stays & auto-resumes when you re-join."},
-    "24_7_off_title": {"normal": "📴 24/7 Radio OFF"},
-    "24_7_off_desc": {"normal": "Queue cleared - bot will disconnect after 60 s if left alone."},
-    "24_7_auto_title": {"normal": "🔄 24/7 Auto Mode"},
-    "24_7_auto_desc": {"normal": "Autoplay enabled - will add similar songs when playlist ends!"},
-    "24_7_normal_title": {"normal": "🔁 24/7 Loop Mode"},
-    "24_7_normal_desc": {"normal": "Playlist will loop indefinitely without adding new songs."},
-    "24_7_invalid_mode": {"normal": "Invalid mode! Use `/24_7 auto` or `/24_7 normal`"},
-    "queue_page_footer": {"normal": "Page {current_page}/{total_pages}"},
-    "previous_button": {"normal": "⬅️ Previous"},
-    "next_button": {"normal": "Next ➡️"},
-    "queue_status_title": {"normal": "Current Status"},
-    "queue_status_none": {"normal": "No special modes active."},
-    "queue_status_loop": {"normal": "🔁 **Loop (Song)**: Enabled"},
-    "queue_status_24_7": {"normal": "📻 **24/7 ({mode})**: Enabled"},
-    "queue_status_autoplay": {"normal": "➡️ **Autoplay**: Enabled"},
-    "now_playing_in_queue": {"normal": "▶️ Now Playing"},
-    "reconnect_start": {"normal": "🔃 Reconnecting to the voice channel to improve stability..."},
-    "reconnect_success": {"normal": "✅ Reconnected! Resuming playback from where you left off."},
-    "reconnect_not_playing": {"normal": "I can only reconnect during active playback."},
-    "autoplay_direct_link_notice": {"normal": "💿 The last track was a direct link, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay..."},
-    "skip_confirmation": {"normal": "⏭️ Song Skipped!"},
-    "skip_queue_empty": {"normal": "The queue is now empty."},
-    "remove_title": {"normal": "🗑️ Remove Songs"},
-    "remove_description": {"normal": "Use the dropdown menu to select one or more songs to remove.\nUse the buttons to navigate if you have more than 25 songs."},
-    "remove_placeholder": {"normal": "Select one or more songs to remove..."},
-    "remove_success_title": {"normal": "✅ {count} Song(s) Removed"},
-    "remove_processed": {"normal": "*Selection has been processed.*"},
-    "replay_success_title": {"normal": "🎵 Song Replayed"},
-    "replay_success_desc": {"normal": "Restarting [{title}]({url}) from the beginning."},
-    "search_results_title": {"normal": "🔎 Search Results"},
-    "search_results_description": {"normal": "Please select a song from the dropdown menu below to add it to the queue."},
-    "search_placeholder": {"normal": "Choose a song to add..."},
-    "search_no_results": {"normal": "Sorry, I couldn't find any results for **{query}**."},
-    "search_selection_made": {"normal": "*Your selection has been added to the queue.*"},
-    "search_song_added": {"normal": "✅ Added to Queue"},
-    "jump_to_placeholder": {"normal": "Jump to a specific song in the queue..."},
-    "jump_to_success": {"normal": "⏭️ Jumped to **{title}**!"},
-    "seek_success": {"normal": "▶️ Jumped to **{timestamp}**."},
-    "seek_fail_live": {"normal": "Cannot seek in a live stream."},
-    "seek_fail_invalid_time": {"normal": "Invalid time format. Use `HH:MM:SS`, `MM:SS`, or `SS` (e.g., `1:23`)."},
-    "fastforward_success": {"normal": "⏩ Fast-forwarded by **{duration}**."},
-    "rewind_success": {"normal": "⏪ Rewound by **{duration}**."},
-    "seek_interface_title": {"normal": "⏱️ Playback Control"},
-    "seek_interface_footer": {"normal": "This interface will time out in 5 minutes."},
-    "seek_modal_title": {"normal": "Jump to Timestamp"},
-    "seek_modal_label": {"normal": "New time (e.g., 1:23, 45)"},
-    "rewind_button_label": {"normal": "Rewind 15s"},
-    "fastforward_button_label": {"normal": "Forward 15s"},
-    "jump_to_button_label": {"normal": "Jump to..."},
-    "autoplay_loading_title": {"normal": "💿 Autoplay in Progress"},
-    "autoplay_loading_description": {"normal": "{progress_bar}\nAdding song {processed}/{total} to the queue..."},
-    "autoplay_finished_description": {"normal": "Added **{count}** new songs to the queue! Enjoy the music."},
-    "volume_success": {"normal": "🔊 Volume adjusted to **{level}%**."},
-    "queue_status_volume": {"normal": "🔊 **Volume**: {level}%"},
-    "controller_title": {"normal": "Music Controller"},
-    "controller_idle_description": {"normal": "Waiting for music...\nSend the name or link of a song in this channel."},
-    "controller_next_up_field": {"normal": "Next Up"},
-    "controller_now_playing_field": {"normal": "Now Playing"},
-    "controller_nothing_next": {"normal": "Nothing next"},
-    "controller_no_other_songs": {"normal": "No other songs in queue."},
-    "controller_queue_is_empty": {"normal": "Queue is empty."},
-    "controller_footer": {"normal": "{count} songs in queue | Total duration: {duration} | Volume: {volume}%"},
-    "controller_previous_label": {"normal": "Previous"},
-    "controller_pause_label": {"normal": "Pause"},
-    "controller_resume_label": {"normal": "Resume"},
-    "controller_skip_label": {"normal": "Skip"},
-    "controller_stop_label": {"normal": "Stop"},
-    "controller_add_song_label": {"normal": "Add Song"},
-    "controller_shuffle_label": {"normal": "Shuffle"},
-    "controller_loop_label": {"normal": "Loop"},
-    "controller_autoplay_label": {"normal": "Autoplay"},
-    "controller_queue_label": {"normal": "Show Queue"},
-    "controller_jump_to_song_label": {"normal": "Jump to..."},
-    "controller_queue_title": {"normal": "Queue"},
-    "jump_to_title": {"normal": " JUMP TO SONG"},
-    "jump_to_description": {"normal": "Use the dropdown menu to jump to a specific song in the queue.\nUse the buttons to navigate if you have a lot of songs."},
-    "controller_vol_down_label": {"normal": " "},
-    "controller_vol_up_label": {"normal": " "},
-    "youtube_blocked_title": {"normal": "YouTube Links Disabled"},
-    "youtube_blocked_description": {
-        "normal": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo get full YouTube playback, I made a super simple Windows app that sets up self-hosting for you — it's free and gives you full control!"
-    },
-    "youtube_blocked_repo_field": {"normal": "Get the Code & Setup"},
-    "youtube_blocked_repo_value": {"normal": "GitHub repo: https://github.com/kian-fotovat/simple-playify\nWindows setup & instructions: https://alan7383.github.io/playify/self-host.html"},
-    "queue_last_song": {"normal": "No other songs are in the queue."},
-    "command_restricted_title": {"normal": "🚫 Command Disabled Here"},
-    "command_restricted_description": {"normal": "Sorry, {bot_name} commands can only be used in specific channels on this server."},
-    "command_allowed_channels_field": {"normal": "Allowed Channels"},
-    "allowlist_set_success": {"normal": "✅ Success! Bot commands are now restricted to the following channels: {channels}"},
-    "allowlist_reset_success": {"normal": "✅ Success! All command restrictions have been removed. The bot will now respond in any channel."},
-    "allowlist_invalid_args": {"normal": "Invalid usage. You must either specify at least one channel to set the allowlist, or type 'default' in the `reset` option to remove it."},
+    "critical_error_title": "🚨 An Unexpected Error Occurred",
+    "critical_error_description": "The bot encountered a problem. Please report this issue on GitHub so we can fix it!",
+    "critical_error_report_field": "Report on GitHub",
+    "critical_error_report_value": "You can create an issue here:\n**https://github.com/kian-fotovat/simple-playify/issues**\n\nPlease include the error details below.",
+    "critical_error_details_field": "Error Details",
+    "no_voice_channel": "You must be in a voice channel to use this command.",
+    "connection_error": "Error connecting to the voice channel.",
+    "spotify_error": "Error processing the Spotify link. It may be private, region-locked, or invalid.",
+    "spotify_error_title": "🚨 Spotify Error",
+    "spotify_error_description_detailed": "Could not process this Spotify link.\n\n**Probable reason:** The playlist might be private, deleted, or unavailable in the bot's region.\n\n*The fallback method also failed, which can happen if Spotify recently updated its website.*",
+    "spotify_playlist_added": "🎶 Spotify Playlist Added",
+    "spotify_playlist_description": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+    "deezer_error": "Error processing the Deezer link. It may be private, region-locked, or invalid.",
+    "deezer_playlist_added": "🎶 Deezer Playlist Added",
+    "deezer_playlist_description": "**{count} tracks** added, {failed} failed.\n{failed_tracks}",
+    "song_added": "�  Added to Queue",
+    "playlist_added": "🎶 Playlist Added",
+    "playlist_description": "**{count} tracks** added to the queue.",
+    "ytmusic_playlist_added": "🎶 YouTube Music Playlist Added",
+    "ytmusic_playlist_description": "**{count} tracks** being added...",
+    "video_error": "Error adding the video or playlist.",
+    "search_error": "Error during search. Try another title.",
+    "now_playing_title": "🎵 Now Playing",
+    "now_playing_description": "[{title}]({url})",
+    "pause": "⏸️ Playback paused.",
+    "no_playback": "No playback in progress.",
+    "resume": "▶️ Playback resumed.",
+    "no_paused": "No playback is paused.",
+    "skip": "⏭️ Current song skipped.",
+    "no_song": "No song is playing.",
+    "loop": "🔁 Looping for the current song {state}.",
+    "loop_state_enabled": "enabled",
+    "loop_state_disabled": "disabled",
+    "stop": "⏹️ Playback stopped and bot disconnected.",
+    "not_connected": "The bot is not connected to a voice channel.",
+    "shuffle_success": "🔀 Queue shuffled successfully!",
+    "queue_empty": "The queue is empty.",
+    "autoplay_toggle": "Autoplay {state}.",
+    "autoplay_state_enabled": "enabled",
+    "autoplay_state_disabled": "disabled",
+    "autoplay_added": "🎵 Adding similar songs to the queue... (This may take up to 1 minute)",
+    "queue_title": "🎶 Queue",
+    "queue_description": "There are **{count} songs** in the queue.",
+    "queue_next": "Next songs:",
+    "queue_song": "- [{title}]({url})",
+    "clear_queue_success": "✅ Queue cleared.",
+    "play_next_added": "🎵 Added as next song",
+    "no_song_playing": "No song is currently playing.",
+    "loading_playlist": "Processing playlist...\n{processed}/{total} tracks added",
+    "playlist_error": "Error processing the playlist. It may be private, region-locked, or invalid.",
+    "extraction_error": "⚠️ Could Not Add Track",
+    "extraction_error_reason": "Reason: {error_message}",
+    "error_title_age_restricted": "Age-Restricted Video",
+    "error_desc_age_restricted": "This video requires sign-in to confirm the user's age and cannot be played by the bot.",
+    "error_title_private": "Private Video",
+    "error_desc_private": "This video is marked as private and cannot be accessed.",
+    "error_title_unavailable": "Video Unavailable",
+    "error_desc_unavailable": "This video is no longer available or may have been removed.",
+    "error_title_generic": "Access Denied",
+    "error_desc_generic": "The bot was blocked from accessing this video. This can happen with certain live streams or premieres.",
+    "error_field_full_error": "Full Error for Bug Report",
+    "error_field_what_to_do": "What to do?",
+    "error_what_to_do_content": "Some videos have restrictions that prevent bots from playing them.\n\nIf you believe this is a different bug, please [open an issue on GitHub]({github_link}).",
+    "24_7_on_title": "📻 24/7 Radio ON",
+    "24_7_on_desc": "Queue will loop indefinitely - bot stays & auto-resumes when you re-join.",
+    "24_7_off_title": "📴 24/7 Radio OFF",
+    "24_7_off_desc": "Queue cleared - bot will disconnect after 60 s if left alone.",
+    "24_7_auto_title": "🔄 24/7 Auto Mode",
+    "24_7_auto_desc": "Autoplay enabled - will add similar songs when playlist ends!",
+    "24_7_normal_title": "🔁 24/7 Loop Mode",
+    "24_7_normal_desc": "Playlist will loop indefinitely without adding new songs.",
+    "24_7_invalid_mode": "Invalid mode! Use `/24_7 auto` or `/24_7 normal`",
+    "queue_page_footer": "Page {current_page}/{total_pages}",
+    "previous_button": "⬅️ Previous",
+    "next_button": "Next ➡️",
+    "queue_status_title": "Current Status",
+    "queue_status_none": "No special modes active.",
+    "queue_status_loop": "🔁 **Loop (Song)**: Enabled",
+    "queue_status_24_7": "📻 **24/7 ({mode})**: Enabled",
+    "queue_status_autoplay": "➡️ **Autoplay**: Enabled",
+    "now_playing_in_queue": "▶️ Now Playing",
+    "reconnect_start": "🔃 Reconnecting to the voice channel to improve stability...",
+    "reconnect_success": "✅ Reconnected! Resuming playback from where you left off.",
+    "reconnect_not_playing": "I can only reconnect during active playback.",
+    "autoplay_direct_link_notice": "💿 The last track was a direct link, which can't be used for recommendations. Searching queue history for a compatible song to start Autoplay...",
+    "skip_confirmation": "⏭️ Song Skipped!",
+    "skip_queue_empty": "The queue is now empty.",
+    "remove_title": "🗑️ Remove Songs",
+    "remove_description": "Use the dropdown menu to select one or more songs to remove.\nUse the buttons to navigate if you have more than 25 songs.",
+    "remove_placeholder": "Select one or more songs to remove...",
+    "remove_success_title": "✅ {count} Song(s) Removed",
+    "remove_processed": "*Selection has been processed.*",
+    "replay_success_title": "🎵 Song Replayed",
+    "replay_success_desc": "Restarting [{title}]({url}) from the beginning.",
+    "search_results_title": "🔎 Search Results",
+    "search_results_description": "Please select a song from the dropdown menu below to add it to the queue.",
+    "search_placeholder": "Choose a song to add...",
+    "search_no_results": "Sorry, I couldn't find any results for **{query}**.",
+    "search_selection_made": "*Your selection has been added to the queue.*",
+    "search_song_added": "✅ Added to Queue",
+    "jump_to_placeholder": "Jump to a specific song in the queue...",
+    "jump_to_success": "⏭️ Jumped to **{title}**!",
+    "seek_success": "▶️ Jumped to **{timestamp}**.",
+    "seek_fail_live": "Cannot seek in a live stream.",
+    "seek_fail_invalid_time": "Invalid time format. Use `HH:MM:SS`, `MM:SS`, or `SS` (e.g., `1:23`).",
+    "fastforward_success": "⏩ Fast-forwarded by **{duration}**.",
+    "rewind_success": "⏪ Rewound by **{duration}**.",
+    "seek_interface_title": "⏱️ Playback Control",
+    "seek_interface_footer": "This interface will time out in 5 minutes.",
+    "seek_modal_title": "Jump to Timestamp",
+    "seek_modal_label": "New time (e.g., 1:23, 45)",
+    "rewind_button_label": "Rewind 15s",
+    "fastforward_button_label": "Forward 15s",
+    "jump_to_button_label": "Jump to...",
+    "autoplay_loading_title": "💿 Autoplay in Progress",
+    "autoplay_loading_description": "{progress_bar}\nAdding song {processed}/{total} to the queue...",
+    "autoplay_finished_description": "Added **{count}** new songs to the queue! Enjoy the music.",
+    "volume_success": "🔊 Volume adjusted to **{level}%**.",
+    "queue_status_volume": "🔊 **Volume**: {level}%",
+    "controller_title": "Music Controller",
+    "controller_idle_description": "Waiting for music...\nSend the name or link of a song in this channel.",
+    "controller_next_up_field": "Next Up",
+    "controller_now_playing_field": "Now Playing",
+    "controller_nothing_next": "Nothing next",
+    "controller_no_other_songs": "No other songs in queue.",
+    "controller_queue_is_empty": "Queue is empty.",
+    "controller_footer": "{count} songs in queue | Total duration: {duration} | Volume: {volume}%",
+    "controller_previous_label": "Previous",
+    "controller_pause_label": "Pause",
+    "controller_resume_label": "Resume",
+    "controller_skip_label": "Skip",
+    "controller_stop_label": "Stop",
+    "controller_add_song_label": "Add Song",
+    "controller_shuffle_label": "Shuffle",
+    "controller_loop_label": "Loop",
+    "controller_autoplay_label": "Autoplay",
+    "controller_queue_label": "Show Queue",
+    "controller_jump_to_song_label": "Jump to...",
+    "controller_queue_title": "Queue",
+    "jump_to_title": " JUMP TO SONG",
+    "jump_to_description": "Use the dropdown menu to jump to a specific song in the queue.\nUse the buttons to navigate if you have a lot of songs.",
+    "controller_vol_down_label": " ",
+    "controller_vol_up_label": " ",
+    "youtube_blocked_title": "YouTube Links Disabled",
+    "youtube_blocked_description": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo get full YouTube playback, I made a super simple Windows app that sets up self-hosting for you — it's free and gives you full control!",
+    "youtube_blocked_repo_field": "Get the Code & Setup",
+    "youtube_blocked_repo_value": "GitHub repo: https://github.com/kian-fotovat/simple-playify\nWindows setup & instructions: https://alan7383.github.io/playify/self-host.html",
+    "queue_last_song": "No other songs are in the queue.",
+    "command_restricted_title": "🚫 Command Disabled Here",
+    "command_restricted_description": "Sorry, {bot_name} commands can only be used in specific channels on this server.",
+    "command_allowed_channels_field": "Allowed Channels",
+    "allowlist_set_success": "✅ Success! Bot commands are now restricted to the following channels: {channels}",
+    "allowlist_reset_success": "✅ Success! All command restrictions have been removed. The bot will now respond in any channel.",
+    "allowlist_invalid_args": "Invalid usage. You must either specify at least one channel to set the allowlist, or type 'default' in the `reset` option to remove it.",
 }
 
 AVAILABLE_COOKIES = ["cookies_1.txt", "cookies_2.txt", "cookies_3.txt", "cookies_4.txt", "cookies_5.txt"]
 
 
-def get_messages(message_key, guild_id):
-    mode = "normal"
-    return messages[message_key][mode]
+def get_messages(message_key):
+    return messages[message_key]
 
 
 def ydl_worker(ydl_opts, query, cookies_file=None):
@@ -1175,7 +1170,7 @@ def run_bot(status_queue, log_queue, command_queue):
 
                 options.append(discord.SelectOption(label=f"{global_index + 1}. {title}"[:100], value=str(global_index)))
 
-            super().__init__(placeholder=get_messages("jump_to_placeholder", guild_id), min_values=1, max_values=1, options=options)
+            super().__init__(placeholder=get_messages("jump_to_placeholder"), min_values=1, max_values=1, options=options)
 
         async def callback(self, interaction: discord.Interaction):
             guild_id = interaction.guild_id
@@ -1301,7 +1296,7 @@ def run_bot(status_queue, log_queue, command_queue):
             is_paused = vc and vc.is_paused()
 
             def get_label(key):
-                return get_messages(key, self.guild_id)
+                return get_messages(key)
 
             # --- DYNAMIC BUTTON MANAGEMENT ---
             for child in self.children:
@@ -1482,7 +1477,7 @@ def run_bot(status_queue, log_queue, command_queue):
             music_player = get_player(interaction.guild_id)
             async with music_player.queue_lock:
                 if music_player.queue.empty():
-                    return await interaction.response.send_message(get_messages("queue_empty", self.guild_id), ephemeral=True, silent=True)
+                    return await interaction.response.send_message(get_messages("queue_empty"), ephemeral=True, silent=True)
                 queue_list = list(music_player.queue._queue)
                 random.shuffle(queue_list)
                 new_queue = asyncio.Queue()
@@ -1547,16 +1542,16 @@ def run_bot(status_queue, log_queue, command_queue):
 
         status_lines = []
         if music_player.loop_current:
-            status_lines.append(get_messages("queue_status_loop", guild_id))
+            status_lines.append(get_messages("queue_status_loop"))
         if _24_7_active.get(guild_id, False):
             mode_24_7 = "Auto" if music_player.autoplay_enabled else "Normal"
-            status_lines.append(get_messages("queue_status_24_7", guild_id).format(mode=mode_24_7))
+            status_lines.append(get_messages("queue_status_24_7").format(mode=mode_24_7))
         elif music_player.autoplay_enabled:
-            status_lines.append(get_messages("queue_status_autoplay", guild_id))
+            status_lines.append(get_messages("queue_status_autoplay"))
 
-        status_description = "\n".join(status_lines) if status_lines else get_messages("queue_status_none", guild_id)
+        status_description = "\n".join(status_lines) if status_lines else get_messages("queue_status_none")
 
-        embed = Embed(title=get_messages("queue_status_title", guild_id), description=status_description, color=discord.Color.blue())
+        embed = Embed(title=get_messages("queue_status_title"), description=status_description, color=discord.Color.blue())
         return embed
 
     async def create_controller_embed(bot, guild_id):
@@ -1569,9 +1564,9 @@ def run_bot(status_queue, log_queue, command_queue):
         if not is_playing:
             if not is_connected:
                 description = "The bot is not connected to a voice channel.\nJoin a voice channel and click the button below."
-                embed = Embed(title=get_messages("controller_title", guild_id), description=description, color=0x36393F)
+                embed = Embed(title=get_messages("controller_title"), description=description, color=0x36393F)
             else:  # Connected but waiting
-                embed = Embed(title=get_messages("controller_title", guild_id), description=get_messages("controller_idle_description", guild_id), color=0x36393F)
+                embed = Embed(title=get_messages("controller_title"), description=get_messages("controller_idle_description"), color=0x36393F)
             embed.set_image(url="https://i.imgur.com/vDusBWD.png")
             embed.set_footer(text="Playify Controller System")
             return embed
@@ -1584,7 +1579,6 @@ def run_bot(status_queue, log_queue, command_queue):
             title = title[:77] + "..."
 
         thumbnail = info.get("thumbnail")
-        requester = info.get("requester", bot.user)
         artist = info.get("uploader", "Unknown Artist")
 
         is_24_7_normal = _24_7_active.get(guild_id, False) and not music_player.autoplay_enabled
@@ -1600,7 +1594,7 @@ def run_bot(status_queue, log_queue, command_queue):
         else:
             queue_snapshot = list(music_player.queue._queue)
 
-        tracks_to_display = queue_snapshot[:5]
+        tracks_to_display = queue_snapshot[:6]
 
         lazy_items_to_resolve = [item for item in tracks_to_display if isinstance(item, LazySearchItem) and not item.resolved_info]
         if lazy_items_to_resolve:
@@ -1616,7 +1610,7 @@ def run_bot(status_queue, log_queue, command_queue):
                     track.update(hydrated_map[track["url"]])
                     track["hydrated"] = True
 
-        next_song_text = get_messages("controller_nothing_next", guild_id)
+        next_song_text = get_messages("controller_nothing_next")
         if tracks_to_display:
             next_song = tracks_to_display[0]
             display_info = get_track_display_info(next_song)
@@ -1634,55 +1628,50 @@ def run_bot(status_queue, log_queue, command_queue):
         # Safely build the queue description field to avoid exceeding character limit
         description_lines = []
         current_length = 0
-        MAX_DESC_LENGTH = 900  # Safe limit below Discord's 1024 cap
 
         if len(tracks_to_display) > 1:
-            for i, item in enumerate(tracks_to_display[1:], start=2):
+            for i, item in enumerate(tracks_to_display[1:6], start=2):
                 display_info = get_track_display_info(item)
                 item_title = display_info.get("title")
                 if len(item_title) > 40:
-                    item_title = item_title[:37] + "..."
+                    item_title = item_title[:38] + "..."
                 item_duration = format_duration(display_info.get("duration"))
 
                 line = ""
                 if display_info.get("source_type") == "lazy":
-                    line = f"`{i}.` {item_title}"
+                    line = f"`{i - 1}.` {item_title}"
                 else:
-                    line = f"`{i}.` {item_title} - `{item_duration}`"
-
-                if current_length + len(line) > MAX_DESC_LENGTH:
-                    description_lines.append(f"\n... and {len(queue_snapshot) - i + 1} more songs.")
-                    break
+                    line = f"`{i - 1}.` {item_title} - `{item_duration}`"
 
                 description_lines.append(line)
                 current_length += len(line)
         elif len(tracks_to_display) == 1:
-            description_lines.append(get_messages("controller_no_other_songs", guild_id))
+            description_lines.append(get_messages("controller_no_other_songs"))
         else:
-            description_lines.append(get_messages("controller_queue_is_empty", guild_id))
+            description_lines.append(get_messages("controller_queue_is_empty"))
 
         queue_list = "\n".join(description_lines)
 
-        embed = Embed(title=get_messages("controller_title", guild_id), color=discord.Color.blue())
+        embed = Embed(title=get_messages("controller_title"), color=discord.Color.blue())
         now_playing_title_display = f"**[{title}]({info.get('webpage_url', info.get('url', '#'))})**"
         now_playing_value = f"{now_playing_title_display}\n> **{artist}**"
-        embed.add_field(name=get_messages("controller_now_playing_field", guild_id), value=now_playing_value, inline=False)
-        embed.add_field(name=get_messages("controller_next_up_field", guild_id), value=next_song_text, inline=False)
-        embed.add_field(name=get_messages("controller_queue_title", guild_id), value=queue_list, inline=False)
+        embed.add_field(name=get_messages("controller_now_playing_field"), value=now_playing_value, inline=False)
+        embed.add_field(name=get_messages("controller_next_up_field"), value=next_song_text, inline=False)
+        embed.add_field(name=get_messages("controller_queue_title"), value=queue_list, inline=False)
 
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
 
         status_lines = []
         if music_player.loop_current:
-            status_lines.append(get_messages("queue_status_loop", guild_id))
+            status_lines.append(get_messages("queue_status_loop"))
         if _24_7_active.get(guild_id, False):
             mode_24_7 = "Auto" if music_player.autoplay_enabled else "Normal"
-            status_lines.append(get_messages("queue_status_24_7", guild_id).format(mode=mode_24_7))
+            status_lines.append(get_messages("queue_status_24_7").format(mode=mode_24_7))
         elif music_player.autoplay_enabled:
-            status_lines.append(get_messages("queue_status_autoplay", guild_id))
+            status_lines.append(get_messages("queue_status_autoplay"))
         if status_lines:
-            embed.add_field(name=get_messages("queue_status_title", guild_id), value="\n".join(status_lines), inline=False)
+            embed.add_field(name=get_messages("queue_status_title"), value="\n".join(status_lines), inline=False)
 
         count_for_display = len(queue_snapshot)
 
@@ -1794,9 +1783,9 @@ def run_bot(status_queue, log_queue, command_queue):
         def __init__(self, view, guild_id):
             self.view = view
             self.music_player = get_player(guild_id)
-            super().__init__(title=get_messages("seek_modal_title", guild_id))
+            super().__init__(title=get_messages("seek_modal_title"))
 
-            self.timestamp_input = discord.ui.TextInput(label=get_messages("seek_modal_label", guild_id), placeholder="e.g., 1:23 or 45", required=True)
+            self.timestamp_input = discord.ui.TextInput(label=get_messages("seek_modal_label"), placeholder="e.g., 1:23 or 45", required=True)
             self.add_item(self.timestamp_input)
 
         async def on_submit(self, interaction: discord.Interaction):
@@ -1934,7 +1923,7 @@ def run_bot(status_queue, log_queue, command_queue):
                     discord.SelectOption(label=video.get("title", "Unknown Title")[:100], description=f"by {video.get('uploader', 'Unknown Artist')}"[:100], value=video.get("webpage_url", video.get("url")), emoji="🎵")
                 )
 
-            super().__init__(placeholder=get_messages("search_placeholder", guild_id), min_values=1, max_values=1, options=options)
+            super().__init__(placeholder=get_messages("search_placeholder"), min_values=1, max_values=1, options=options)
 
         async def callback(self, interaction: discord.Interaction):
             """This is called when the user selects a song."""
@@ -1944,7 +1933,7 @@ def run_bot(status_queue, log_queue, command_queue):
             selected_url = self.values[0]
 
             self.disabled = True
-            self.placeholder = get_messages("search_selection_made", guild_id)
+            self.placeholder = get_messages("search_selection_made")
             await interaction.response.edit_message(view=self.view)
 
             try:
@@ -1973,7 +1962,7 @@ def run_bot(status_queue, log_queue, command_queue):
                 video_url = video_info.get("webpage_url", video_info.get("url"))
 
                 if guild_id not in controller_channels:
-                    embed = Embed(title=get_messages("song_added", guild_id), description=f"[{video_info.get('title', 'Unknown Title')}]({video_url})", color=discord.Color.blue())
+                    embed = Embed(title=get_messages("song_added"), description=f"[{video_info.get('title', 'Unknown Title')}]({video_url})", color=discord.Color.blue())
                     if video_info.get("thumbnail"):
                         embed.set_thumbnail(url=video_info["thumbnail"])
                     await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -2155,7 +2144,7 @@ def run_bot(status_queue, log_queue, command_queue):
 
                 options.append(discord.SelectOption(label=f"{global_index + 1}. {title}"[:100], value=str(global_index)))
 
-            super().__init__(placeholder=get_messages("remove_placeholder", guild_id), min_values=1, max_values=len(options) if options else 1, options=options)
+            super().__init__(placeholder=get_messages("remove_placeholder"), min_values=1, max_values=len(options) if options else 1, options=options)
 
         async def callback(self, interaction: discord.Interaction):
             """This is the corrected callback that properly handles the interaction response."""
@@ -2181,10 +2170,10 @@ def run_bot(status_queue, log_queue, command_queue):
             bot.loop.create_task(update_controller(bot, guild_id))
 
             self.view.clear_items()
-            await interaction.response.edit_message(content=get_messages("remove_processed", guild_id), embed=None, view=self.view)
+            await interaction.response.edit_message(content=get_messages("remove_processed"), embed=None, view=self.view)
 
             embed = Embed(
-                title=get_messages("remove_success_title", guild_id).format(count=len(removed_titles)),
+                title=get_messages("remove_success_title").format(count=len(removed_titles)),
                 description="\n".join([f"• `{title}`" for title in removed_titles]),
                 color=discord.Color.green(),
             )
@@ -2251,8 +2240,8 @@ def run_bot(status_queue, log_queue, command_queue):
     async def show_youtube_blocked_message(interaction: discord.Interaction):
         """Creates and sends the standardized 'YouTube is blocked' embed."""
         guild_id = interaction.guild.id
-        embed = Embed(title=get_messages("youtube_blocked_title", guild_id), description=get_messages("youtube_blocked_description", guild_id), color=discord.Color.orange())
-        embed.add_field(name=get_messages("youtube_blocked_repo_field", guild_id), value=get_messages("youtube_blocked_repo_value", guild_id))
+        embed = Embed(title=get_messages("youtube_blocked_title"), description=get_messages("youtube_blocked_description"), color=discord.Color.orange())
+        embed.add_field(name=get_messages("youtube_blocked_repo_field"), value=get_messages("youtube_blocked_repo_value"))
         # Use followup.send because the interaction will always be deferred by the command
         await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
 
@@ -2390,7 +2379,7 @@ def run_bot(status_queue, log_queue, command_queue):
 
         member = interaction.guild.get_member(interaction.user.id)
         if not member or not member.voice or not member.voice.channel:
-            embed = Embed(description=get_messages("no_voice_channel", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("no_voice_channel"), color=discord.Color.red())
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             else:
@@ -2473,7 +2462,7 @@ def run_bot(status_queue, log_queue, command_queue):
                     raise e
 
             except Exception as e:
-                embed = Embed(description=get_messages("connection_error", guild_id), color=discord.Color.red())
+                embed = Embed(description=get_messages("connection_error"), color=discord.Color.red())
                 if interaction.response.is_done():
                     await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
                 else:
@@ -2702,10 +2691,10 @@ def run_bot(status_queue, log_queue, command_queue):
         tb_str = "".join(traceback.format_exception(type(error), value=error, tb=error.__traceback__))
         logger.error(f"Unhandled playback error in guild {guild_id}:\n{tb_str}")
 
-        embed = Embed(title=get_messages("critical_error_title", guild_id), description=get_messages("critical_error_description", guild_id), color=discord.Color.red())
-        embed.add_field(name=get_messages("critical_error_report_field", guild_id), value=get_messages("critical_error_report_value", guild_id), inline=False)
+        embed = Embed(title=get_messages("critical_error_title"), description=get_messages("critical_error_description"), color=discord.Color.red())
+        embed.add_field(name=get_messages("critical_error_report_field"), value=get_messages("critical_error_report_value"), inline=False)
         error_details = f"URL: {music_player.current_url}\nError: {str(error)[:500]}"
-        embed.add_field(name=get_messages("critical_error_details_field", guild_id), value=f"```\n{error_details}\n```", inline=False)
+        embed.add_field(name=get_messages("critical_error_details_field"), value=f"```\n{error_details}\n```", inline=False)
         embed.set_footer(text="Your help is appreciated!")
 
         try:
@@ -2800,7 +2789,7 @@ def run_bot(status_queue, log_queue, command_queue):
                                 if music_player.text_channel:
                                     try:
                                         notice_key = "autoplay_direct_link_notice"
-                                        notice_embed = Embed(description=get_messages(notice_key, guild_id), color=discord.Color.blue())
+                                        notice_embed = Embed(description=get_messages(notice_key), color=discord.Color.blue())
                                         progress_message = await music_player.text_channel.send(embed=notice_embed, silent=SILENT_MESSAGES)
                                     except discord.Forbidden:
                                         pass
@@ -2819,8 +2808,8 @@ def run_bot(status_queue, log_queue, command_queue):
                             try:
                                 if not progress_message and music_player.text_channel:
                                     initial_embed = Embed(
-                                        title=get_messages("autoplay_loading_title", guild_id),
-                                        description=get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(0), processed=0, total="?"),
+                                        title=get_messages("autoplay_loading_title"),
+                                        description=get_messages("autoplay_loading_description").format(progress_bar=create_loading_bar(0), processed=0, total="?"),
                                         color=discord.Color.blue(),
                                     )
                                     progress_message = await music_player.text_channel.send(embed=initial_embed, silent=SILENT_MESSAGES)
@@ -2860,7 +2849,7 @@ def run_bot(status_queue, log_queue, command_queue):
                                         if (i + 1) % 10 == 0 or (i + 1) == total_to_add:
                                             progress = (i + 1) / total_to_add
                                             updated_embed = progress_message.embeds[0]
-                                            updated_embed.description = get_messages("autoplay_loading_description", guild_id).format(progress_bar=create_loading_bar(progress), processed=added_count, total=total_to_add)
+                                            updated_embed.description = get_messages("autoplay_loading_description").format(progress_bar=create_loading_bar(progress), processed=added_count, total=total_to_add)
                                             await progress_message.edit(embed=updated_embed)
                                             await asyncio.sleep(0.5)
                             except Exception as e:
@@ -2869,14 +2858,14 @@ def run_bot(status_queue, log_queue, command_queue):
                                 if progress_message and added_count > 0:
                                     final_embed = progress_message.embeds[0]
                                     final_embed.title = None
-                                    final_embed.description = get_messages("autoplay_finished_description", guild_id).format(count=added_count)
+                                    final_embed.description = get_messages("autoplay_finished_description").format(count=added_count)
                                     final_embed.color = discord.Color.green()
                                     await progress_message.edit(embed=final_embed)
                                 elif progress_message and added_count == 0:
                                     await progress_message.delete()
                     if music_player.queue.empty():
                         music_player.current_task = None
-                        bot.loop.create_task(update_controller(bot, guild_id))
+                        bot.loop.create_task(update_controller(bot))
                         if not _24_7_active.get(guild_id, False):
                             await asyncio.sleep(60)
                             if music_player.voice_client and not music_player.voice_client.is_playing() and len(music_player.voice_client.channel.members) == 1:
@@ -2896,7 +2885,7 @@ def run_bot(status_queue, log_queue, command_queue):
                         if music_player.text_channel:
                             try:
                                 error_embed = Embed(
-                                    title=get_messages("extraction_error", guild_id),
+                                    title=get_messages("extraction_error"),
                                     description=f"Could not find a source for: `{failed_title}`.\n*This track will be skipped.*",
                                     color=discord.Color.red(),
                                 )
@@ -2936,7 +2925,7 @@ def run_bot(status_queue, log_queue, command_queue):
                 if music_player.text_channel:
                     try:
                         emoji, title_key, desc_key = parse_yt_dlp_error(str(e))
-                        embed = Embed(title=f"{emoji} Playback Failed", description=get_messages(desc_key, guild_id) + "\n*This track will be skipped.*", color=discord.Color.red())
+                        embed = Embed(title=f"{emoji} Playback Failed", description=get_messages(desc_key) + "\n*This track will be skipped.*", color=discord.Color.red())
                         embed.add_field(name="Affected URL", value=f"`{url_for_fetching}`")
                         await music_player.text_channel.send(embed=embed, silent=SILENT_MESSAGES)
                     except discord.Forbidden:
@@ -3105,7 +3094,7 @@ def run_bot(status_queue, log_queue, command_queue):
             }
             title_key, desc_key = platform_key_map.get(platform_name)
 
-            embed = Embed(title=get_messages(title_key, guild_id), description=get_messages(desc_key, guild_id).format(count=total_tracks, failed=0, failed_tracks=""), color=discord.Color.green())
+            embed = Embed(title=get_messages(title_key), description=get_messages(desc_key).format(count=total_tracks, failed=0, failed_tracks=""), color=discord.Color.green())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
             if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
@@ -3134,7 +3123,7 @@ def run_bot(status_queue, log_queue, command_queue):
                 if platform_tracks is None:
                     error_key_map = {"Spotify": "spotify_error", "Deezer": "deezer_error"}
                     error_message_key = error_key_map.get(platform_name, "video_error")
-                    embed = Embed(description=get_messages(error_message_key, guild_id), color=discord.Color.red())
+                    embed = Embed(description=get_messages(error_message_key), color=discord.Color.red())
                     await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
                     return
 
@@ -3192,7 +3181,7 @@ def run_bot(status_queue, log_queue, command_queue):
                                 "hydrated": False,  # Mark as needing metadata
                             }
                         )
-                    embed = Embed(title=get_messages("playlist_added", guild_id), description=get_messages("playlist_description", guild_id).format(count=len(tracks_to_add)), color=discord.Color.green())
+                    embed = Embed(title=get_messages("playlist_added"), description=get_messages("playlist_description").format(count=len(tracks_to_add)), color=discord.Color.green())
                     await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
                 else:
                     # This is a single track. `info` is the video's data.
@@ -3215,7 +3204,7 @@ def run_bot(status_queue, log_queue, command_queue):
             await add_and_update_controller(video_info)
 
         except Exception as e:
-            embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("search_error"), color=discord.Color.red())
             logger.error(f"Error in /play for '{query}': {e}", exc_info=True)
             if interaction.response.is_done():
                 try:
@@ -3250,7 +3239,7 @@ def run_bot(status_queue, log_queue, command_queue):
             tracks_for_display = list(music_player.queue._queue)
 
         if not tracks_for_display and not music_player.current_info:
-            embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("queue_empty"), color=discord.Color.red())
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
             return
 
@@ -3277,7 +3266,7 @@ def run_bot(status_queue, log_queue, command_queue):
         music_player.history.clear()
         music_player.radio_playlist.clear()
 
-        embed = Embed(description=get_messages("clear_queue_success", guild_id), color=discord.Color.green())
+        embed = Embed(description=get_messages("clear_queue_success"), color=discord.Color.green())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
 
     @bot.tree.command(name="playnext", description="Add a song or to play next")
@@ -3294,8 +3283,8 @@ def run_bot(status_queue, log_queue, command_queue):
 
         # Define the helper function to show the YouTube blocked message
         async def show_youtube_blocked_message():
-            embed = Embed(title=get_messages("youtube_blocked_title", guild_id), description=get_messages("youtube_blocked_description", guild_id), color=discord.Color.orange())
-            embed.add_field(name=get_messages("youtube_blocked_repo_field", guild_id), value=get_messages("youtube_blocked_repo_value", guild_id))
+            embed = Embed(title=get_messages("youtube_blocked_title"), description=get_messages("youtube_blocked_description"), color=discord.Color.orange())
+            embed.add_field(name=get_messages("youtube_blocked_repo_field"), value=get_messages("youtube_blocked_repo_value"))
             await interaction.followup.send(embed=embed, ephemeral=True, silent=True)
 
         # FIX: Check if the query is a YouTube link at the beginning
@@ -3330,7 +3319,7 @@ def run_bot(status_queue, log_queue, command_queue):
                         tracks = await process_deezer_url(query, guild_id)
 
                     if tracks is None:
-                        embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
+                        embed = Embed(description=get_messages("search_error"), color=discord.Color.red())
                         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
                         return
 
@@ -3372,7 +3361,7 @@ def run_bot(status_queue, log_queue, command_queue):
                     "requester": interaction.user,
                 }
             except Exception as e:
-                embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
+                embed = Embed(description=get_messages("search_error"), color=discord.Color.red())
                 await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
                 logger.error(f"Error processing /playnext for query '{query}': {e}", exc_info=True)
                 return
@@ -3387,7 +3376,7 @@ def run_bot(status_queue, log_queue, command_queue):
 
             description_text = f"[{queue_item['title']}]({queue_item['webpage_url']})"
 
-            embed = Embed(title=get_messages("play_next_added", guild_id), description=description_text, color=discord.Color.blue())
+            embed = Embed(title=get_messages("play_next_added"), description=description_text, color=discord.Color.blue())
             if queue_item.get("thumbnail"):
                 embed.set_thumbnail(url=queue_item["thumbnail"])
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -3410,15 +3399,15 @@ def run_bot(status_queue, log_queue, command_queue):
             title = music_player.current_info.get("title", "Unknown Title")
             thumbnail = music_player.current_info.get("thumbnail")
             url = music_player.current_info.get("webpage_url", music_player.current_url)
-            description_text = get_messages("now_playing_description", guild_id).format(title=title, url=url)
+            description_text = get_messages("now_playing_description").format(title=title, url=url)
 
-            embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=discord.Color.green())
+            embed = Embed(title=get_messages("now_playing_title"), description=description_text, color=discord.Color.green())
             if thumbnail:
                 embed.set_thumbnail(url=thumbnail)
 
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
         else:
-            embed = Embed(description=get_messages("no_song_playing", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("no_song_playing"), color=discord.Color.red())
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
     @bot.tree.command(name="pause", description="Pause the current playback")
@@ -3442,12 +3431,12 @@ def run_bot(status_queue, log_queue, command_queue):
                 music_player.playback_started_at = None
 
             voice_client.pause()
-            embed = Embed(description=get_messages("pause", guild_id), color=discord.Color.orange())
+            embed = Embed(description=get_messages("pause"), color=discord.Color.orange())
             # Use followup.send because we deferred
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
             bot.loop.create_task(update_controller(bot, interaction.guild.id))
         else:
-            embed = Embed(description=get_messages("no_playback", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("no_playback"), color=discord.Color.red())
             # Use followup.send because we deferred
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
@@ -3471,12 +3460,12 @@ def run_bot(status_queue, log_queue, command_queue):
                 music_player.playback_started_at = time.time()
 
             voice_client.resume()
-            embed = Embed(description=get_messages("resume", guild_id), color=discord.Color.green())
+            embed = Embed(description=get_messages("resume"), color=discord.Color.green())
             # Use followup.send because we deferred
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
             bot.loop.create_task(update_controller(bot, interaction.guild.id))
         else:
-            embed = Embed(description=get_messages("no_paused", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("no_paused"), color=discord.Color.red())
             # Use followup.send because we deferred
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
@@ -3525,7 +3514,7 @@ def run_bot(status_queue, log_queue, command_queue):
         voice_client = interaction.guild.voice_client
 
         if not voice_client or not (voice_client.is_playing() or voice_client.is_paused()):
-            embed = Embed(description=get_messages("no_song", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("no_song"), color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             return
 
@@ -3574,8 +3563,8 @@ def run_bot(status_queue, log_queue, command_queue):
             # Replaying the current song
             title = music_player.current_info.get("title", "Unknown Title")
             url = music_player.current_info.get("webpage_url", music_player.current_url)
-            description_text = get_messages("replay_success_desc", guild_id).format(title=title, url=url)
-            embed = Embed(title=get_messages("replay_success_title", guild_id), description=description_text, color=discord.Color.blue())
+            description_text = get_messages("replay_success_desc").format(title=title, url=url)
+            embed = Embed(title=get_messages("replay_success_title"), description=description_text, color=discord.Color.blue())
             if music_player.current_info.get("thumbnail"):
                 embed.set_thumbnail(url=music_player.current_info["thumbnail"])
             await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -3592,17 +3581,17 @@ def run_bot(status_queue, log_queue, command_queue):
             hydrated_next_info = await music_player.hydrate_track_info(next_song_info)
             next_title = hydrated_next_info.get("title", "Unknown Title")
             next_url = hydrated_next_info.get("webpage_url", "#")
-            description_text = get_messages("now_playing_description", guild_id).format(title=next_title, url=next_url)
+            description_text = get_messages("now_playing_description").format(title=next_title, url=next_url)
 
-            embed = Embed(title=get_messages("now_playing_title", guild_id), description=description_text, color=discord.Color.blue())
-            embed.set_author(name=get_messages("skip_confirmation", guild_id))
+            embed = Embed(title=get_messages("now_playing_title"), description=description_text, color=discord.Color.blue())
+            embed.set_author(name=get_messages("skip_confirmation"))
 
             if hydrated_next_info.get("thumbnail"):
                 embed.set_thumbnail(url=hydrated_next_info["thumbnail"])
         else:
             # Queue is now empty
-            embed = Embed(title=get_messages("skip_confirmation", guild_id), color=discord.Color.blue())
-            embed.set_footer(text=get_messages("skip_queue_empty", guild_id))
+            embed = Embed(title=get_messages("skip_confirmation"), color=discord.Color.blue())
+            embed.set_footer(text=get_messages("skip_queue_empty"))
 
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
 
@@ -3624,9 +3613,9 @@ def run_bot(status_queue, log_queue, command_queue):
         music_player = get_player(guild_id)
 
         music_player.loop_current = not music_player.loop_current
-        state = get_messages("loop_state_enabled", guild_id) if music_player.loop_current else get_messages("loop_state_disabled", guild_id)
+        state = get_messages("loop_state_enabled") if music_player.loop_current else get_messages("loop_state_disabled")
 
-        embed = Embed(description=get_messages("loop", guild_id).format(state=state), color=discord.Color.blue())
+        embed = Embed(description=get_messages("loop").format(state=state), color=discord.Color.blue())
 
         # 2. Send the actual response as a follow-up
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
@@ -3670,10 +3659,10 @@ def run_bot(status_queue, log_queue, command_queue):
             clear_audio_cache(guild_id)
             music_players[guild_id] = MusicPlayer()
 
-            embed = Embed(description=get_messages("stop", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("stop"), color=discord.Color.red())
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
         else:
-            embed = Embed(description=get_messages("not_connected", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("not_connected"), color=discord.Color.red())
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
     # /shuffle command
@@ -3697,11 +3686,11 @@ def run_bot(status_queue, log_queue, command_queue):
             for item in items:
                 await music_player.queue.put(item)
 
-            embed = Embed(description=get_messages("shuffle_success", guild_id), color=discord.Color.green())
+            embed = Embed(description=get_messages("shuffle_success"), color=discord.Color.green())
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
             bot.loop.create_task(update_controller(bot, interaction.guild.id))
         else:
-            embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("queue_empty"), color=discord.Color.red())
             await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
     # /autoplay command
@@ -3715,9 +3704,9 @@ def run_bot(status_queue, log_queue, command_queue):
         music_player = get_player(guild_id)
 
         music_player.autoplay_enabled = not music_player.autoplay_enabled
-        state = get_messages("autoplay_state_enabled", guild_id) if music_player.autoplay_enabled else get_messages("autoplay_state_disabled", guild_id)
+        state = get_messages("autoplay_state_enabled") if music_player.autoplay_enabled else get_messages("autoplay_state_disabled")
 
-        embed = Embed(description=get_messages("autoplay_toggle", guild_id).format(state=state), color=discord.Color.blue())
+        embed = Embed(description=get_messages("autoplay_toggle").format(state=state), color=discord.Color.blue())
         await interaction.response.send_message(silent=SILENT_MESSAGES, embed=embed)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
 
@@ -3840,7 +3829,7 @@ def run_bot(status_queue, log_queue, command_queue):
             music_player.loop_current = False
             music_player.radio_playlist.clear()
 
-            embed = Embed(title=get_messages("24_7_off_title", guild_id), description=get_messages("24_7_off_desc", guild_id), color=discord.Color.red())
+            embed = Embed(title=get_messages("24_7_off_title"), description=get_messages("24_7_off_desc"), color=discord.Color.red())
             await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
             return
 
@@ -3875,10 +3864,10 @@ def run_bot(status_queue, log_queue, command_queue):
 
         if mode == "auto":
             music_player.autoplay_enabled = True
-            embed = Embed(title=get_messages("24_7_auto_title", guild_id), description=get_messages("24_7_auto_desc", guild_id), color=discord.Color.green())
+            embed = Embed(title=get_messages("24_7_auto_title"), description=get_messages("24_7_auto_desc"), color=discord.Color.green())
         else:  # mode == "normal"
             music_player.autoplay_enabled = False
-            embed = Embed(title=get_messages("24_7_normal_title", guild_id), description=get_messages("24_7_normal_desc", guild_id), color=discord.Color.green())
+            embed = Embed(title=get_messages("24_7_normal_title"), description=get_messages("24_7_normal_desc"), color=discord.Color.green())
 
         if not music_player.voice_client.is_playing() and not music_player.voice_client.is_paused():
             music_player.current_task = asyncio.create_task(play_audio(guild_id))
@@ -3909,7 +3898,7 @@ def run_bot(status_queue, log_queue, command_queue):
         # We remove the `is_playing()` check. We only need to know WHAT to play,
         # not IF it's currently making sound. This is the key fix for the zombie state.
         if not music_player.current_info:
-            embed = Embed(description=get_messages("reconnect_not_playing", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("reconnect_not_playing"), color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             return
 
@@ -3954,7 +3943,7 @@ def run_bot(status_queue, log_queue, command_queue):
             # We now reliably restart playback from the correct timestamp
             music_player.current_task = bot.loop.create_task(play_audio(guild_id, seek_time=current_timestamp, is_a_loop=True))
 
-            embed = Embed(description=get_messages("reconnect_success", guild_id), color=discord.Color.green())
+            embed = Embed(description=get_messages("reconnect_success"), color=discord.Color.green())
             await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES)
 
         except Exception as e:
@@ -4005,7 +3994,7 @@ def run_bot(status_queue, log_queue, command_queue):
         music_player = get_player(guild_id)
 
         if music_player.queue.empty():
-            embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("queue_empty"), color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             return
 
@@ -4015,7 +4004,7 @@ def run_bot(status_queue, log_queue, command_queue):
         view = RemoveView(interaction, all_tracks)
         await view.update_view()
 
-        embed = Embed(title=get_messages("remove_title", guild_id), description=get_messages("remove_description", guild_id), color=discord.Color.blue())
+        embed = Embed(title=get_messages("remove_title"), description=get_messages("remove_description"), color=discord.Color.blue())
 
         await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
@@ -4048,18 +4037,18 @@ def run_bot(status_queue, log_queue, command_queue):
             search_results = info.get("entries", [])
 
             if not search_results:
-                embed = Embed(description=get_messages("search_no_results", guild_id).format(query=query), color=discord.Color.red())
+                embed = Embed(description=get_messages("search_no_results").format(query=query), color=discord.Color.red())
                 await interaction.followup.send(embed=embed, silent=SILENT_MESSAGES, ephemeral=True)
                 return
 
             view = SearchView(search_results, guild_id)
-            embed = Embed(title=get_messages("search_results_title", guild_id), description=get_messages("search_results_description", guild_id), color=discord.Color.blue())
+            embed = Embed(title=get_messages("search_results_title"), description=get_messages("search_results_description"), color=discord.Color.blue())
 
             await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
         except Exception as e:
             logger.error(f"Error during /search for '{query}': {e}", exc_info=True)
-            embed = Embed(description=get_messages("search_error", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("search_error"), color=discord.Color.red())
             await interaction.followup.send(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
 
     @bot.tree.command(name="seek", description="Opens an interactive menu to seek, fast-forward, or rewind.")
@@ -4068,18 +4057,18 @@ def run_bot(status_queue, log_queue, command_queue):
         music_player = get_player(guild_id)
 
         if not music_player.voice_client or not (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
-            await interaction.response.send_message(get_messages("no_playback", guild_id), ephemeral=True, silent=SILENT_MESSAGES)
+            await interaction.response.send_message(get_messages("no_playback"), ephemeral=True, silent=SILENT_MESSAGES)
             return
 
         if music_player.is_current_live:
-            await interaction.response.send_message(get_messages("seek_fail_live", guild_id), ephemeral=True, silent=SILENT_MESSAGES)
+            await interaction.response.send_message(get_messages("seek_fail_live"), ephemeral=True, silent=SILENT_MESSAGES)
             return
 
         # Create the view and the initial embed
         view = SeekView(interaction)
 
         # Create the initial embed (will be updated by the view)
-        initial_embed = Embed(title=get_messages("seek_interface_title", guild_id), description="Loading player...", color=discord.Color.blue())
+        initial_embed = Embed(title=get_messages("seek_interface_title"), description="Loading player...", color=discord.Color.blue())
 
         await interaction.response.send_message(embed=initial_embed, view=view, silent=SILENT_MESSAGES)
 
@@ -4110,7 +4099,7 @@ def run_bot(status_queue, log_queue, command_queue):
         if vc and vc.is_playing() and isinstance(vc.source, discord.PCMVolumeTransformer):
             vc.source.volume = new_volume
 
-        embed = Embed(description=get_messages("volume_success", guild_id).format(level=level), color=discord.Color.blue())
+        embed = Embed(description=get_messages("volume_success").format(level=level), color=discord.Color.blue())
 
         await interaction.response.send_message(embed=embed, silent=SILENT_MESSAGES)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
@@ -4186,7 +4175,7 @@ def run_bot(status_queue, log_queue, command_queue):
                 del allowed_channels_map[guild_id]
                 logger.info(f"Command channel allowlist has been RESET for guild {guild_id}.")
 
-            embed = discord.Embed(description=get_messages("allowlist_reset_success", guild_id), color=discord.Color.green())
+            embed = discord.Embed(description=get_messages("allowlist_reset_success"), color=discord.Color.green())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
             return
 
@@ -4200,12 +4189,12 @@ def run_bot(status_queue, log_queue, command_queue):
             channel_mentions = ", ".join([ch.mention for ch in channels])
             logger.info(f"Command channel allowlist for guild {guild_id} set to: {allowed_ids}")
 
-            embed = discord.Embed(description=get_messages("allowlist_set_success", guild_id).format(channels=channel_mentions), color=discord.Color.green())
+            embed = discord.Embed(description=get_messages("allowlist_set_success").format(channels=channel_mentions), color=discord.Color.green())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
             return
 
         # Case 3: Invalid arguments
-        embed = discord.Embed(description=get_messages("allowlist_invalid_args", guild_id), color=discord.Color.orange())
+        embed = discord.Embed(description=get_messages("allowlist_invalid_args"), color=discord.Color.orange())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
 
     @bot.tree.command(name="previous", description="Plays the previous song in the history.")
@@ -4261,7 +4250,7 @@ def run_bot(status_queue, log_queue, command_queue):
         music_player = get_player(guild_id)
 
         if music_player.queue.empty():
-            embed = Embed(description=get_messages("queue_empty", guild_id), color=discord.Color.red())
+            embed = Embed(description=get_messages("queue_empty"), color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
             return
 
@@ -4271,7 +4260,7 @@ def run_bot(status_queue, log_queue, command_queue):
         view = JumpToView(interaction, all_tracks)
         await view.update_view()
 
-        embed = Embed(title=get_messages("jump_to_title", guild_id), description=get_messages("jump_to_description", guild_id), color=discord.Color.blue())
+        embed = Embed(title=get_messages("jump_to_title"), description=get_messages("jump_to_description"), color=discord.Color.blue())
 
         await interaction.followup.send(embed=embed, view=view, silent=SILENT_MESSAGES)
 
@@ -4433,10 +4422,10 @@ def run_bot(status_queue, log_queue, command_queue):
 
         # Final block if no condition is met
         channel_mentions = ", ".join([f"<#{ch_id}>" for ch_id in allowed_ids])
-        description_text = get_messages("command_restricted_description", guild_id).format(bot_name=interaction.client.user.name)
+        description_text = get_messages("command_restricted_description").format(bot_name=interaction.client.user.name)
 
-        embed = discord.Embed(title=get_messages("command_restricted_title", guild_id), description=description_text, color=discord.Color.red())
-        embed.add_field(name=get_messages("command_allowed_channels_field", guild_id), value=channel_mentions)
+        embed = discord.Embed(title=get_messages("command_restricted_title"), description=description_text, color=discord.Color.red())
+        embed.add_field(name=get_messages("command_allowed_channels_field"), value=channel_mentions)
 
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=True)
         return False

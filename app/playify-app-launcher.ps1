@@ -33,7 +33,7 @@ try {
 
     # --- Step 1: Configure Application Directory ---
     $dataDir = Join-Path $scriptDirectory 'Playify_Data'
-    $configPath = Join-Path $dataDir 'config.txt'
+    $configPath = Join-Path $dataDir 'playify_launcher_config.txt'
     $appRoot = $null
 
     # Load saved directory from config.
