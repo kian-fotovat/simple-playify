@@ -139,7 +139,7 @@ MESSAGES = {
     "error.unavailable.description": "This video is no longer available or may have been removed.",
     "youtube_blocked_title": "YouTube Links Disabled",
     "youtube_blocked_description": "Due to Google/YouTube restrictions, playing YouTube links directly is not supported on the public version of Playify.\n\nTo get full YouTube playback, a simple Windows app is available to set up self-hosting for you \u2014 it's free and gives you full control!",
-    "error.youtube_blocked.repo_field": "Get the Code & Setup",
+    "youtube_blocked_repo_field": "Get the Code & Setup",
     "youtube_blocked_repo_value": "GitHub repo: [kian-fotovat/simple-playify](https://github.com/kian-fotovat/simple-playify)\nWindows setup & instructions:\n[Download Here](https://github.com/kian-fotovat/simple-playify/releases/latest)",
     "critical_error_title": "🚨 An Unexpected Error Occurred",
     "critical_error_description": "The bot encountered a problem. Please report this issue on GitHub so we can fix it!",
@@ -168,7 +168,7 @@ MESSAGES = {
     "player.a_song_fallback": "a song",
     "player.track_will_be_skipped": "This track will be skipped.",
     "player.no_playback.title": "No playback in progress.",
-    "player.no_song.title": "No song is currently playing.",
+    "player.no_song": "No song is currently playing.",
     "not_connected": "The bot is not connected to a voice channel.",
     "player.history.empty": "No previous song in history.",
     "player.previous.success": "Skipping back to the previous song.",
@@ -249,7 +249,7 @@ MESSAGES = {
     "search_results_description": "Please select a song from the dropdown menu below to add it to the queue.",
     "search_placeholder": "Choose a song to add...",
     "search_selection_made": "Your selection has been added to the queue.",
-    "search.no_results": "Sorry, I couldn't find any results for **{query}**.",
+    "search_no_results": "Sorry, I couldn't find any results for **{query}**.",
     "search.added_to_queue_ephemeral": "✅ Added to queue: {title}",
     "search.result_description": "by {artist}",
     "seek.fail_live": "⌛ Cannot seek in a live stream.",
@@ -1190,7 +1190,7 @@ async def create_controller_embed(bot, guild_id):
     now_playing_value = get_messages("controller.now_playing.value", now_playing_title_display=now_playing_title_display, artist=artist)
     embed.add_field(name=get_messages("controller.now_playing.title"), value=now_playing_value, inline=False)
     embed.add_field(name=get_messages("controller.next_up.title"), value=next_song_text, inline=False)
-    embed.add_field(name=get_messages("controller_controller_queue_title"), value=queue_list, inline=False)
+    embed.add_field(name=get_messages("controller_queue_title"), value=queue_list, inline=False)
 
     if thumbnail:
         embed.set_thumbnail(url=thumbnail)
@@ -3385,7 +3385,7 @@ async def pause(interaction: discord.Interaction):
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed)
         bot.loop.create_task(update_controller(bot, interaction.guild.id))
     else:
-        embed = Embed(description=get_messages("no_playback"), color=discord.Color.red())
+        embed = Embed(description=get_messages("player.no_playback.title"), color=discord.Color.red())
         # Use followup.send because we deferred
         await interaction.followup.send(silent=SILENT_MESSAGES, embed=embed, ephemeral=True)
 
@@ -3471,7 +3471,7 @@ async def skip(interaction: discord.Interaction, number: Optional[app_commands.R
     voice_client = interaction.guild.voice_client
 
     if not voice_client or not (voice_client.is_playing() or voice_client.is_paused()):
-        embed = Embed(description=get_messages("no_song"), color=discord.Color.red())
+        embed = Embed(description=get_messages("player.no_song"), color=discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True, silent=SILENT_MESSAGES)
         return
 
@@ -4054,7 +4054,7 @@ async def seek_interactive(interaction: discord.Interaction):
     music_player = state.music_player
 
     if not music_player.voice_client or not (music_player.voice_client.is_playing() or music_player.voice_client.is_paused()):
-        await interaction.response.send_message(get_messages("no_playback"), ephemeral=True, silent=SILENT_MESSAGES)
+        await interaction.response.send_message(get_messages("player.no_playback.title"), ephemeral=True, silent=SILENT_MESSAGES)
         return
 
     if music_player.is_current_live:
