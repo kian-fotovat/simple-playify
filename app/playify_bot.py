@@ -43,39 +43,6 @@ DB_PATH = os.path.join(APP_DATA_DIR, "playify_state.db")
 os.makedirs(APP_DATA_DIR, exist_ok=True)
 
 
-def run_nacl_diagnostics():
-    # On utilise le même dossier AppData pour trouver le log facilement
-    app_data_dir = APP_DATA_DIR
-    log_file_path = os.path.join(app_data_dir, "playify_bot_nacl_diag.txt")
-
-    with open(log_file_path, "w", encoding="utf-8") as f:
-        f.write("--- Diagnostics PyNaCl depuis le processus du bot ---\n")
-        try:
-            f.write("Tentative d'import de 'cffi._cffi_backend'...\n")
-            f.write("SUCCÈS: 'import cffi._cffi_backend' a fonctionné.\n\n")
-
-            f.write("Tentative d'import de 'nacl.secret'...\n")
-            import nacl.secret
-
-            f.write("SUCCÈS: 'import nacl.secret' a fonctionné.\n\n")
-
-            f.write("Tentative de création d'un objet SecretBox (test de la librairie C)...\n")
-            key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
-            box = nacl.secret.SecretBox(key)
-            f.write("SUCCÈS: SecretBox créé.\n")
-            f.write("CONCLUSION: Tout semble fonctionner. Le problème est ailleurs.\n")
-
-        except Exception as e:
-            f.write("!!! ÉCHEC: Erreur durant l'import de diagnostic.\n")
-            f.write(f"Type: {type(e).__name__}\n")
-            f.write(f"Message: {e}\n")
-            f.write("Traceback:\n")
-            traceback.print_exc(file=f)
-
-
-# --- FIN DU BLOC DE DIAGNOSTIC ---
-
-
 def init_db():
     """Initialize the SQLite database and create tables if they do not exist."""
     conn = sqlite3.connect(DB_PATH)
@@ -836,7 +803,6 @@ def run_bot(status_queue, log_queue, command_queue):
     This function contains all the bot's logic.
     It is called by the desktop application (app.py).
     """
-    run_nacl_diagnostics()
     # --- Redirection des logs (inchangé) ---
     sys.stdout = StreamToQueue(log_queue)
     sys.stderr = StreamToQueue(log_queue)
