@@ -2474,16 +2474,6 @@ def run_bot(status_queue, log_queue, command_queue):
             except Exception as e:
                 logger.error(f"Error while deleting cache for guild {guild_id}: {e}")
 
-    def get_full_opts():
-        """Returns standard options for fetching full metadata."""
-        return {
-            "format": "bestaudio/best",
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
-            "socket_timeout": 10,
-        }
-
     async def fetch_meta(url, _):
         """Fetches metadata for a single URL, used for queue hydration."""
         try:
@@ -2831,7 +2821,7 @@ def run_bot(status_queue, log_queue, command_queue):
                                     await progress_message.delete()
                     if music_player.queue.empty():
                         music_player.current_task = None
-                        bot.loop.create_task(update_controller(bot))
+                        bot.loop.create_task(update_controller(bot, guild_id))
                         if not _24_7_active.get(guild_id, False):
                             await asyncio.sleep(60)
                             if music_player.voice_client and not music_player.voice_client.is_playing() and len(music_player.voice_client.channel.members) == 1:

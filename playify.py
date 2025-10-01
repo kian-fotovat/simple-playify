@@ -2188,17 +2188,6 @@ def clear_audio_cache(guild_id: int):
             logger.error(f"Error while deleting cache for guild {guild_id}: {e}")
 
 
-def get_full_opts():
-    """Returns standard options for fetching full metadata."""
-    return {
-        "format": "bestaudio/best",
-        "quiet": True,
-        "no_warnings": True,
-        "noplaylist": True,
-        "socket_timeout": 10,
-    }
-
-
 async def fetch_meta(url, _):
     """Fetches metadata for a single URL, used for queue hydration."""
     try:
