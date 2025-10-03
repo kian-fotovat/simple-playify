@@ -1490,10 +1490,11 @@ class SearchSelect(discord.ui.Select):
 
         try:
             ydl_opts_full = {
-                "format": "bestaudio/best",
+                "format": "bestaudio[acodec=opus]/bestaudio/best",
                 "quiet": True,
                 "no_warnings": True,
                 "noplaylist": True,
+                "concurrent_fragments": 4,
             }
             video_info = await fetch_video_info_with_retry(selected_url, ydl_opts_override=ydl_opts_full)
 
@@ -1859,6 +1860,7 @@ async def fetch_video_info_with_retry(query: str, ydl_opts_override=None):
         "no_warnings": True,
         "no_color": True,
         "socket_timeout": 15,
+        "concurrent_fragments": 4,
     }
     ydl_opts = {**base_ydl_opts, **(ydl_opts_override or {})}
 
@@ -1887,7 +1889,21 @@ async def fetch_video_info_with_retry(query: str, ydl_opts_override=None):
             logger.error(f"All cookies failed for age-restricted content: '{query[:100]}'")
             raise e
         else:
-            # Not an age restriction error, re-raise it
+            logger.warning(f"Error detected for '{query[:100]}'. Retrying with cookies.")
+
+            cookies_to_try = AVAILABLE_COOKIES.copy()
+            random.shuffle(cookies_to_try)  # Shuffle to distribute load/bans
+
+            for cookie_name in cookies_to_try:
+                try:
+                    logger.info(f"Retrying with cookie: {cookie_name}")
+                    return await run_ydl_with_low_priority(ydl_opts, query, specific_cookie_file=cookie_name)
+                except Exception as cookie_e:
+                    logger.warning(f"Cookie '{cookie_name}' failed: {str(cookie_e)[:150]}")
+                    continue  # Try the next cookie
+
+            # If all cookies failed, re-raise the original error
+            logger.error(f"All cookies content: '{query[:100]}'")
             raise e
 
 
